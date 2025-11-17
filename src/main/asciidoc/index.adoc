@@ -1,0 +1,21 @@
+= API 문서
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 2
+:sectlinks:
+
+// build.gradle에서 설정한 변수를 가리킴
+:snippets: ../../build/generated-snippets
+
+== 1. 테스트 API
+
+=== 1.1. Hello
+`GET /api/hello`
+
+설명 설명 설명 설명 설명
+
+// 테스트에서 "hello"로 지정한 스니펫을 포함
+include::{snippets}/hello/http-request.adoc[]
+include::{snippets}/hello/http-response.adoc[]
