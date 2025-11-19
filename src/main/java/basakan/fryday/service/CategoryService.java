@@ -1,6 +1,6 @@
 package basakan.fryday.service;
 
-import basakan.fryday.api.dto.CategoryCreateRequest;
+import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.domain.Category;

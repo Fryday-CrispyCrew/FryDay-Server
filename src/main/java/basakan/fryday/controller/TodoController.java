@@ -1,7 +1,7 @@
 package basakan.fryday.controller;
 
-import basakan.fryday.api.dto.TodoResponse;
-import basakan.fryday.api.dto.TodoSaveRequest;
+import basakan.fryday.controller.dto.TodoResponse;
+import basakan.fryday.controller.dto.TodoSaveRequest;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.service.TodoService;
 import jakarta.validation.Valid;

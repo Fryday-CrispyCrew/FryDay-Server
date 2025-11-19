@@ -1,4 +1,4 @@
-package basakan.fryday.api.dto;
+package basakan.fryday.controller.dto;
 
 import basakan.fryday.domain.CategoryColor;
 import jakarta.validation.constraints.NotBlank;

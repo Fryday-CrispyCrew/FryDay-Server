@@ -1,7 +1,7 @@
 package basakan.fryday.service;
 
-import basakan.fryday.api.dto.TodoResponse;
-import basakan.fryday.api.dto.TodoSaveRequest;
+import basakan.fryday.controller.dto.TodoResponse;
+import basakan.fryday.controller.dto.TodoSaveRequest;
 import basakan.fryday.domain.Todo;
 import basakan.fryday.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;

@@ -1,6 +1,6 @@
 package basakan.fryday.controller;
 
-import basakan.fryday.api.dto.CategoryCreateRequest;
+import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
