@@ -22,6 +22,10 @@ public class Todo {
     @Column(nullable = false)
     private Status status;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
+
     public enum Status {
         IN_PROGRESS, // 튀기는 중(기본 상태)
         COMPLETED,   // 튀김(완료)
@@ -29,9 +33,10 @@ public class Todo {
     }
 
     @Builder
-    public Todo(String description) {
+    public Todo(String description, Category category) {
         this.description = description;
         this.status = Status.IN_PROGRESS;
+        this.category = category;
     }
 
 }

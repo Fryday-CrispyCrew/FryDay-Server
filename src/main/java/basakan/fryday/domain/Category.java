@@ -22,11 +22,14 @@ public class Category {
     @Column(nullable = false)
     private CategoryColor color;
 
+    @Column(nullable = false)
+    private Long userId;
 
     @Builder
-    public Category(String name, CategoryColor color) {
+    public Category(String name, CategoryColor color, Long userId) {
         this.name = name;
         this.color = color;
+        this.userId = userId;
     }
 
     public void update(String name, CategoryColor color) {
