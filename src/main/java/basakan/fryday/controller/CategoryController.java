@@ -2,6 +2,7 @@ package basakan.fryday.controller;
 
 import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.response.ApiResponse;
+import basakan.fryday.controller.dto.CategoryResponse;
 import basakan.fryday.controller.dto.CategoryUpdateRequest;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
@@ -16,24 +17,25 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    public ApiResponse<Long> createCategory(@Valid @RequestBody CategoryCreateRequest request) {
-        Long saveId = categoryService.createCategory(request);
-        return ApiResponse.success(saveId);
+    public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryCreateRequest request) {
+        CategoryResponse response = categoryService.createCategory(request);
+
+        return ApiResponse.success(response);
     }
 
     @PatchMapping("/{categoryId}")
-    public ApiResponse<Void> updateCategory(
+    public ApiResponse<CategoryResponse> updateCategory(
             @PathVariable Long categoryId,
             @Valid @RequestBody CategoryUpdateRequest request
     ) {
-        // TODO: 인증 정보에서 userId를 가져와서 전달해야 함
         Long currentUserId = 1L;
 
-        categoryService.updateCategory(categoryId, currentUserId, request);
-        return ApiResponse.success(null, "카테고리가 수정되었습니다.");
+        CategoryResponse response = categoryService.updateCategory(categoryId, currentUserId, request);
+
+        return ApiResponse.success(response, "카테고리가 수정되었습니다.");
     }
 
-            @DeleteMapping("/{categoryId}")
+    @DeleteMapping("/{categoryId}")
     public ApiResponse<Void> deleteCategory(@PathVariable Long categoryId) {
         // TODO: 인증 정보에서 userId를 가져와서 전달해야 함
         Long currentUserId = 1L;

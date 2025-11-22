@@ -1,4 +1,4 @@
-= API 문서
+= Fryday API 문서
 :doctype: book
 :icons: font
 :source-highlighter: highlightjs
@@ -9,13 +9,51 @@
 // build.gradle에서 설정한 변수를 가리킴
 :snippets: ../../build/generated-snippets
 
-== 1. 테스트 API
+== 카테고리(Category)
 
-=== 1.1. Hello
-`GET /api/hello`
+=== 카테고리 생성
+`POST /api/categories`
 
-설명 설명 설명 설명 설명
+새로운 카테고리를 생성합니다.
 
-// 테스트에서 "hello"로 지정한 스니펫을 포함
-include::{snippets}/hello/http-request.adoc[]
-include::{snippets}/hello/http-response.adoc[]
+==== 요청 필드
+// 👇 generated-snippets 폴더 밑에 있는 조각을 불러옵니다
+include::{snippets}/category-create/request-fields.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/category-create/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/category-create/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/category-create/response-fields.adoc[]
+
+
+=== 카테고리 수정
+`PATCH /api/categories/{categoryId}`
+
+기존 카테고리의 이름과 색상을 수정합니다.
+
+==== 요청 필드
+include::{snippets}/category-update/request-fields.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/category-update/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/category-update/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/category-update/response-fields.adoc[]
+
+=== 카테고리 삭제
+`DELETE /api/categories/{categoryId}`
+
+기존 카테고리를 삭제합니다.
+
+==== HTTP 요청 예시
+include::{snippets}/category-delete/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/category-delete/http-response.adoc[]

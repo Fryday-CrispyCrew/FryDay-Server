@@ -3,6 +3,7 @@ package basakan.fryday.service;
 import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.dto.CategoryResponse;
 import basakan.fryday.controller.dto.CategoryUpdateRequest;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
@@ -22,7 +23,7 @@ public class CategoryService {
     private static final int MAX_CATEGORIES_COUNT = 6;
 
     @Transactional
-    public Long createCategory(CategoryCreateRequest request) {
+    public CategoryResponse createCategory(CategoryCreateRequest request) {
         long currentCount = categoryRepository.countByUserIdAndDeletedAtIsNull(request.getUserId());
 
         if (currentCount >= MAX_CATEGORIES_COUNT) {
@@ -35,15 +36,19 @@ public class CategoryService {
                 .userId(request.getUserId())
                 .build();
 
-        return categoryRepository.save(category).getId();
+        Category savedCategory = categoryRepository.save(category);
+
+        return CategoryResponse.from(savedCategory);
     }
 
     @Transactional
-    public void updateCategory(Long categoryId, Long userId, CategoryUpdateRequest request) {
+    public CategoryResponse updateCategory(Long categoryId, Long userId, CategoryUpdateRequest request) {
         Category category = categoryRepository.findByIdAndUserIdAndDeletedAtIsNull(categoryId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
 
         category.update(request.getName(), request.getColor());
+
+        return CategoryResponse.from(category);
     }
 
     @Transactional
