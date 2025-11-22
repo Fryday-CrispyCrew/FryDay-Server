@@ -1,5 +1,7 @@
 package basakan.fryday.service;
 
+import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.dto.TodoResponse;
 import basakan.fryday.controller.dto.TodoSaveRequest;
 import basakan.fryday.domain.Todo;
@@ -22,6 +24,16 @@ public class TodoService {
         Todo saveTodo = todoRepository.save(todo);
 
         return TodoResponse.from(saveTodo);
+    }
+
+    @Transactional
+    public TodoResponse toggleTodoCompletion(Long todoId, Long userId) {
+        Todo todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        todo.toggleCompletion();;
+
+        return TodoResponse.from(todo);
     }
 
 }

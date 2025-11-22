@@ -39,4 +39,12 @@ public class Todo {
         this.category = category;
     }
 
+    public void toggleCompletion() {
+        if (this.status == Status.COMPLETED) {
+            this.status = Status.IN_PROGRESS;
+        } else {
+            this.status = Status.COMPLETED;
+        }
+    }
+
 }
