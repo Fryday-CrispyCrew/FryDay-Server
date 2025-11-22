@@ -22,7 +22,7 @@ public class CategoryService {
 
     @Transactional
     public Long createCategory(CategoryCreateRequest request) {
-        long currentCount = categoryRepository.countByUserId(request.getUserId());
+        long currentCount = categoryRepository.countByUserIdAndDeletedAtIsNull(request.getUserId());
 
         if (currentCount >= MAX_CATEGORIES_COUNT) {
             throw new BusinessException(ErrorCode.CATEGORY_LIMIT_EXCEEDED);
@@ -35,6 +35,14 @@ public class CategoryService {
                 .build();
 
         return categoryRepository.save(category).getId();
+    }
+
+    @Transactional
+    public void deleteCategory(Long categoryId, Long userId) {
+        Category category = categoryRepository.findByIdAndUserIdAndDeletedAtIsNull(categoryId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        category.delete();
     }
 
     @Transactional

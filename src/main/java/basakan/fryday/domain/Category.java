@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,6 +27,8 @@ public class Category {
     @Column(nullable = false)
     private Long userId;
 
+    private LocalDateTime deletedAt;
+
     @Builder
     public Category(String name, CategoryColor color, Long userId) {
         this.name = name;
@@ -35,5 +39,13 @@ public class Category {
     public void update(String name, CategoryColor color) {
         this.name = name;
         this.color = color;
+    }
+
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
     }
 }
