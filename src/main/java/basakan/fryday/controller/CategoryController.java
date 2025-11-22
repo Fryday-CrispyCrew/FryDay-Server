@@ -2,6 +2,7 @@ package basakan.fryday.controller;
 
 import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.response.ApiResponse;
+import basakan.fryday.controller.dto.CategoryUpdateRequest;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,19 @@ public class CategoryController {
         return ApiResponse.success(saveId);
     }
 
-    @DeleteMapping("/{categoryId}")
+    @PatchMapping("/{categoryId}")
+    public ApiResponse<Void> updateCategory(
+            @PathVariable Long categoryId,
+            @Valid @RequestBody CategoryUpdateRequest request
+    ) {
+        // TODO: 인증 정보에서 userId를 가져와서 전달해야 함
+        Long currentUserId = 1L;
+
+        categoryService.updateCategory(categoryId, currentUserId, request);
+        return ApiResponse.success(null, "카테고리가 수정되었습니다.");
+    }
+
+            @DeleteMapping("/{categoryId}")
     public ApiResponse<Void> deleteCategory(@PathVariable Long categoryId) {
         // TODO: 인증 정보에서 userId를 가져와서 전달해야 함
         Long currentUserId = 1L;

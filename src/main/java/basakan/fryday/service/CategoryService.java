@@ -3,6 +3,7 @@ package basakan.fryday.service;
 import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.dto.CategoryUpdateRequest;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
 import basakan.fryday.repository.CategoryRepository;
@@ -38,6 +39,14 @@ public class CategoryService {
     }
 
     @Transactional
+    public void updateCategory(Long categoryId, Long userId, CategoryUpdateRequest request) {
+        Category category = categoryRepository.findByIdAndUserIdAndDeletedAtIsNull(categoryId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        category.update(request.getName(), request.getColor());
+    }
+
+    @Transactional
     public void deleteCategory(Long categoryId, Long userId) {
         Category category = categoryRepository.findByIdAndUserIdAndDeletedAtIsNull(categoryId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -50,17 +59,17 @@ public class CategoryService {
         List<Category> defaultCategories = List.of(
                 Category.builder()
                         .name("카테고리1")
-                        .color(CategoryColor.RED)
+                        .color(CategoryColor.BR)
                         .userId(userId)
                         .build(),
                 Category.builder()
                         .name("카테고리2")
-                        .color(CategoryColor.BLUE)
+                        .color(CategoryColor.CB)
                         .userId(userId)
                         .build(),
                 Category.builder()
                         .name("카테고리3")
-                        .color(CategoryColor.GREEN)
+                        .color(CategoryColor.YL)
                         .userId(userId)
                         .build()
         );
