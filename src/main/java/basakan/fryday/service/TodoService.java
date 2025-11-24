@@ -2,6 +2,8 @@ package basakan.fryday.service;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.dto.MemoResponse;
+import basakan.fryday.controller.dto.MemoRequest;
 import basakan.fryday.controller.dto.TodoResponse;
 import basakan.fryday.controller.dto.TodoSaveRequest;
 import basakan.fryday.domain.Category;
@@ -39,6 +41,16 @@ public class TodoService {
         todo.toggleCompletion();;
 
         return TodoResponse.from(todo);
+    }
+
+    @Transactional
+    public MemoResponse updateMemo(Long todoId, Long userId, MemoRequest request) {
+        Todo todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        todo.updateMemo(request.getMemo());
+
+        return MemoResponse.from(todo.getId(), todo.getMemo());
     }
 
 }

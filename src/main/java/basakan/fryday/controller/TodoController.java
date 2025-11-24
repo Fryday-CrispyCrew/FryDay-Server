@@ -1,5 +1,7 @@
 package basakan.fryday.controller;
 
+import basakan.fryday.controller.dto.MemoResponse;
+import basakan.fryday.controller.dto.MemoRequest;
 import basakan.fryday.controller.dto.TodoResponse;
 import basakan.fryday.controller.dto.TodoSaveRequest;
 import basakan.fryday.common.response.ApiResponse;
@@ -28,5 +30,16 @@ public class TodoController {
 
         TodoResponse response = todoService.toggleTodoCompletion(todoId, currentUserId);
         return ApiResponse.success(response);
+    }
+
+    @PatchMapping("/{todoId}/memo")
+    public ApiResponse<MemoResponse> updateMemo(
+            @PathVariable Long todoId,
+            @Valid @RequestBody MemoRequest request
+    ) {
+        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
+
+        MemoResponse response = todoService.updateMemo(todoId, currentUserId, request);
+        return ApiResponse.success(response, "메모가 저장되었습니다.");
     }
 }

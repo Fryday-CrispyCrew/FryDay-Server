@@ -1,6 +1,8 @@
 package basakan.fryday.controller;
 
 import basakan.fryday.RestDocsSupport;
+import basakan.fryday.controller.dto.MemoRequest;
+import basakan.fryday.controller.dto.MemoResponse;
 import basakan.fryday.controller.dto.TodoResponse;
 import basakan.fryday.controller.dto.TodoSaveRequest;
 import basakan.fryday.domain.Category;
@@ -19,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
-import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
@@ -118,6 +120,45 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("변경 후 상태 (IN_PROGRESS <-> COMPLETED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 메모 API")
+    void updateMemo() throws Exception {
+        // given
+        Long todoId = 1L;
+        String memoContent = "튀김옷 꼼꼼히 입히기";
+        MemoRequest request = new MemoRequest(memoContent);
+
+        MemoResponse mockResponse = MemoResponse.from(todoId, memoContent);
+
+        // Mocking: Service 호출 시 위의 가짜 객체 반환
+        given(todoService.updateMemo(anyLong(), anyLong(), any(MemoRequest.class)))
+                .willReturn(mockResponse);
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/memo", todoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-update-memo",
+                        pathParameters(
+                                parameterWithName("todoId").description("메모를 수정할 투두 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("memo").type(JsonFieldType.STRING).description("수정할 메모 내용")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.todoId").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("저장된 메모 내용"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )

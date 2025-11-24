@@ -26,6 +26,9 @@ public class Todo {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    @Column(length = 300)
+    private String memo;
+
     public enum Status {
         IN_PROGRESS, // 튀기는 중(기본 상태)
         COMPLETED,   // 튀김(완료)
@@ -45,6 +48,10 @@ public class Todo {
         } else {
             this.status = Status.COMPLETED;
         }
+    }
+
+    public void updateMemo(String memo) {
+        this.memo = memo;
     }
 
 }
