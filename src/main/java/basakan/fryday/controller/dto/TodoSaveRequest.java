@@ -1,7 +1,9 @@
 package basakan.fryday.controller.dto;
 
+import basakan.fryday.domain.Category;
 import basakan.fryday.domain.Todo;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -12,13 +14,18 @@ public class TodoSaveRequest {
     @NotBlank(message = "내용은 필수로 입력해야 합니다.")
     private String description;
 
-    public TodoSaveRequest(String description) {
+    @NotNull
+    private Long categoryId;
+
+    public TodoSaveRequest(String description, Long categoryId) {
+        this.categoryId = categoryId;
         this.description = description;
     }
 
-    public Todo toEntity() {
+    public Todo toEntity(Category category) {
         return Todo.builder()
-                .description(description)
+                .description(this.description)
+                .category(category)
                 .build();
     }
 }

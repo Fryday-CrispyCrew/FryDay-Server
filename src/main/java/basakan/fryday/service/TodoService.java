@@ -4,7 +4,9 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.dto.TodoResponse;
 import basakan.fryday.controller.dto.TodoSaveRequest;
+import basakan.fryday.domain.Category;
 import basakan.fryday.domain.Todo;
+import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,14 +14,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-
 public class TodoService {
 
     private final TodoRepository todoRepository;
+    private final CategoryRepository categoryRepository;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request) {
-        Todo todo = request.toEntity();
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        Todo todo = request.toEntity(category);
 
         Todo saveTodo = todoRepository.save(todo);
 
