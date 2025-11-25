@@ -47,20 +47,55 @@ include::{snippets}/todo-toggle/response-fields.adoc[]
 
 투두의 메모를 생성 및 수정합니다.
 
-=== 요청 필드
+==== 요청 필드
 include::{snippets}/todo-update-memo/request-fields.adoc[]
 
-=== 경로 파라미터
+==== 경로 파라미터
 include::{snippets}/todo-update-memo/path-parameters.adoc[]
 
-=== HTTP 요청 예시
+==== HTTP 요청 예시
 include::{snippets}/todo-update-memo/http-request.adoc[]
 
-=== HTTP 응답 예시
+==== HTTP 응답 예시
 include::{snippets}/todo-update-memo/http-response.adoc[]
 
-=== 응답 필드
+==== 응답 필드
 include::{snippets}/todo-update-memo/response-fields.adoc[]
+
+=== 투두 삭제
+`DELETE /api/todos/{todoId}`
+
+기존 투두를 삭제합니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-delete/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-delete/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-delete/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-delete/response-fields.adoc[]
+
+
+=== 탄 투두 오늘로 가져오기
+`POST /api/todos/{todoId}/bring-to-today`
+
+탄 투두를 오늘 날짜로 가져옵니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-bring-to-today/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-bring-to-today/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-bring-to-today/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-bring-to-today/response-fields.adoc[]
 
 
 == 카테고리(Category)

@@ -42,4 +42,20 @@ public class TodoController {
         MemoResponse response = todoService.updateMemo(todoId, currentUserId, request);
         return ApiResponse.success(response, "메모가 저장되었습니다.");
     }
+
+    @DeleteMapping("/{todoId}")
+    public ApiResponse<Void> deleteTodo(@PathVariable Long todoId) {
+        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
+
+        todoService.deleteTodo(todoId, currentUserId);
+        return ApiResponse.success(null, "투두가 삭제되었습니다.");
+    }
+
+    @PostMapping("{todoId}/bring-to-today")
+    public ApiResponse<TodoResponse> bringTodoToToday(@PathVariable Long todoId) {
+        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
+
+        TodoResponse response = todoService.bringTodoToToday(todoId, currentUserId);
+        return ApiResponse.success(response, "투두가 오늘로 가져와졌습니다.");
+    }
 }

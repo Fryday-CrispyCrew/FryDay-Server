@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+
 @Service
 @RequiredArgsConstructor
 public class TodoService {
@@ -51,6 +53,34 @@ public class TodoService {
         todo.updateMemo(request.getMemo());
 
         return MemoResponse.from(todo.getId(), todo.getMemo());
+    }
+
+    @Transactional
+    public void deleteTodo(Long todoId, Long userId) {
+        Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (todo.isFailed()) {
+            throw new BusinessException(ErrorCode.CANNOT_DELETE_FAILED_TODO);
+        }
+
+        todoRepository.delete(todo);
+    }
+
+    @Transactional
+    public TodoResponse bringTodoToToday(Long todoId, Long userId) {
+        Todo originalTodo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        Todo newTodo = Todo.builder()
+                .description(originalTodo.getDescription())
+                .category(originalTodo.getCategory())
+                .date(LocalDate.now())
+                .build();
+
+        Todo saveTodo = todoRepository.save(newTodo);
+        return TodoResponse.from(saveTodo);
     }
 
 }
