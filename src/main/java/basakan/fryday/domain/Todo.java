@@ -75,4 +75,8 @@ public class Todo {
         return this.status == Status.FAILED;
     }
 
+    public void updateDate(LocalDate date) {
+        this.date = date;
+    }
+
 }

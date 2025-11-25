@@ -1,6 +1,8 @@
 package basakan.fryday.controller;
 
 import basakan.fryday.RestDocsSupport;
+import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.dto.MemoRequest;
 import basakan.fryday.controller.dto.MemoResponse;
 import basakan.fryday.controller.dto.TodoResponse;
@@ -28,6 +30,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TodoController.class)
@@ -82,6 +85,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED, FAILED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
@@ -124,6 +128,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("변경 후 상태 (IN_PROGRESS <-> COMPLETED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
@@ -231,6 +236,118 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (초기화됨: IN_PROGRESS)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.NULL).description("메모 (초기엔 없음)").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜 (오늘 날짜)"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 내일 하기 (날짜 미루기)")
+    void postponeToTomorrow() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo mockTodo = Todo.builder()
+                .description("양파 썰기")
+                .category(mockCategory)
+                .date(tomorrow)
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(todoService.postponeToTomorrow(anyLong(), anyLong()))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/tomorrow", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-postpone-tomorrow",
+                        pathParameters(
+                                parameterWithName("todoId").description("미룰 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경 후 날짜 (내일)"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 내일 하기 실패 - 오늘 날짜가 아닌 경우")
+    void postponeToTomorrow_Fail_NotToday() throws Exception {
+        // given
+        Long todoId = 1L;
+
+        // Mocking: Service가 예외를 던지도록 설정
+        given(todoService.postponeToTomorrow(anyLong(), anyLong()))
+                .willThrow(new BusinessException(ErrorCode.TODO_NOT_TODAY));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/tomorrow", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("오늘 날짜의 투두만 내일로 미룰 수 있습니다."));
+    }
+
+    @Test
+    @DisplayName("투두 오늘 하기 (날짜 당기기)")
+    void moveToToday() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate today = LocalDate.now();
+
+        // Mocking: 날짜가 오늘로 변경된 투두 응답
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo mockTodo = Todo.builder()
+                .description("양파 썰기")
+                .category(mockCategory)
+                .date(today)
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(todoService.moveToToday(anyLong(), anyLong()))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/today", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-move-today",
+                        pathParameters(
+                                parameterWithName("todoId").description("가져올 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경 후 날짜 (오늘)"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )

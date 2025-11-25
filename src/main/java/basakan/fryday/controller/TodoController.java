@@ -58,4 +58,20 @@ public class TodoController {
         TodoResponse response = todoService.bringTodoToToday(todoId, currentUserId);
         return ApiResponse.success(response, "투두가 오늘로 가져와졌습니다.");
     }
+
+    @PatchMapping("/{todoId}/tomorrow")
+    public ApiResponse<TodoResponse> postponeToTomorrow(@PathVariable Long todoId) {
+        Long currentUserId = 1L;
+
+        TodoResponse response = todoService.postponeToTomorrow(todoId, currentUserId);
+        return ApiResponse.success(response, "내일로 이동되었습니다.");
+    }
+
+    @PatchMapping("/{todoId}/today")
+    public ApiResponse<TodoResponse> moveToToday(@PathVariable Long todoId) {
+        Long currentUserId = 1L;
+
+        TodoResponse response = todoService.moveToToday(todoId, currentUserId);
+        return ApiResponse.success(response, "오늘로 이동되었습니다.");
+    }
 }
