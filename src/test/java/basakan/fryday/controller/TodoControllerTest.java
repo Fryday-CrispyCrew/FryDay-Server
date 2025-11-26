@@ -3,10 +3,7 @@ package basakan.fryday.controller;
 import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
-import basakan.fryday.controller.dto.MemoRequest;
-import basakan.fryday.controller.dto.MemoResponse;
-import basakan.fryday.controller.dto.TodoResponse;
-import basakan.fryday.controller.dto.TodoSaveRequest;
+import basakan.fryday.controller.dto.*;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
 import basakan.fryday.domain.Todo;
@@ -349,6 +346,55 @@ class TodoControllerTest extends RestDocsSupport {
 
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경 후 날짜 (오늘)"),
 
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 날짜 변경")
+    void updateTodoDate() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate futureDate = LocalDate.now().plusDays(5); // 5일 뒤로 변경
+        TodoDateUpdateRequest request = new TodoDateUpdateRequest(futureDate);
+
+        // Mocking
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+        Todo mockTodo = Todo.builder()
+                .description("장보기")
+                .category(mockCategory)
+                .date(futureDate) // 변경된 날짜
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(todoService.updateTodoDate(anyLong(), anyLong(), any(TodoDateUpdateRequest.class)))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/date", todoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-update-date",
+                        pathParameters(
+                                parameterWithName("todoId").description("수정할 투두 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("date").type(JsonFieldType.STRING).description("변경할 날짜 (YYYY-MM-DD, 오늘 이후만 가능)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                // data 필드 검증
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경된 날짜"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

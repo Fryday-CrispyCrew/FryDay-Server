@@ -2,10 +2,7 @@ package basakan.fryday.service;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
-import basakan.fryday.controller.dto.MemoResponse;
-import basakan.fryday.controller.dto.MemoRequest;
-import basakan.fryday.controller.dto.TodoResponse;
-import basakan.fryday.controller.dto.TodoSaveRequest;
+import basakan.fryday.controller.dto.*;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.Todo;
 import basakan.fryday.repository.CategoryRepository;
@@ -103,6 +100,20 @@ public class TodoService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
         todo.updateDate(LocalDate.now());
+
+        return TodoResponse.from(todo);
+    }
+
+    @Transactional
+    public TodoResponse updateTodoDate(Long todoId, Long userId, TodoDateUpdateRequest request) {
+        Todo todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (request.getDate().isBefore(LocalDate.now())) {
+            throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
+        }
+
+        todo.updateDate(request.getDate());
 
         return TodoResponse.from(todo);
     }

@@ -1,9 +1,6 @@
 package basakan.fryday.controller;
 
-import basakan.fryday.controller.dto.MemoResponse;
-import basakan.fryday.controller.dto.MemoRequest;
-import basakan.fryday.controller.dto.TodoResponse;
-import basakan.fryday.controller.dto.TodoSaveRequest;
+import basakan.fryday.controller.dto.*;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.service.TodoService;
 import jakarta.validation.Valid;
@@ -73,5 +70,16 @@ public class TodoController {
 
         TodoResponse response = todoService.moveToToday(todoId, currentUserId);
         return ApiResponse.success(response, "오늘로 이동되었습니다.");
+    }
+
+    @PatchMapping("/{todoId}/date")
+    public ApiResponse<TodoResponse> updateTodoDate(
+            @PathVariable Long todoId,
+            @Valid @RequestBody TodoDateUpdateRequest request
+            ) {
+        Long currentUserId = 1L;
+
+        TodoResponse response = todoService.updateTodoDate(todoId, currentUserId, request);
+        return ApiResponse.success(response, "날짜가 변경되었습니다.");
     }
 }

@@ -131,6 +131,24 @@ include::{snippets}/todo-move-today/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-move-today/response-fields.adoc[]
 
+=== 투두 날짜 변경
+`PATCH /api/todos/{todoId}/date`
+
+투두의 날짜를 변경합니다.
+
+==== 요청 바디
+include::{snippets}/todo-update-date/request-body.adoc[]
+==== 요청 필드
+include::{snippets}/todo-update-date/request-fields.adoc[]
+==== 경로 파라미터
+include::{snippets}/todo-update-date/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-update-date/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-update-date/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-update-date/response-fields.adoc[]
+
 == 카테고리(Category)
 
 === 카테고리 생성
