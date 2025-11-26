@@ -97,6 +97,39 @@ include::{snippets}/todo-bring-to-today/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-bring-to-today/response-fields.adoc[]
 
+=== 내일로 미루기
+`POST /api/todos/{todoId}/postpone-to-tomorrow`
+
+투두를 내일로 미룹니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-postpone-tomorrow/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-postpone-tomorrow/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-postpone-tomorrow/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-postpone-tomorrow/response-fields.adoc[]
+
+=== 투두 오늘 하기
+`POST /api/todos/{todoId}/today`
+
+투두를 오늘 날짜로 변경합니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-move-today/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-move-today/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-move-today/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-move-today/response-fields.adoc[]
 
 == 카테고리(Category)
 
