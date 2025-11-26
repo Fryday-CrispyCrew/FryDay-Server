@@ -33,6 +33,9 @@ public class Todo extends BaseEntity {
 
     private LocalDate deletedAt;
 
+    @Column(nullable = false)
+    private Long displayOrder;
+
     public enum Status {
         IN_PROGRESS, // 튀기는 중(기본 상태)
         COMPLETED,   // 튀김(완료)
@@ -40,11 +43,12 @@ public class Todo extends BaseEntity {
     }
 
     @Builder
-    public Todo(String description, Category category, LocalDate date) {
+    public Todo(String description, Category category, LocalDate date, Long displayOrder) {
         this.description = description;
         this.status = Status.IN_PROGRESS;
         this.category = category;
         this.date = (date != null) ? date : LocalDate.now();
+        this.displayOrder = displayOrder != null ? displayOrder : 0L;
     }
 
     public void toggleCompletion() {
@@ -73,6 +77,10 @@ public class Todo extends BaseEntity {
 
     public void updateDate(LocalDate date) {
         this.date = date;
+    }
+
+    public void updateDisplayOrder(Long displayOrder) {
+        this.displayOrder = displayOrder;
     }
 
 }

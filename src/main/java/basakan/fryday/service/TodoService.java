@@ -3,6 +3,7 @@ package basakan.fryday.service;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.dto.*;
+import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.Todo;
 import basakan.fryday.repository.CategoryRepository;
@@ -12,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,11 @@ public class TodoService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
 
         Todo todo = request.toEntity(category);
+
+        Long maxOrder = todoRepository.findMaxDisplayOrder(category.getUserId(), todo.getDate());
+        long nextOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+
+        todo.updateDisplayOrder(nextOrder);
 
         Todo saveTodo = todoRepository.save(todo);
 
@@ -116,6 +125,23 @@ public class TodoService {
         todo.updateDate(request.getDate());
 
         return TodoResponse.from(todo);
+    }
+
+    @Transactional
+    public void reorderTodos(Long userId, LocalDate date, OrderUpdateRequest request) {
+        List<Long> idList = request.getIds();
+
+        List<Todo> todos = todoRepository.findAllByCategory_UserIdAndDateAndDeletedAtIsNullOrderByDisplayOrderAsc(userId, date);
+
+        Map<Long, Todo> todoMap = todos.stream()
+                .collect(Collectors.toMap(BaseEntity::getId, t -> t));
+
+        for (int i = 0; i < idList.size(); i++) {
+            Todo todo = todoMap.get(idList.get(i));
+            if (todo != null) {
+                todo.updateDisplayOrder((long) (i + 1));
+            }
+        }
     }
 
 }

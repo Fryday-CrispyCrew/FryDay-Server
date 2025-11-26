@@ -17,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -24,8 +25,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
-import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
-import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -395,6 +395,36 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경된 날짜"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 순서 변경")
+    void reorderTodos() throws Exception {
+        // given
+        LocalDate targetDate = LocalDate.of(2025, 11, 26);
+        List<Long> newOrderIds = List.of(3L, 1L, 2L); // 3번->1등, 1번->2등, 2번->3등
+        OrderUpdateRequest request = new OrderUpdateRequest(newOrderIds);
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/reorder")
+                        .param("date", String.valueOf(targetDate))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-reorder",
+                        queryParameters(
+                                parameterWithName("date").description("순서를 변경할 날짜 (YYYY-MM-DD)")
+                        ),
+                        requestFields(
+                                fieldWithPath("ids").type(JsonFieldType.ARRAY).description("변경된 순서대로 나열된 투두 ID 리스트")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

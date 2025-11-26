@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/todos")
@@ -76,10 +78,21 @@ public class TodoController {
     public ApiResponse<TodoResponse> updateTodoDate(
             @PathVariable Long todoId,
             @Valid @RequestBody TodoDateUpdateRequest request
-            ) {
+    ) {
         Long currentUserId = 1L;
 
         TodoResponse response = todoService.updateTodoDate(todoId, currentUserId, request);
         return ApiResponse.success(response, "날짜가 변경되었습니다.");
+    }
+
+    @PatchMapping("/reorder")
+    public ApiResponse<Void> reorderTodos(
+            @RequestParam LocalDate date,
+            @Valid @RequestBody OrderUpdateRequest request
+    ) {
+        Long currentUserId = 1L;
+
+        todoService.reorderTodos(currentUserId, date, request);
+        return ApiResponse.success(null, "투두 순서가 변경되었습니다.");
     }
 }
