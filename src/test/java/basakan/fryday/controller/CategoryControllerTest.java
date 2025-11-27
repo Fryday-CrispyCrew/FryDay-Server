@@ -4,6 +4,7 @@ import basakan.fryday.RestDocsSupport;
 import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.controller.dto.CategoryResponse;
 import basakan.fryday.controller.dto.CategoryUpdateRequest;
+import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
 import basakan.fryday.service.CategoryService;
@@ -14,13 +15,14 @@ import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
-import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
-import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.test.util.ReflectionTestUtils.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -137,6 +139,31 @@ class CategoryControllerTest extends RestDocsSupport {
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
                                 fieldWithPath("data").type(JsonFieldType.NULL).description("데이터 (없음)").optional(),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("카테고리 순서 변경")
+    void reorderCategories() throws Exception {
+        // given
+        List<Long> newOrderIds = List.of(3L, 1L, 2L);
+        OrderUpdateRequest request = new OrderUpdateRequest(newOrderIds);
+
+        // when & then
+        mockMvc.perform(patch("/api/categories/reorder")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("category-reorder",
+                        requestFields(
+                                fieldWithPath("ids").type(JsonFieldType.ARRAY).description("변경할 순서대로 나열된 카테고리 ID 리스트")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

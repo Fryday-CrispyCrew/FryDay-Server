@@ -1,8 +1,9 @@
 package basakan.fryday.controller;
 
 import basakan.fryday.RestDocsSupport;
-import basakan.fryday.controller.dto.TodoResponse;
-import basakan.fryday.controller.dto.TodoSaveRequest;
+import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.dto.*;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
 import basakan.fryday.domain.Todo;
@@ -15,15 +16,18 @@ import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDate;
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
-import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.post;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
-import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
-import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.restdocs.request.RequestDocumentation.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TodoController.class)
@@ -77,6 +81,8 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED, FAILED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
@@ -118,7 +124,307 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("변경 후 상태 (IN_PROGRESS <-> COMPLETED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
 
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 메모 API")
+    void updateMemo() throws Exception {
+        // given
+        Long todoId = 1L;
+        String memoContent = "튀김옷 꼼꼼히 입히기";
+        MemoRequest request = new MemoRequest(memoContent);
+
+        MemoResponse mockResponse = MemoResponse.from(todoId, memoContent);
+
+        // Mocking: Service 호출 시 위의 가짜 객체 반환
+        given(todoService.updateMemo(anyLong(), anyLong(), any(MemoRequest.class)))
+                .willReturn(mockResponse);
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/memo", todoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-update-memo",
+                        pathParameters(
+                                parameterWithName("todoId").description("메모를 수정할 투두 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("memo").type(JsonFieldType.STRING).description("수정할 메모 내용")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.todoId").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("저장된 메모 내용"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 삭제 API")
+    void deleteTodo() throws Exception {
+        // given
+        Long todoId = 1L;
+
+        // when & then
+        mockMvc.perform(delete("/api/todos/{todoId}", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-delete",
+                        pathParameters(
+                                parameterWithName("todoId").description("삭제할 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("지난 투두 오늘로 가져오기 API")
+    void bringTodoToToday() throws Exception {
+        // given
+        Long originalTodoId = 99L; // 과거의 투두 ID
+        Long newTodoId = 100L;     // 새로 생성될 투두 ID
+
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo newMockTodo = Todo.builder()
+                .description("양파 썰기") // 내용은 그대로
+                .category(mockCategory)
+                .date(LocalDate.now())    // 날짜는 오늘
+                .build();
+        ReflectionTestUtils.setField(newMockTodo, "id", newTodoId);
+
+        // Service Mocking
+        given(todoService.bringTodoToToday(anyLong(), anyLong()))
+                .willReturn(TodoResponse.from(newMockTodo));
+
+        // when & then
+        mockMvc.perform(post("/api/todos/{todoId}/bring-to-today", originalTodoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-bring-to-today",
+                        pathParameters(
+                                parameterWithName("todoId").description("가져올 과거의 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("새로 생성된 투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (초기화됨: IN_PROGRESS)"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.NULL).description("메모 (초기엔 없음)").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜 (오늘 날짜)"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 내일 하기 (날짜 미루기)")
+    void postponeToTomorrow() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo mockTodo = Todo.builder()
+                .description("양파 썰기")
+                .category(mockCategory)
+                .date(tomorrow)
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(todoService.postponeToTomorrow(anyLong(), anyLong()))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/tomorrow", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-postpone-tomorrow",
+                        pathParameters(
+                                parameterWithName("todoId").description("미룰 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경 후 날짜 (내일)"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 내일 하기 실패 - 오늘 날짜가 아닌 경우")
+    void postponeToTomorrow_Fail_NotToday() throws Exception {
+        // given
+        Long todoId = 1L;
+
+        // Mocking: Service가 예외를 던지도록 설정
+        given(todoService.postponeToTomorrow(anyLong(), anyLong()))
+                .willThrow(new BusinessException(ErrorCode.TODO_NOT_TODAY));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/tomorrow", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("오늘 날짜의 투두만 내일로 미룰 수 있습니다."));
+    }
+
+    @Test
+    @DisplayName("투두 오늘 하기 (날짜 당기기)")
+    void moveToToday() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate today = LocalDate.now();
+
+        // Mocking: 날짜가 오늘로 변경된 투두 응답
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo mockTodo = Todo.builder()
+                .description("양파 썰기")
+                .category(mockCategory)
+                .date(today)
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(todoService.moveToToday(anyLong(), anyLong()))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/today", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-move-today",
+                        pathParameters(
+                                parameterWithName("todoId").description("가져올 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경 후 날짜 (오늘)"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 날짜 변경")
+    void updateTodoDate() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate futureDate = LocalDate.now().plusDays(5); // 5일 뒤로 변경
+        TodoDateUpdateRequest request = new TodoDateUpdateRequest(futureDate);
+
+        // Mocking
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+        Todo mockTodo = Todo.builder()
+                .description("장보기")
+                .category(mockCategory)
+                .date(futureDate) // 변경된 날짜
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(todoService.updateTodoDate(anyLong(), anyLong(), any(TodoDateUpdateRequest.class)))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/date", todoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-update-date",
+                        pathParameters(
+                                parameterWithName("todoId").description("수정할 투두 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("date").type(JsonFieldType.STRING).description("변경할 날짜 (YYYY-MM-DD, 오늘 이후만 가능)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                // data 필드 검증
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경된 날짜"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 순서 변경")
+    void reorderTodos() throws Exception {
+        // given
+        LocalDate targetDate = LocalDate.of(2025, 11, 26);
+        List<Long> newOrderIds = List.of(3L, 1L, 2L); // 3번->1등, 1번->2등, 2번->3등
+        OrderUpdateRequest request = new OrderUpdateRequest(newOrderIds);
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/reorder")
+                        .param("date", String.valueOf(targetDate))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-reorder",
+                        queryParameters(
+                                parameterWithName("date").description("순서를 변경할 날짜 (YYYY-MM-DD)")
+                        ),
+                        requestFields(
+                                fieldWithPath("ids").type(JsonFieldType.ARRAY).description("변경된 순서대로 나열된 투두 ID 리스트")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

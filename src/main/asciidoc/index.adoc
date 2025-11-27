@@ -42,6 +42,127 @@ include::{snippets}/todo-toggle/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-toggle/response-fields.adoc[]
 
+=== 투두 메모
+`PATCH /api/todos/{todoId}/memo`
+
+투두의 메모를 생성 및 수정합니다.
+
+==== 요청 필드
+include::{snippets}/todo-update-memo/request-fields.adoc[]
+
+==== 경로 파라미터
+include::{snippets}/todo-update-memo/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-update-memo/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-update-memo/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-update-memo/response-fields.adoc[]
+
+=== 투두 삭제
+`DELETE /api/todos/{todoId}`
+
+기존 투두를 삭제합니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-delete/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-delete/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-delete/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-delete/response-fields.adoc[]
+
+
+=== 탄 투두 오늘로 가져오기
+`POST /api/todos/{todoId}/bring-to-today`
+
+탄 투두를 오늘 날짜로 가져옵니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-bring-to-today/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-bring-to-today/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-bring-to-today/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-bring-to-today/response-fields.adoc[]
+
+=== 내일로 미루기
+`POST /api/todos/{todoId}/postpone-to-tomorrow`
+
+투두를 내일로 미룹니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-postpone-tomorrow/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-postpone-tomorrow/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-postpone-tomorrow/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-postpone-tomorrow/response-fields.adoc[]
+
+=== 투두 오늘 하기
+`POST /api/todos/{todoId}/today`
+
+투두를 오늘 날짜로 변경합니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-move-today/path-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-move-today/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-move-today/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-move-today/response-fields.adoc[]
+
+=== 투두 날짜 변경
+`PATCH /api/todos/{todoId}/date`
+
+투두의 날짜를 변경합니다.
+
+==== 요청 바디
+include::{snippets}/todo-update-date/request-body.adoc[]
+==== 요청 필드
+include::{snippets}/todo-update-date/request-fields.adoc[]
+==== 경로 파라미터
+include::{snippets}/todo-update-date/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-update-date/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-update-date/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-update-date/response-fields.adoc[]
+
+=== 투두 순서 변경
+`PATCH /api/todos/order`
+
+투두의 순서를 변경합니다.
+
+==== 요청 필드
+include::{snippets}/todo-reorder/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-reorder/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-reorder/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-reorder/response-fields.adoc[]
+
 
 == 카테고리(Category)
 
@@ -91,3 +212,20 @@ include::{snippets}/category-delete/http-request.adoc[]
 
 ==== HTTP 응답 예시
 include::{snippets}/category-delete/http-response.adoc[]
+
+=== 카테고리 순서 변경
+`PATCH /api/categories/order`
+
+카테고리의 순서를 변경합니다.
+
+==== 요청 필드
+include::{snippets}/category-reorder/request-fields.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/category-reorder/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/category-reorder/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/category-reorder/response-fields.adoc[]

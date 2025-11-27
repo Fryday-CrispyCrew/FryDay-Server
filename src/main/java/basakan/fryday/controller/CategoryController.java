@@ -4,6 +4,7 @@ import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.dto.CategoryResponse;
 import basakan.fryday.controller.dto.CategoryUpdateRequest;
+import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,13 @@ public class CategoryController {
 
         categoryService.deleteCategory(categoryId, currentUserId);
         return ApiResponse.success(null, "카테고리가 삭제되었습니다.");
+    }
+
+    @PatchMapping("/reorder")
+    public ApiResponse<Void> updateCategoryOrder(@Valid @RequestBody OrderUpdateRequest request) {
+        Long currentUserId = 1L;
+        categoryService.reorderCategories(currentUserId, request);
+        return ApiResponse.success(null, "카테고리 순서가 변경되었습니다.");
     }
 }
 

@@ -19,7 +19,10 @@ public enum ErrorCode {
     CATEGORY_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "카테고리 개수는 최대 6개까지 생성할 수 있습니다."),
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "카테고리를 찾을 수 없습니다."),
 
-    TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "투두를 찾을 수 없습니다.");
+    TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "투두를 찾을 수 없습니다."),
+    CANNOT_DELETE_FAILED_TODO(HttpStatus.BAD_REQUEST, "타버린(미완료) 투두는 삭제할 수 없습니다."),
+    TODO_NOT_TODAY(HttpStatus.BAD_REQUEST, "오늘 날짜의 투두만 내일로 미룰 수 있습니다."),
+    PAST_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "과거 날짜로 변경할 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;

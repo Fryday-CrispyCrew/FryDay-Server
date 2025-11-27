@@ -25,11 +25,15 @@ public class Category extends BaseEntity{
 
     private LocalDateTime deletedAt;
 
+    @Column(nullable = false)
+    private Long displayOrder;
+
     @Builder
-    public Category(String name, CategoryColor color, Long userId) {
+    public Category(String name, CategoryColor color, Long userId, Long displayOrder) {
         this.name = name;
         this.color = color;
         this.userId = userId;
+        this.displayOrder = displayOrder != null ? displayOrder : 0L;
     }
 
     public void update(String name, CategoryColor color) {
@@ -43,5 +47,9 @@ public class Category extends BaseEntity{
 
     public boolean isDeleted() {
         return this.deletedAt != null;
+    }
+
+    public void updateDisplayOrder(Long displayOrder) {
+        this.displayOrder = displayOrder;
     }
 }
