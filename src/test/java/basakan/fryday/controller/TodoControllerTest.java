@@ -429,4 +429,57 @@ class TodoControllerTest extends RestDocsSupport {
                         )
                 ));
     }
+
+    @Test
+    @DisplayName("투두 리스트 조회 API (전체/카테고리 필터)")
+    void getTodoList() throws Exception {
+        // given
+        LocalDate date = LocalDate.of(2025, 11, 28);
+        Long categoryId = 1L;
+
+        Category mockCategory = Category.builder().name("운동").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", categoryId);
+
+        Todo todo1 = Todo.builder().description("스쿼트 100개").category(mockCategory).date(date).displayOrder(1L).build();
+        ReflectionTestUtils.setField(todo1, "id", 100L);
+
+        Todo todo2 = Todo.builder().description("런닝 30분").category(mockCategory).date(date).displayOrder(2L).build();
+        ReflectionTestUtils.setField(todo2, "id", 101L);
+
+        List<TodoListResponse> responses = List.of(
+                TodoListResponse.from(todo1),
+                TodoListResponse.from(todo2)
+        );
+
+        // Service Mocking (categoryId가 있을 때를 가정)
+        given(todoService.getTodoList(anyLong(), any(LocalDate.class), anyLong()))
+                .willReturn(responses);
+
+        // when & then
+        mockMvc.perform(get("/api/todos")
+                        .param("date", date.toString())       // 필수 파라미터
+                        .param("categoryId", String.valueOf(categoryId)) // 선택 파라미터
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-list",
+                        queryParameters(
+                                parameterWithName("date").description("조회할 날짜 (YYYY-MM-DD)"),
+                                parameterWithName("categoryId").description("필터링할 카테고리 ID (생략 시 전체 조회)").optional()
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data[].id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data[].description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data[].status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS 등)"),
+                                fieldWithPath("data[].categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data[].displayOrder").type(JsonFieldType.NUMBER).description("정렬 순서"),
+                                fieldWithPath("data[].date").type(JsonFieldType.STRING).description("날짜"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
 }

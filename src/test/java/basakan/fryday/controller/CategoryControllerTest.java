@@ -1,10 +1,7 @@
 package basakan.fryday.controller;
 
 import basakan.fryday.RestDocsSupport;
-import basakan.fryday.controller.dto.CategoryCreateRequest;
-import basakan.fryday.controller.dto.CategoryResponse;
-import basakan.fryday.controller.dto.CategoryUpdateRequest;
-import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.dto.*;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
 import basakan.fryday.service.CategoryService;
@@ -14,10 +11,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
@@ -164,6 +163,47 @@ class CategoryControllerTest extends RestDocsSupport {
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("카테고리 목록 조회 API")
+    void getCategories() throws Exception {
+        // given
+        Category cat1 = Category.builder().name("운동").color(CategoryColor.BR).userId(1L).displayOrder(1L).build();
+        ReflectionTestUtils.setField(cat1, "id", 10L);
+
+        Category cat2 = Category.builder().name("요리").color(CategoryColor.YL).userId(1L).displayOrder(2L).build();
+        ReflectionTestUtils.setField(cat2, "id", 11L);
+
+        List<CategoryReadResponse> responses = List.of(
+                CategoryReadResponse.from(cat1),
+                CategoryReadResponse.from(cat2)
+        );
+
+        given(categoryService.getCategoriesByUserId(anyLong()))
+                .willReturn(responses);
+
+        // when & then
+        mockMvc.perform(get("/api/categories")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("category-list",
+
+                        // 응답 필드
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data[].id").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data[].name").type(JsonFieldType.STRING).description("카테고리 이름"),
+                                fieldWithPath("data[].colorCode").type(JsonFieldType.STRING).description("색상 코드 (로직용)"),
+                                fieldWithPath("data[].colorHex").type(JsonFieldType.STRING).description("색상 헥사코드 (화면 표시용)"),
+                                fieldWithPath("data[].displayOrder").type(JsonFieldType.NUMBER).description("정렬 순서"),
+
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
