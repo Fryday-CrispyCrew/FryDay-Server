@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: fryday-test
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: false
+    open-in-view: false
+
+jwt:
+  secret-key: test-secret-key-for-testing-purposes-at-least-32-characters-long-enough
+  access-token-expiration: 3600000
+  refresh-token-expiration: 1209600000
