@@ -1,10 +1,7 @@
 package basakan.fryday.controller;
 
-import basakan.fryday.controller.dto.CategoryCreateRequest;
+import basakan.fryday.controller.dto.*;
 import basakan.fryday.common.response.ApiResponse;
-import basakan.fryday.controller.dto.CategoryResponse;
-import basakan.fryday.controller.dto.CategoryUpdateRequest;
-import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.Getter;
@@ -21,10 +18,10 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public ApiResponse<List<CategoryResponse>> getCategories() {
+    public ApiResponse<List<CategoryReadResponse>> getCategories() {
         Long currentUserId = 1L;
 
-        List<CategoryResponse> responses = categoryService.getCategoriesByUserId(currentUserId);
+        List<CategoryReadResponse> responses = categoryService.getCategoriesByUserId(currentUserId);
         return ApiResponse.success(responses);
     }
 

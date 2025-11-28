@@ -1,11 +1,8 @@
 package basakan.fryday.service;
 
-import basakan.fryday.controller.dto.CategoryCreateRequest;
+import basakan.fryday.controller.dto.*;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
-import basakan.fryday.controller.dto.CategoryResponse;
-import basakan.fryday.controller.dto.CategoryUpdateRequest;
-import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
@@ -85,10 +82,10 @@ public class CategoryService {
     }
 
     @Transactional
-    public List<CategoryResponse> getCategoriesByUserId(Long userId) {
+    public List<CategoryReadResponse> getCategoriesByUserId(Long userId) {
         List<Category> categories = categoryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDisplayOrderAsc(userId);
         return categories.stream()
-                .map(CategoryResponse::from)
+                .map(CategoryReadResponse::from)
                 .collect(Collectors.toList());
     }
 
