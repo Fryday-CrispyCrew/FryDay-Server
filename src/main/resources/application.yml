@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: fryday
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/fryday?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+    open-in-view: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+jwt:
+  secret-key: your-secret-key-here-please-change-this-to-a-secure-key-at-least-32-characters-long
+  access-token-expiration: 3600000
+  refresh-token-expiration: 1209600000
+
+oauth:
+  apple:
+    client-id: your-apple-client-id  # Apple Developer에서 발급받은 Bundle ID 또는 Service ID
+    jwks-url: https://appleid.apple.com/auth/keys
