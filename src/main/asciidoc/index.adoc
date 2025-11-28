@@ -7,7 +7,84 @@
 :sectlinks:
 
 // build.gradle에서 설정한 변수를 가리킴
-:snippets: ../../build/generated-snippets
+:snippets: ../../../build/generated-snippets
+
+== 인증(Auth)
+
+=== 소셜 로그인
+`POST /api/v1/auth/social/login`
+
+카카오, 네이버, 애플 소셜 로그인을 처리합니다.
+
+==== 로그인 상태 (LoginStatus)
+
+응답의 `loginStatus` 필드는 사용자가 다음에 어떤 화면으로 이동해야 하는지를 나타냅니다.
+
+[cols="1,3,2"]
+|===
+|상태 |설명 |다음 화면
+
+|`NEEDS_CONSENT`
+|개인정보 수집 및 이용 동의가 필요한 상태 (최초 가입)
+|동의 화면
+
+|`NEEDS_ONBOARDING`
+|개인정보 동의는 완료했으나, 온보딩(앱 사용법 안내)이 필요한 상태
+|온보딩 화면
+
+|`NEEDS_NICKNAME`
+|온보딩은 완료했으나, 닉네임 설정이 필요한 상태
+|닉네임 설정 화면
+
+|`COMPLETED`
+|모든 설정이 완료된 상태 (정상 로그인)
+|메인 화면
+|===
+
+NOTE: 클라이언트는 `loginStatus` 값에 따라 적절한 화면으로 사용자를 안내해야 합니다.
+
+==== 요청 필드
+include::{snippets}/auth/social-login-new-user/request-fields.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/auth/social-login-new-user/http-request.adoc[]
+
+==== HTTP 응답 예시 (최초 로그인)
+include::{snippets}/auth/social-login-new-user/http-response.adoc[]
+
+==== HTTP 응답 예시 (기존 회원)
+include::{snippets}/auth/social-login-existing-user/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/auth/social-login-new-user/response-fields.adoc[]
+
+==== 에러 응답
+
+소셜 로그인 API는 다음과 같은 에러 응답을 반환할 수 있습니다.
+
+===== 잘못된 토큰 (401 Unauthorized)
+
+소셜 Provider로부터 발급받은 토큰이 유효하지 않은 경우
+
+include::{snippets}/auth/social-login-invalid-token/http-response.adoc[]
+
+===== 지원하지 않는 Provider (400 Bad Request)
+
+KAKAO, NAVER, APPLE 외의 Provider를 요청한 경우
+
+include::{snippets}/auth/social-login-unsupported-provider/http-response.adoc[]
+
+===== 차단된 사용자 (403 Forbidden)
+
+관리자에 의해 차단된 사용자가 로그인을 시도한 경우
+
+include::{snippets}/auth/social-login-blocked-user/http-response.adoc[]
+
+===== 탈퇴한 사용자 (403 Forbidden)
+
+이미 탈퇴 처리된 사용자가 로그인을 시도한 경우
+
+include::{snippets}/auth/social-login-withdrawn-user/http-response.adoc[]
 
 == 투두(Todo)
 

@@ -1,9 +1,14 @@
 package basakan.fryday.common.exception;
 
 import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.exception.auth.InvalidProviderTokenException;
+import basakan.fryday.common.exception.auth.UnsupportedProviderException;
+import basakan.fryday.common.exception.auth.UserBlockedException;
+import basakan.fryday.common.exception.auth.UserWithdrawnException;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.common.response.FieldErrorResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,7 +21,43 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 1. 비즈니스 로직 예외 처리
+    // 1. Auth 예외 처리 - InvalidProviderTokenException
+    @ExceptionHandler(InvalidProviderTokenException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleInvalidProviderToken(InvalidProviderTokenException e) {
+        log.warn("Invalid Provider Token: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.fail("소셜 로그인 토큰이 유효하지 않습니다."));
+    }
+
+    // 2. Auth 예외 처리 - UnsupportedProviderException
+    @ExceptionHandler(UnsupportedProviderException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleUnsupportedProvider(UnsupportedProviderException e) {
+        log.warn("Unsupported Provider: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail("지원하지 않는 소셜 로그인 Provider입니다. (KAKAO, NAVER, APPLE만 지원)"));
+    }
+
+    // 3. Auth 예외 처리 - UserBlockedException
+    @ExceptionHandler(UserBlockedException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleUserBlocked(UserBlockedException e) {
+        log.warn("User Blocked: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.fail("차단된 사용자입니다. 관리자에게 문의하세요."));
+    }
+
+    // 4. Auth 예외 처리 - UserWithdrawnException
+    @ExceptionHandler(UserWithdrawnException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleUserWithdrawn(UserWithdrawnException e) {
+        log.warn("User Withdrawn: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.fail("탈퇴한 사용자입니다."));
+    }
+
+    // 5. 비즈니스 로직 예외 처리
     @ExceptionHandler(BusinessException.class)
     protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         log.warn("BusinessException: {}", e.getMessage());
