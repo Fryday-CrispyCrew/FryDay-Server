@@ -7,8 +7,11 @@ import basakan.fryday.controller.dto.CategoryUpdateRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,6 +19,14 @@ import org.springframework.web.bind.annotation.*;
 public class CategoryController {
 
     private final CategoryService categoryService;
+
+    @GetMapping
+    public ApiResponse<List<CategoryResponse>> getCategories() {
+        Long currentUserId = 1L;
+
+        List<CategoryResponse> responses = categoryService.getCategoriesByUserId(currentUserId);
+        return ApiResponse.success(responses);
+    }
 
     @PostMapping
     public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryCreateRequest request) {

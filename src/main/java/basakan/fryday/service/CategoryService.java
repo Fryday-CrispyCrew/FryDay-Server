@@ -85,6 +85,14 @@ public class CategoryService {
     }
 
     @Transactional
+    public List<CategoryResponse> getCategoriesByUserId(Long userId) {
+        List<Category> categories = categoryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDisplayOrderAsc(userId);
+        return categories.stream()
+                .map(CategoryResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
     public void initDefaultCategories(Long userId) {
         List<Category> defaultCategories = List.of(
                 Category.builder()
