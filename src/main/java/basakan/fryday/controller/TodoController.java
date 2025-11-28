@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -15,6 +16,17 @@ import java.time.LocalDate;
 public class TodoController {
 
     private final TodoService todoService;
+
+    @GetMapping
+    public ApiResponse<List<TodoListResponse>> getTodoList(
+            @RequestParam LocalDate date,
+            @RequestParam(required = false) Long categoryId
+    ) {
+        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
+
+        List<TodoListResponse> responses = todoService.getTodoList(currentUserId, date, categoryId);
+        return ApiResponse.success(responses);
+    }
 
     @PostMapping
     public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoSaveRequest request) {

@@ -144,4 +144,19 @@ public class TodoService {
         }
     }
 
+    @Transactional
+    public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
+        List<Todo> todos;
+
+        if (categoryId == null) {
+            todos = todoRepository.findAllByUserIdAndDate(userId, date);
+        } else {
+            todos = todoRepository.findAllByCategoryIdAndDate(categoryId, date);
+        }
+
+        return todos.stream()
+                .map(TodoListResponse::from)
+                .collect(Collectors.toList());
+    }
+
 }
