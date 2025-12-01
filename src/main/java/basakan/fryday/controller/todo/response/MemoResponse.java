@@ -1,4 +1,4 @@
-package basakan.fryday.controller.dto;
+package basakan.fryday.controller.todo.response;
 
 import lombok.Getter;
 

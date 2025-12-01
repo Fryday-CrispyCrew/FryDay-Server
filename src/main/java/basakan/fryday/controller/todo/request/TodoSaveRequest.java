@@ -1,7 +1,7 @@
-package basakan.fryday.controller.dto;
+package basakan.fryday.controller.todo.request;
 
-import basakan.fryday.domain.Category;
-import basakan.fryday.domain.Todo;
+import basakan.fryday.domain.category.Category;
+import basakan.fryday.domain.todo.Todo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;

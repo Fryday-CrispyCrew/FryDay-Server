@@ -1,4 +1,4 @@
-package basakan.fryday.domain;
+package basakan.fryday.domain.todo;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

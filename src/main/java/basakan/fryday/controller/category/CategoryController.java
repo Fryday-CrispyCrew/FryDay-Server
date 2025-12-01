@@ -1,10 +1,13 @@
-package basakan.fryday.controller;
+package basakan.fryday.controller.category;
 
-import basakan.fryday.controller.dto.*;
 import basakan.fryday.common.response.ApiResponse;
+import basakan.fryday.controller.category.request.CategoryCreateRequest;
+import basakan.fryday.controller.category.request.CategoryUpdateRequest;
+import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.category.response.CategoryReadResponse;
+import basakan.fryday.controller.category.response.CategoryResponse;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

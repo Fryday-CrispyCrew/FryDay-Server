@@ -1,5 +1,7 @@
-package basakan.fryday.domain;
+package basakan.fryday.domain.todo;
 
+import basakan.fryday.domain.BaseEntity;
+import basakan.fryday.domain.category.Category;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -7,7 +9,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter

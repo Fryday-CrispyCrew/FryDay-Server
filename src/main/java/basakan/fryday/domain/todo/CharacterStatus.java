@@ -1,4 +1,4 @@
-package basakan.fryday.domain;
+package basakan.fryday.domain.todo;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

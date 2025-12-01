@@ -1,11 +1,15 @@
 package basakan.fryday.service;
 
-import basakan.fryday.controller.dto.*;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.category.request.CategoryCreateRequest;
+import basakan.fryday.controller.category.request.CategoryUpdateRequest;
+import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.category.response.CategoryReadResponse;
+import basakan.fryday.controller.category.response.CategoryResponse;
 import basakan.fryday.domain.BaseEntity;
-import basakan.fryday.domain.Category;
-import basakan.fryday.domain.CategoryColor;
+import basakan.fryday.domain.category.Category;
+import basakan.fryday.domain.todo.CategoryColor;
 import basakan.fryday.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

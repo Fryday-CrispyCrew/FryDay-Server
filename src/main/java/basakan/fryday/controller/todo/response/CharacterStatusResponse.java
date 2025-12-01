@@ -1,6 +1,6 @@
-package basakan.fryday.controller.dto;
+package basakan.fryday.controller.todo.response;
 
-import basakan.fryday.domain.CharacterStatus;
+import basakan.fryday.domain.todo.CharacterStatus;
 import lombok.Builder;
 import lombok.Getter;
 

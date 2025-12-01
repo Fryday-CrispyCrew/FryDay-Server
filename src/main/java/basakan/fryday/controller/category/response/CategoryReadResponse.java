@@ -1,6 +1,6 @@
-package basakan.fryday.controller.dto;
+package basakan.fryday.controller.category.response;
 
-import basakan.fryday.domain.Category;
+import basakan.fryday.domain.category.Category;
 import lombok.Getter;
 
 @Getter

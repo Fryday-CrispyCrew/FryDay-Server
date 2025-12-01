@@ -1,6 +1,6 @@
-package basakan.fryday.controller.dto;
+package basakan.fryday.controller.todo.response;
 
-import basakan.fryday.domain.Todo;
+import basakan.fryday.domain.todo.Todo;
 import lombok.Getter;
 
 import java.time.LocalDate;
