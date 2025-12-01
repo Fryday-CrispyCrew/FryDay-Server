@@ -5,6 +5,7 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.dto.*;
 import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.domain.Category;
+import basakan.fryday.domain.CharacterStatus;
 import basakan.fryday.domain.Todo;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.TodoRepository;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -67,9 +69,9 @@ public class TodoService {
                 .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        if (todo.isFailed()) {
-            throw new BusinessException(ErrorCode.CANNOT_DELETE_FAILED_TODO);
-        }
+//        if (todo.isFailed()) {
+//            throw new BusinessException(ErrorCode.CANNOT_DELETE_FAILED_TODO);
+//        }
 
         todoRepository.delete(todo);
     }
@@ -157,6 +159,43 @@ public class TodoService {
         return todos.stream()
                 .map(TodoListResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public CharacterStatusResponse getDailyCharacterStatus(Long userId, LocalDate targetDate) {
+
+        if (targetDate.isAfter(LocalDate.now())) {
+            return CharacterStatusResponse.builder()
+                    .status(CharacterStatus.CASE_FUTURE)
+                    .imageCode(null) // 그래픽 생성 안 함
+                    .description(CharacterStatus.CASE_FUTURE.getDescription())
+                    .build();
+        }
+
+        List<Todo> todos = todoRepository.findAllByUserIdAndDate(userId, targetDate);
+
+        int totalCount = todos.size();
+        int completedCount = (int) todos.stream().filter(Todo::isCompleted).count();
+        LocalDateTime now = LocalDateTime.now();
+
+        CharacterStatus status = CharacterStatus.determine(totalCount, completedCount, targetDate, now);
+
+        String imageCode = resolveImageCode(status);
+
+        return CharacterStatusResponse.builder()
+                .status(status)
+                .imageCode(imageCode)
+                .description(status.getDescription())
+                .build();
+
+    }
+
+    private String resolveImageCode(CharacterStatus status) {
+        if (status == CharacterStatus.CASE_D) {
+            // Case D일 때만 D1, D2 중 랜덤 반환
+            return Math.random() < 0.5 ? "d1_graphic" : "d2_graphic";
+        }
+        return status.getImageCode();
     }
 
 }

@@ -6,6 +6,7 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.dto.*;
 import basakan.fryday.domain.Category;
 import basakan.fryday.domain.CategoryColor;
+import basakan.fryday.domain.CharacterStatus;
 import basakan.fryday.domain.Todo;
 import basakan.fryday.service.TodoService;
 import org.junit.jupiter.api.DisplayName;
@@ -477,6 +478,45 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data[].categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data[].displayOrder").type(JsonFieldType.NUMBER).description("정렬 순서"),
                                 fieldWithPath("data[].date").type(JsonFieldType.STRING).description("날짜"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API")
+    void getDailyCharacterStatus() throws Exception {
+        // given
+        LocalDate date = LocalDate.of(2025, 12, 1);
+
+        // Mocking: CASE_D (절반 이상) 상태이며, 랜덤 이미지가 'd1_graphic'으로 결정된 상황 가정
+        CharacterStatusResponse response = CharacterStatusResponse.builder()
+                .status(CharacterStatus.CASE_D)
+                .imageCode("d1_graphic")
+                .description(CharacterStatus.CASE_D.getDescription())
+                .build();
+
+        given(todoService.getDailyCharacterStatus(anyLong(), any(LocalDate.class)))
+                .willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/api/todos/character-status")
+                        .param("date", date.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-character-status",
+                        queryParameters(
+                                parameterWithName("date").description("조회할 날짜 (YYYY-MM-DD)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("캐릭터 상태 Enum (CASE_A ~ CASE_G)"),
+                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING).description("프론트엔드 이미지 매핑 코드 (예: '1', 'd1_graphic' 등)"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("상태 설명"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )

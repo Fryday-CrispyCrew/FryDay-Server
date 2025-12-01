@@ -107,4 +107,14 @@ public class TodoController {
         todoService.reorderTodos(currentUserId, date, request);
         return ApiResponse.success(null, "투두 순서가 변경되었습니다.");
     }
+
+    @GetMapping("/character-status")
+    public ApiResponse<CharacterStatusResponse> getCharacterStatus(
+            @RequestParam LocalDate date
+    ) {
+        Long currentUserId = 1L;
+
+        CharacterStatusResponse response = todoService.getDailyCharacterStatus(currentUserId, date);
+        return ApiResponse.success(response);
+    }
 }
