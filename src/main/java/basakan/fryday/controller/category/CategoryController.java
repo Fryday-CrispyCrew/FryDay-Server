@@ -1,14 +1,17 @@
-package basakan.fryday.controller;
+package basakan.fryday.controller.category;
 
-import basakan.fryday.controller.dto.CategoryCreateRequest;
 import basakan.fryday.common.response.ApiResponse;
-import basakan.fryday.controller.dto.CategoryResponse;
-import basakan.fryday.controller.dto.CategoryUpdateRequest;
+import basakan.fryday.controller.category.request.CategoryCreateRequest;
+import basakan.fryday.controller.category.request.CategoryUpdateRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.category.response.CategoryReadResponse;
+import basakan.fryday.controller.category.response.CategoryResponse;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,6 +19,14 @@ import org.springframework.web.bind.annotation.*;
 public class CategoryController {
 
     private final CategoryService categoryService;
+
+    @GetMapping
+    public ApiResponse<List<CategoryReadResponse>> getCategories() {
+        Long currentUserId = 1L;
+
+        List<CategoryReadResponse> responses = categoryService.getCategoriesByUserId(currentUserId);
+        return ApiResponse.success(responses);
+    }
 
     @PostMapping
     public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryCreateRequest request) {

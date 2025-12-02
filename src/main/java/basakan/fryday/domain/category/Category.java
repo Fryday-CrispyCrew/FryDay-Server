@@ -1,5 +1,6 @@
-package basakan.fryday.domain;
+package basakan.fryday.domain.category;
 
+import basakan.fryday.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Category extends BaseEntity{
+public class Category extends BaseEntity {
 
     @Column(nullable = false)
     private String name;

@@ -1,5 +1,7 @@
-package basakan.fryday.domain;
+package basakan.fryday.domain.todo;
 
+import basakan.fryday.domain.BaseEntity;
+import basakan.fryday.domain.category.Category;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -7,7 +9,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -37,9 +38,8 @@ public class Todo extends BaseEntity {
     private Long displayOrder;
 
     public enum Status {
-        IN_PROGRESS, // 튀기는 중(기본 상태)
-        COMPLETED,   // 튀김(완료)
-        FAILED       // 미완료(탐)
+        IN_PROGRESS, // 미완료 (체크 안 됨)
+        COMPLETED    // 완료 (체크 됨)
     }
 
     @Builder
@@ -59,6 +59,10 @@ public class Todo extends BaseEntity {
         }
     }
 
+    public boolean isCompleted() {
+        return this.status == Status.COMPLETED;
+    }
+
     public void updateMemo(String memo) {
         this.memo = memo;
     }
@@ -71,9 +75,6 @@ public class Todo extends BaseEntity {
         return this.deletedAt != null;
     }
 
-    public boolean isFailed() {
-        return this.status == Status.FAILED;
-    }
 
     public void updateDate(LocalDate date) {
         this.date = date;

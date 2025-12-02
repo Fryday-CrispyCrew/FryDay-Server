@@ -3,10 +3,19 @@ package basakan.fryday.controller;
 import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
-import basakan.fryday.controller.dto.*;
-import basakan.fryday.domain.Category;
-import basakan.fryday.domain.CategoryColor;
-import basakan.fryday.domain.Todo;
+import basakan.fryday.controller.todo.request.MemoRequest;
+import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
+import basakan.fryday.controller.todo.request.TodoSaveRequest;
+import basakan.fryday.controller.todo.response.CharacterStatusResponse;
+import basakan.fryday.controller.todo.response.MemoResponse;
+import basakan.fryday.controller.todo.response.TodoListResponse;
+import basakan.fryday.controller.todo.response.TodoResponse;
+import basakan.fryday.controller.todo.TodoController;
+import basakan.fryday.domain.category.Category;
+import basakan.fryday.domain.category.CategoryColor;
+import basakan.fryday.domain.todo.CharacterStatus;
+import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.service.TodoService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -425,6 +434,98 @@ class TodoControllerTest extends RestDocsSupport {
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 리스트 조회 API (전체/카테고리 필터)")
+    void getTodoList() throws Exception {
+        // given
+        LocalDate date = LocalDate.of(2025, 11, 28);
+        Long categoryId = 1L;
+
+        Category mockCategory = Category.builder().name("운동").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", categoryId);
+
+        Todo todo1 = Todo.builder().description("스쿼트 100개").category(mockCategory).date(date).displayOrder(1L).build();
+        ReflectionTestUtils.setField(todo1, "id", 100L);
+
+        Todo todo2 = Todo.builder().description("런닝 30분").category(mockCategory).date(date).displayOrder(2L).build();
+        ReflectionTestUtils.setField(todo2, "id", 101L);
+
+        List<TodoListResponse> responses = List.of(
+                TodoListResponse.from(todo1),
+                TodoListResponse.from(todo2)
+        );
+
+        // Service Mocking (categoryId가 있을 때를 가정)
+        given(todoService.getTodoList(anyLong(), any(LocalDate.class), anyLong()))
+                .willReturn(responses);
+
+        // when & then
+        mockMvc.perform(get("/api/todos")
+                        .param("date", date.toString())       // 필수 파라미터
+                        .param("categoryId", String.valueOf(categoryId)) // 선택 파라미터
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-list",
+                        queryParameters(
+                                parameterWithName("date").description("조회할 날짜 (YYYY-MM-DD)"),
+                                parameterWithName("categoryId").description("필터링할 카테고리 ID (생략 시 전체 조회)").optional()
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data[].id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data[].description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data[].status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS 등)"),
+                                fieldWithPath("data[].categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data[].displayOrder").type(JsonFieldType.NUMBER).description("정렬 순서"),
+                                fieldWithPath("data[].date").type(JsonFieldType.STRING).description("날짜"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API")
+    void getDailyCharacterStatus() throws Exception {
+        // given
+        LocalDate date = LocalDate.of(2025, 12, 1);
+
+        // Mocking: CASE_D (절반 이상) 상태이며, 랜덤 이미지가 'd1_graphic'으로 결정된 상황 가정
+        CharacterStatusResponse response = CharacterStatusResponse.builder()
+                .status(CharacterStatus.CASE_D)
+                .imageCode("d1_graphic")
+                .description(CharacterStatus.CASE_D.getDescription())
+                .build();
+
+        given(todoService.getDailyCharacterStatus(anyLong(), any(LocalDate.class)))
+                .willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/api/todos/character-status")
+                        .param("date", date.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-character-status",
+                        queryParameters(
+                                parameterWithName("date").description("조회할 날짜 (YYYY-MM-DD)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("캐릭터 상태 Enum (CASE_A ~ CASE_G)"),
+                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING).description("프론트엔드 이미지 매핑 코드 (예: '1', 'd1_graphic' 등)"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("상태 설명"),
+
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

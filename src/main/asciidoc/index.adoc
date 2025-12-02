@@ -102,6 +102,37 @@ include::{snippets}/todo-create/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-create/response-fields.adoc[]
 
+=== 투두 조회
+`GET /api/todos`
+
+투두 목록을 조회합니다.
+
+==== 요청 쿼리 파라미터
+include::{snippets}/todo-list/query-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/todo-list/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/todo-list/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/todo-list/response-fields.adoc[]
+
+=== 투두 캐릭터 상태 조회
+`GET /api/todos/character-status`
+
+투두 캐릭터의 상태를 조회합니다.
+
+==== HTTP 요청 예시
+include::{snippets}/todo-character-status/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-character-status/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-character-status/response-fields.adoc[]
+
+
+
 === 투두 상태 수정
 `POST /api/todos/{todoId}/completion`
 
@@ -260,6 +291,18 @@ include::{snippets}/category-create/http-response.adoc[]
 
 ==== 응답 필드
 include::{snippets}/category-create/response-fields.adoc[]
+
+=== 카테고리 조회
+`GET /api/categories`
+
+카테고리 목록을 조회합니다.
+
+==== HTTP 요청 예시
+include::{snippets}/category-list/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/category-list/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/category-list/response-fields.adoc[]
 
 
 === 카테고리 수정

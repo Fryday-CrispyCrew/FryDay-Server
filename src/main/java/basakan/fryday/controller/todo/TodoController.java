@@ -1,13 +1,21 @@
-package basakan.fryday.controller;
+package basakan.fryday.controller.todo;
 
-import basakan.fryday.controller.dto.*;
 import basakan.fryday.common.response.ApiResponse;
+import basakan.fryday.controller.todo.request.MemoRequest;
+import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
+import basakan.fryday.controller.todo.request.TodoSaveRequest;
+import basakan.fryday.controller.todo.response.CharacterStatusResponse;
+import basakan.fryday.controller.todo.response.MemoResponse;
+import basakan.fryday.controller.todo.response.TodoListResponse;
+import basakan.fryday.controller.todo.response.TodoResponse;
 import basakan.fryday.service.TodoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -15,6 +23,17 @@ import java.time.LocalDate;
 public class TodoController {
 
     private final TodoService todoService;
+
+    @GetMapping
+    public ApiResponse<List<TodoListResponse>> getTodoList(
+            @RequestParam LocalDate date,
+            @RequestParam(required = false) Long categoryId
+    ) {
+        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
+
+        List<TodoListResponse> responses = todoService.getTodoList(currentUserId, date, categoryId);
+        return ApiResponse.success(responses);
+    }
 
     @PostMapping
     public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoSaveRequest request) {
@@ -94,5 +113,15 @@ public class TodoController {
 
         todoService.reorderTodos(currentUserId, date, request);
         return ApiResponse.success(null, "투두 순서가 변경되었습니다.");
+    }
+
+    @GetMapping("/character-status")
+    public ApiResponse<CharacterStatusResponse> getCharacterStatus(
+            @RequestParam LocalDate date
+    ) {
+        Long currentUserId = 1L;
+
+        CharacterStatusResponse response = todoService.getDailyCharacterStatus(currentUserId, date);
+        return ApiResponse.success(response);
     }
 }

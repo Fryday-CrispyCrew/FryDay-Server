@@ -1,6 +1,6 @@
 package basakan.fryday.repository;
 
-import basakan.fryday.domain.Todo;
+import basakan.fryday.domain.todo.Todo;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,4 +13,16 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
     @Query("SELECT MAX(t.displayOrder) FROM Todo t JOIN t.category c WHERE c.userId = :userId AND t.date = :date AND t.deletedAt IS NULL")
     Long findMaxDisplayOrder(@Param("userId") Long userId, @Param("date") LocalDate date);
+
+    // 전체 보기
+    @Query("SELECT t FROM Todo t " +
+            "WHERE t.category.userId = :userId AND t.date = :date AND t.deletedAt IS NULL " +
+            "ORDER BY t.displayOrder ASC")
+    List<Todo> findAllByUserIdAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
+
+    // 카테고리별 보기
+    @Query("SELECT t FROM Todo t " +
+            "WHERE t.category.id = :categoryId AND t.date = :date AND t.deletedAt IS NULL " +
+            "ORDER BY t.displayOrder ASC")
+    List<Todo> findAllByCategoryIdAndDate(@Param("categoryId") Long categoryId, @Param("date") LocalDate date);
 }

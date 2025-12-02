@@ -1,4 +1,4 @@
-package basakan.fryday.controller.dto;
+package basakan.fryday.controller.todo.request;
 
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
