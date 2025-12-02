@@ -1,7 +1,7 @@
 package basakan.fryday.controller.category.response;
 
 import basakan.fryday.domain.category.Category;
-import basakan.fryday.domain.todo.CategoryColor;
+import basakan.fryday.domain.category.CategoryColor;
 import lombok.Getter;
 
 @Getter

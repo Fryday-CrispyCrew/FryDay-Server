@@ -1,7 +1,6 @@
 package basakan.fryday.domain.category;
 
 import basakan.fryday.domain.BaseEntity;
-import basakan.fryday.domain.todo.CategoryColor;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

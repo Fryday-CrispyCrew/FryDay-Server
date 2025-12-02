@@ -8,7 +8,7 @@ import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.controller.category.response.CategoryReadResponse;
 import basakan.fryday.controller.category.response.CategoryResponse;
 import basakan.fryday.domain.category.Category;
-import basakan.fryday.domain.todo.CategoryColor;
+import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.service.CategoryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

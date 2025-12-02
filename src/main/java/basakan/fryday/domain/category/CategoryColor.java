@@ -1,4 +1,4 @@
-package basakan.fryday.domain.todo;
+package basakan.fryday.domain.category;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -10,15 +10,15 @@ import java.util.Arrays;
 @Getter
 @RequiredArgsConstructor
 public enum CategoryColor {
-    BR("BR", "#5D4037"),
-    LG("LG", "#9CCC65"),
-    CB("CB", "#5C85AA"),
-    DP("DP", "#B05C8E"),
-    MT("MT", "#4DB6AC"),
-    VL("VL", "#8E67AC"),
-    PK("PK", "#F06292"),
-    MB("MB", "#A1887F"),
-    YL("YL", "#FFCA28");
+    BR("BR", "#693838"),
+    LG("LG", "#82B236"),
+    CB("CB", "#3E78AE"),
+    DP("DP", "#D0509D"),
+    MT("MT", "#3CB492"),
+    VL("VL", "#9351A1"),
+    PK("PK", "#F06B9C"),
+    MB("MB", "#AA7459"),
+    YL("YL", "#FFA100");
 
     private final String code; // API 통신용 코드
     private final String hex;  // 프론트엔드 표시용 헥사 코드

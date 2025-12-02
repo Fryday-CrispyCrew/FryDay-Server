@@ -9,7 +9,7 @@ import basakan.fryday.controller.category.response.CategoryReadResponse;
 import basakan.fryday.controller.category.response.CategoryResponse;
 import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.domain.category.Category;
-import basakan.fryday.domain.todo.CategoryColor;
+import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

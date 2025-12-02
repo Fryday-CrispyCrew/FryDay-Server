@@ -1,6 +1,6 @@
 package basakan.fryday.controller.category.request;
 
-import basakan.fryday.domain.todo.CategoryColor;
+import basakan.fryday.domain.category.CategoryColor;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
