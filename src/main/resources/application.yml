@@ -1,33 +1,31 @@
 spring:
-  application:
-    name: fryday
-
   datasource:
-    url: jdbc:mysql://localhost:3306/fryday?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/${DB_SCHEMA}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     properties:
       hibernate:
         format_sql: true
         show_sql: true
-    open-in-view: false
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME}
+      password: ${REDIS_PASSWORD}
 
 jwt:
-  secret-key: your-secret-key-here-please-change-this-to-a-secure-key-at-least-32-characters-long
-  access-token-expiration: 3600000
-  refresh-token-expiration: 1209600000
+  secret-key: ${JWT_SECRET_KEY:your-default-jwt-secret-key}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:1296000000}
 
 oauth:
   apple:
-    client-id: your-apple-client-id  # Apple Developer에서 발급받은 Bundle ID 또는 Service ID
+    client-id: ${APPLE_CLIENT_ID:com.example.app}
     jwks-url: https://appleid.apple.com/auth/keys
