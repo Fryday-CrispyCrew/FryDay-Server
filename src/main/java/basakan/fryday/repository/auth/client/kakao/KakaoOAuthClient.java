@@ -5,12 +5,8 @@ import basakan.fryday.domain.auth.AuthProvider;
 import basakan.fryday.repository.auth.client.SocialProviderClient;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Component
 @RequiredArgsConstructor
@@ -18,7 +14,7 @@ public class KakaoOAuthClient implements SocialProviderClient {
 
     private static final String KAKAO_USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
 
-    private final RestTemplate restTemplate;
+    private final WebClient webClient;
 
     @Override
     public AuthProvider getProvider() {
@@ -27,20 +23,19 @@ public class KakaoOAuthClient implements SocialProviderClient {
 
     @Override
     public SocialUserInfo verifyToken(String accessToken, String idToken) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-
         try {
-            ResponseEntity<KakaoUserInfoResponse> response = restTemplate.exchange(
-                    KAKAO_USER_INFO_URL,
-                    HttpMethod.GET,
-                    request,
-                    KakaoUserInfoResponse.class
-            );
+            KakaoUserInfoResponse userResponse = webClient.get()
+                    .uri(KAKAO_USER_INFO_URL)
+                    .headers(headers -> headers.setBearerAuth(accessToken))
+                    .retrieve()
+                    .onStatus(
+                            status -> status.is4xxClientError() || status.is5xxServerError(),
+                            clientResponse -> clientResponse.createException()
+                                    .map(error -> new InvalidProviderTokenException())
+                    )
+                    .bodyToMono(KakaoUserInfoResponse.class)
+                    .block();
 
-            KakaoUserInfoResponse userResponse = response.getBody();
             String socialId = userResponse != null ? userResponse.getSocialId() : null;
 
             if (socialId == null) {
@@ -48,6 +43,8 @@ public class KakaoOAuthClient implements SocialProviderClient {
             }
 
             return new SocialUserInfo(AuthProvider.KAKAO, socialId);
+        } catch (InvalidProviderTokenException e) {
+            throw e;
         } catch (Exception e) {
             throw new InvalidProviderTokenException();
         }
