@@ -349,3 +349,19 @@ include::{snippets}/category-reorder/http-response.adoc[]
 
 ==== 응답 필드
 include::{snippets}/category-reorder/response-fields.adoc[]
+
+== 달력
+
+=== 그릇 표시
+`GET /api/daily-results`
+
+그릇의 상태를 표시합니다.
+
+==== 요청 필드
+include::{snippets}/daily-result-list/query-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/daily-result-list/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/daily-result-list/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/daily-result-list/response-fields.adoc[]

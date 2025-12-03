@@ -1,4 +1,4 @@
-package basakan.fryday.controller;
+package basakan.fryday.controller.todo;
 
 import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.ErrorCode;
@@ -11,7 +11,6 @@ import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
 import basakan.fryday.controller.todo.response.TodoResponse;
-import basakan.fryday.controller.todo.TodoController;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.CharacterStatus;
