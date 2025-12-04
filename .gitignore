@@ -37,3 +37,7 @@ out/
 .vscode/
 claude.md
 tasks/**
+.env
+
+### REST Docs ###
+src/main/resources/static/docs/

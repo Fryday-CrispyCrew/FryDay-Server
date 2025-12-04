@@ -1,0 +1,68 @@
+name: Build & Deploy to OCI
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) 코드 체크아웃
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2) JDK 세팅 (Java 21)
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # 3) Gradle 캐시
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4) JAR 빌드 (테스트는 스킵)
+      - name: Build with Gradle
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean bootJar -x test
+
+      # 5) Docker Hub 로그인
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 6) Docker 이미지 빌드
+      - name: Build Docker image
+        run: |
+          docker build -t yeongo05/fry_day:latest .
+
+      # 7) Docker 이미지 푸시
+      - name: Push Docker image
+        run: |
+          docker push yeongo05/fry_day:latest
+
+      # 8) 서버에 SSH 접속해서 pull + 재기동
+      - name: Deploy to OCI server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ~/apps/fryday
+            docker-compose pull
+            docker-compose up -d
