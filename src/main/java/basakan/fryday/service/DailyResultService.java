@@ -5,7 +5,7 @@ import basakan.fryday.domain.DailyResult;
 import basakan.fryday.domain.BowlType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.DailyResultRepository;
-import basakan.fryday.repository.TodoRepository;
+import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

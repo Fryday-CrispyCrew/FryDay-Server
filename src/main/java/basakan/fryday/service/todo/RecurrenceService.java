@@ -1,4 +1,4 @@
-package basakan.fryday.service;
+package basakan.fryday.service.todo;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
@@ -6,8 +6,8 @@ import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.CategoryRepository;
-import basakan.fryday.repository.RecurrenceRepository;
-import basakan.fryday.repository.TodoRepository;
+import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

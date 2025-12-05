@@ -1,4 +1,4 @@
-package basakan.fryday.service;
+package basakan.fryday.service.todo;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
@@ -15,7 +15,7 @@ import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.CategoryRepository;
-import basakan.fryday.repository.TodoRepository;
+import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
