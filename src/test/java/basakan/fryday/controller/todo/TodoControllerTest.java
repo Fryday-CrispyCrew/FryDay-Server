@@ -15,6 +15,7 @@ import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.service.RecurrenceService;
 import basakan.fryday.service.TodoService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,8 @@ class TodoControllerTest extends RestDocsSupport {
     @MockitoBean
     private TodoService todoService;
 
+    @MockitoBean
+    private RecurrenceService recurrenceService;
 
     @Test
     @DisplayName("투두 생성 API")

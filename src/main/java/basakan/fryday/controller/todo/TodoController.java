@@ -3,12 +3,14 @@ package basakan.fryday.controller.todo;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.todo.request.MemoRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
 import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
 import basakan.fryday.controller.todo.response.TodoResponse;
+import basakan.fryday.service.RecurrenceService;
 import basakan.fryday.service.TodoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.util.List;
 public class TodoController {
 
     private final TodoService todoService;
+    private final RecurrenceService recurrenceService;
 
     @GetMapping
     public ApiResponse<List<TodoListResponse>> getTodoList(
@@ -123,5 +126,13 @@ public class TodoController {
 
         CharacterStatusResponse response = todoService.getDailyCharacterStatus(currentUserId, date);
         return ApiResponse.success(response);
+    }
+
+    @PostMapping("/recurrence")
+    public ApiResponse<Void> createRecurringTodo(@Valid @RequestBody RecurrenceCreateRequest request) {
+        Long currentUserId = 1L;
+
+        recurrenceService.createRecurrence(currentUserId, request);
+        return ApiResponse.success(null, "반복 투두가 생성되었습니다.");
     }
 }

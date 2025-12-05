@@ -37,18 +37,21 @@ public class Todo extends BaseEntity {
     @Column(nullable = false)
     private Long displayOrder;
 
+    private long recurrenceId;
+
     public enum Status {
         IN_PROGRESS, // 미완료 (체크 안 됨)
         COMPLETED    // 완료 (체크 됨)
     }
 
     @Builder
-    public Todo(String description, Category category, LocalDate date, Long displayOrder) {
+    public Todo(String description, Category category, LocalDate date, Long displayOrder, long recurrenceId) {
         this.description = description;
         this.status = Status.IN_PROGRESS;
         this.category = category;
         this.date = (date != null) ? date : LocalDate.now();
         this.displayOrder = displayOrder != null ? displayOrder : 0L;
+        this.recurrenceId = recurrenceId;
     }
 
     public void toggleCompletion() {
