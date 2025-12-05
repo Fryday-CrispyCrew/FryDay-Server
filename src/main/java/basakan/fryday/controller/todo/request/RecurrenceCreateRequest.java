@@ -2,7 +2,6 @@ package basakan.fryday.controller.todo.request;
 
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,11 +14,8 @@ import java.util.List;
 @NoArgsConstructor
 public class RecurrenceCreateRequest {
 
-    @NotBlank(message = "내용은 필수입니다.")
-    private String description;
-
-    @NotNull
-    private long categoryId;
+    @NotNull(message = "대상 투두 ID는 필수입니다.")
+    private Long todoId;
 
     @NotNull(message = "반복 유형은 필수입니다.")
     private RecurrenceType type;
@@ -34,7 +30,7 @@ public class RecurrenceCreateRequest {
 
     private LocalTime notificationTime;
 
-    public Recurrence toEntity(long userId) {
+    public Recurrence toEntity(Long userId, Long categoryId, String description) {
         String valuesString = (frequencyValues != null && !frequencyValues.isEmpty())
                 ? String.join(",", frequencyValues)
                 : null;

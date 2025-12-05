@@ -3,7 +3,6 @@ package basakan.fryday.service;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
-import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.CategoryRepository;
@@ -27,16 +26,24 @@ public class RecurrenceService {
     private final CategoryRepository categoryRepository;
 
     @Transactional
-    public void createRecurrence(long userId, RecurrenceCreateRequest request) {
-        if (request.getEndDate().isBefore(request.getStartDate())) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
+    public void createRecurrence(Long userId, RecurrenceCreateRequest request) {
+        Todo originalTodo = todoRepository.findById(request.getTodoId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+        Recurrence recurrence = Recurrence.builder()
+                .userId(userId)
+                .categoryId(originalTodo.getCategory().getId())
+                .description(originalTodo.getDescription())
+                .type(request.getType())
+                .frequencyValues(String.join(",", request.getFrequencyValues()))
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .notificationTime(request.getNotificationTime())
+                .build();
 
-        Recurrence recurrence = request.toEntity(userId);
         Recurrence savedRecurrence = recurrenceRepository.save(recurrence);
+
+        originalTodo.setRecurrenceId(savedRecurrence.getId());
 
         List<Todo> todoList = new ArrayList<>();
 
@@ -49,15 +56,14 @@ public class RecurrenceService {
                 long nextOrder = (maxOrder == null) ? 1 : maxOrder + 1;
 
                 Todo todo = Todo.builder()
-                        .description(request.getDescription())
-                        .category(category)
+                        .description(originalTodo.getDescription())
+                        .category(originalTodo.getCategory())
                         .date(currentDate)
                         .displayOrder(nextOrder)
                         .recurrenceId(savedRecurrence.getId())
                         .build();
                 todoList.add(todo);
             }
-
             currentDate = currentDate.plusDays(1);
         }
         todoRepository.saveAll(todoList);

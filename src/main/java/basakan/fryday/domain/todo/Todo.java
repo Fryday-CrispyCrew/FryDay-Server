@@ -87,4 +87,8 @@ public class Todo extends BaseEntity {
         this.displayOrder = displayOrder;
     }
 
+    public void setRecurrenceId(Long recurrenceId) {
+        this.recurrenceId = recurrenceId;
+    }
+
 }
