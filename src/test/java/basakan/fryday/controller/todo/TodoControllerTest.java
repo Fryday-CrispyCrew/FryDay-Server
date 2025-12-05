@@ -1,22 +1,24 @@
-package basakan.fryday.controller;
+package basakan.fryday.controller.todo;
 
 import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.MemoRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
 import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
 import basakan.fryday.controller.todo.response.TodoResponse;
-import basakan.fryday.controller.todo.TodoController;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.CharacterStatus;
+import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
-import basakan.fryday.service.TodoService;
+import basakan.fryday.service.todo.RecurrenceService;
+import basakan.fryday.service.todo.TodoService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -26,6 +28,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -45,6 +48,8 @@ class TodoControllerTest extends RestDocsSupport {
     @MockitoBean
     private TodoService todoService;
 
+    @MockitoBean
+    private RecurrenceService recurrenceService;
 
     @Test
     @DisplayName("투두 생성 API")
@@ -526,6 +531,42 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.imageCode").type(JsonFieldType.STRING).description("프론트엔드 이미지 매핑 코드 (예: '1', 'd1_graphic' 등)"),
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("상태 설명"),
 
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 반복 설정 API")
+    void createRecurringTodo() throws Exception {
+        // given
+        RecurrenceCreateRequest request = new RecurrenceCreateRequest();
+        ReflectionTestUtils.setField(request, "todoId", 1L);
+        ReflectionTestUtils.setField(request, "type", RecurrenceType.WEEKLY);
+        ReflectionTestUtils.setField(request, "frequencyValues", List.of("MONDAY", "WEDNESDAY", "FRIDAY"));
+        ReflectionTestUtils.setField(request, "startDate", LocalDate.of(2025, 12, 1));
+        ReflectionTestUtils.setField(request, "endDate", LocalDate.of(2025, 12, 31));
+        ReflectionTestUtils.setField(request, "notificationTime", LocalTime.of(9, 0));
+
+        // when & then
+        mockMvc.perform(post("/api/todos/recurrence")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-recurrence-create",
+                        requestFields(
+                                fieldWithPath("todoId").type(JsonFieldType.NUMBER).description("반복 설정할 원본 투두 ID"),
+                                fieldWithPath("type").type(JsonFieldType.STRING).description("반복 주기 (DAILY, WEEKLY, MONTHLY, YEARLY)"),
+                                fieldWithPath("frequencyValues").type(JsonFieldType.ARRAY).description("반복 상세 값 리스트 (요일, 날짜 등)"),
+                                fieldWithPath("startDate").type(JsonFieldType.STRING).description("반복 시작일 (YYYY-MM-DD)"),
+                                fieldWithPath("endDate").type(JsonFieldType.STRING).description("반복 종료일 (YYYY-MM-DD)"),
+                                fieldWithPath("notificationTime").type(JsonFieldType.STRING).description("알림 시간 (HH:mm)").optional()
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data").type(JsonFieldType.NULL).description("데이터 (없음)").optional(),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

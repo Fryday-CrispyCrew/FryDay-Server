@@ -1,4 +1,4 @@
-package basakan.fryday.repository;
+package basakan.fryday.repository.todo;
 
 import basakan.fryday.domain.todo.Todo;
 import org.springframework.data.jpa.repository.JpaRepository;

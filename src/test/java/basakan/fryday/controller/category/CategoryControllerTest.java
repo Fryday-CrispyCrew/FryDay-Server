@@ -1,7 +1,6 @@
-package basakan.fryday.controller;
+package basakan.fryday.controller.category;
 
 import basakan.fryday.RestDocsSupport;
-import basakan.fryday.controller.category.CategoryController;
 import basakan.fryday.controller.category.request.CategoryCreateRequest;
 import basakan.fryday.controller.category.request.CategoryUpdateRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
