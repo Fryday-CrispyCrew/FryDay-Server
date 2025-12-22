@@ -195,8 +195,8 @@ public class TodoService {
 
     private String resolveImageCode(CharacterStatus status) {
         if (status == CharacterStatus.CASE_D) {
-            // Case D일 때만 D1, D2 중 랜덤 반환
-            return Math.random() < 0.5 ? "d1_graphic" : "d2_graphic";
+            // Case E일 때만 e1, e2 중 랜덤 반환
+            return Math.random() < 0.5 ? "e1_graphic" : "e2_graphic";
         }
         return status.getImageCode();
     }
