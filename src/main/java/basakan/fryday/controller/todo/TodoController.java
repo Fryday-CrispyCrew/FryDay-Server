@@ -129,10 +129,10 @@ public class TodoController {
     }
 
     @PostMapping("/recurrence")
-    public ApiResponse<Void> createRecurringTodo(@Valid @RequestBody RecurrenceCreateRequest request) {
+    public ApiResponse<TodoResponse> createRecurringTodo(@Valid @RequestBody RecurrenceCreateRequest request) {
         Long currentUserId = 1L;
 
-        recurrenceService.createRecurrence(currentUserId, request);
-        return ApiResponse.success(null, "반복 투두가 생성되었습니다.");
+        TodoResponse response = recurrenceService.createRecurrence(currentUserId, request);
+        return ApiResponse.success(response, "반복 투두가 생성되었습니다.");
     }
 }
