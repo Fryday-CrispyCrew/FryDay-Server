@@ -25,8 +25,7 @@ public class RecurrenceCreateRequest {
     @NotNull(message = "시작일은 필수입니다.")
     private LocalDate startDate;
 
-    @NotNull(message = "종료일은 필수입니다.")
-    private LocalDate endDate;
+    private LocalDate endDate; // null이면 무한 반복 (Rolling Window Strategy)
 
     private LocalTime notificationTime;
 
