@@ -577,7 +577,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("type").type(JsonFieldType.STRING).description("반복 주기 (DAILY, WEEKLY, MONTHLY, YEARLY)"),
                                 fieldWithPath("frequencyValues").type(JsonFieldType.ARRAY).description("반복 상세 값 리스트 (요일, 날짜 등)"),
                                 fieldWithPath("startDate").type(JsonFieldType.STRING).description("반복 시작일 (YYYY-MM-DD)"),
-                                fieldWithPath("endDate").type(JsonFieldType.STRING).description("반복 종료일 (YYYY-MM-DD, null이면 무한 반복 - Rolling Window)").optional(),
+                                fieldWithPath("endDate").type(JsonFieldType.STRING).description("반복 종료일 (YYYY-MM-DD, null이면 무한 반복)").optional(),
                                 fieldWithPath("notificationTime").type(JsonFieldType.STRING).description("알림 시간 (HH:mm)").optional()
                         ),
                         responseFields(
