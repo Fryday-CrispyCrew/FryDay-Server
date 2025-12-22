@@ -76,10 +76,6 @@ public class TodoService {
                 .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-//        if (todo.isFailed()) {
-//            throw new BusinessException(ErrorCode.CANNOT_DELETE_FAILED_TODO);
-//        }
-
         todoRepository.delete(todo);
     }
 
