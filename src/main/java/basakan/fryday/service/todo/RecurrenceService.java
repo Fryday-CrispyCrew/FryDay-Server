@@ -3,9 +3,9 @@ package basakan.fryday.service.todo;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
+import basakan.fryday.controller.todo.response.TodoResponse;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.Todo;
-import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,22 +23,34 @@ public class RecurrenceService {
 
     private final RecurrenceRepository recurrenceRepository;
     private final TodoRepository todoRepository;
-    private final CategoryRepository categoryRepository;
 
     @Transactional
-    public void createRecurrence(Long userId, RecurrenceCreateRequest request) {
+    public TodoResponse createRecurrence(Long userId, RecurrenceCreateRequest request) {
         Todo originalTodo = todoRepository.findById(request.getTodoId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        originalTodo.updateDate(request.getStartDate());
+
+        LocalDate today = LocalDate.now();
+        LocalDate generationStartDate = request.getStartDate().isBefore(today) ? today : request.getStartDate();
+        
+        // 종료일이 없으면 오늘부터 +1년까지만 생성
+        LocalDate limitDate = (request.getEndDate() != null)
+                ? request.getEndDate()
+                : today.plusYears(1);
 
         Recurrence recurrence = Recurrence.builder()
                 .userId(userId)
                 .categoryId(originalTodo.getCategory().getId())
                 .description(originalTodo.getDescription())
                 .type(request.getType())
-                .frequencyValues(String.join(",", request.getFrequencyValues()))
+                .frequencyValues(request.getFrequencyValues() != null 
+                        ? String.join(",", request.getFrequencyValues()) 
+                        : null)
                 .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
+                .endDate(request.getEndDate()) // null이면 무한 반복
                 .notificationTime(request.getNotificationTime())
+                .lastGeneratedDate(limitDate)
                 .build();
 
         Recurrence savedRecurrence = recurrenceRepository.save(recurrence);
@@ -47,8 +59,8 @@ public class RecurrenceService {
 
         List<Todo> todoList = new ArrayList<>();
 
-        LocalDate currentDate = request.getStartDate();
-        LocalDate limitDate = request.getEndDate();
+        // 시작일부터 limitDate까지 투두 생성
+        LocalDate currentDate = generationStartDate.plusDays(1);
 
         while (!currentDate.isAfter(limitDate)) {
             if (isMatch(request, currentDate)) {
@@ -68,6 +80,7 @@ public class RecurrenceService {
         }
         todoRepository.saveAll(todoList);
 
+        return TodoResponse.from(originalTodo);
     }
 
     private boolean isMatch(RecurrenceCreateRequest request, LocalDate date) {

@@ -36,14 +36,17 @@ public class Recurrence extends BaseEntity {
     @Column(nullable = false)
     private LocalDate startDate;
 
-    @Column(nullable = false)
     private LocalDate endDate;
 
     private LocalTime notificationTime;
 
+    @Column(nullable = false)
+    private LocalDate lastGeneratedDate;
+
     @Builder
     public Recurrence(long userId, long categoryId, String description, RecurrenceType type,
-                      String frequencyValues, LocalDate startDate, LocalDate endDate, LocalTime notificationTime) {
+                      String frequencyValues, LocalDate startDate, LocalDate endDate,
+                      LocalTime notificationTime, LocalDate lastGeneratedDate) {
         this.userId = userId;
         this.categoryId = categoryId;
         this.description = description;
@@ -52,5 +55,10 @@ public class Recurrence extends BaseEntity {
         this.startDate = startDate;
         this.endDate = endDate;
         this.notificationTime = notificationTime;
+        this.lastGeneratedDate = lastGeneratedDate;
+    }
+
+    public void updateLastGeneratedDate(LocalDate date) {
+        this.lastGeneratedDate = date;
     }
 }

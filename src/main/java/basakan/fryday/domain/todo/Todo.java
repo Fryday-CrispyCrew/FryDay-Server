@@ -37,7 +37,8 @@ public class Todo extends BaseEntity {
     @Column(nullable = false)
     private Long displayOrder;
 
-    private long recurrenceId;
+    @Column(name = "recurrence_id")
+    private Long recurrenceId;
 
     public enum Status {
         IN_PROGRESS, // 미완료 (체크 안 됨)

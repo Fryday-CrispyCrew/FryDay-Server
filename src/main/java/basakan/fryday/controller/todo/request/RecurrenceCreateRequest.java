@@ -25,7 +25,6 @@ public class RecurrenceCreateRequest {
     @NotNull(message = "시작일은 필수입니다.")
     private LocalDate startDate;
 
-    @NotNull(message = "종료일은 필수입니다.")
     private LocalDate endDate;
 
     private LocalTime notificationTime;
