@@ -1,6 +1,8 @@
 package basakan.fryday.controller.category;
 
 import basakan.fryday.RestDocsSupport;
+import basakan.fryday.common.security.JwtAuthenticationFilter;
+import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.category.request.CategoryCreateRequest;
 import basakan.fryday.controller.category.request.CategoryUpdateRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
@@ -35,6 +37,12 @@ class CategoryControllerTest extends RestDocsSupport {
 
     @MockitoBean
     private CategoryService categoryService;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("카테고리 생성 API")

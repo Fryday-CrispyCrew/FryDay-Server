@@ -1,6 +1,8 @@
 package basakan.fryday.controller;
 
 import basakan.fryday.RestDocsSupport;
+import basakan.fryday.common.security.JwtAuthenticationFilter;
+import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.todo.response.DailyResultResponse;
 import basakan.fryday.domain.DailyResult;
 import basakan.fryday.domain.BowlType;
@@ -33,6 +35,12 @@ class DailyResultControllerTest extends RestDocsSupport {
 
     @MockitoBean
     private DailyResultService dailyResultService;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("그릇 결과 조회 API")

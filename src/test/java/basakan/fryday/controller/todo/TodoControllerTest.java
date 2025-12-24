@@ -3,6 +3,8 @@ package basakan.fryday.controller.todo;
 import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.common.security.JwtAuthenticationFilter;
+import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.todo.request.MemoRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
@@ -50,6 +52,12 @@ class TodoControllerTest extends RestDocsSupport {
 
     @MockitoBean
     private RecurrenceService recurrenceService;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("투두 생성 API")
