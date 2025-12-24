@@ -1,6 +1,6 @@
 package basakan.fryday.scheduler;
 
-import basakan.fryday.domain.auth.User;
+import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.service.DailyResultService;
 import lombok.RequiredArgsConstructor;

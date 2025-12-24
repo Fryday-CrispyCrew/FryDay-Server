@@ -1,7 +1,7 @@
 package basakan.fryday.repository.auth.client.kakao;
 
 import basakan.fryday.common.exception.auth.InvalidProviderTokenException;
-import basakan.fryday.domain.auth.AuthProvider;
+import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.repository.auth.client.SocialProviderClient;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class KakaoOAuthClient implements SocialProviderClient {
     }
 
     @Override
-    public SocialUserInfo verifyToken(String accessToken, String idToken) {
+    public SocialUserInfo getUserInfo(String accessToken, String idToken) {
         try {
             KakaoUserInfoResponse userResponse = webClient.get()
                     .uri(KAKAO_USER_INFO_URL)

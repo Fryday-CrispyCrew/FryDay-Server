@@ -1,8 +1,8 @@
-package basakan.fryday.controller.auth.response;
+package basakan.fryday.controller.user.response;
 
-import basakan.fryday.domain.auth.AuthProvider;
-import basakan.fryday.domain.auth.LoginStatus;
-import basakan.fryday.domain.auth.User;
+import basakan.fryday.domain.user.AuthProvider;
+import basakan.fryday.domain.user.OnboardingStatus;
+import basakan.fryday.domain.user.User;
 import basakan.fryday.service.auth.dto.SocialLoginDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,9 +15,10 @@ import lombok.NoArgsConstructor;
 @Builder
 public class SocialLoginResponse {
 
-    private LoginStatus loginStatus;
+    private OnboardingStatus onboardingStatus;
     private String accessToken;
     private String refreshToken;
+    private String deviceId;
     private UserInfo user;
 
     public static SocialLoginResponse from(SocialLoginDto dto) {
@@ -26,15 +27,13 @@ public class SocialLoginResponse {
                 .provider(dto.provider())
                 .role(dto.role())
                 .nickname(dto.nickname())
-                .consentAgreed(dto.consentAgreed())
-                .onboardingCompleted(dto.onboardingCompleted())
-                .nicknameSet(dto.nicknameSet())
                 .build();
 
         return SocialLoginResponse.builder()
-                .loginStatus(dto.loginStatus())
+                .onboardingStatus(dto.onboardingStatus())
                 .accessToken(dto.accessToken())
                 .refreshToken(dto.refreshToken())
+                .deviceId(dto.deviceId())
                 .user(userInfo)
                 .build();
     }
@@ -48,8 +47,5 @@ public class SocialLoginResponse {
         private AuthProvider provider;
         private User.Role role;
         private String nickname;
-        private boolean consentAgreed;
-        private boolean onboardingCompleted;
-        private boolean nicknameSet;
     }
 }

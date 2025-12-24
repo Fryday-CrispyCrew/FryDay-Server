@@ -1,4 +1,4 @@
-package basakan.fryday.domain.auth;
+package basakan.fryday.domain.user;
 
 public enum AuthProvider {
     KAKAO,
