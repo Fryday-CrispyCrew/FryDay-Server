@@ -1,7 +1,7 @@
 package basakan.fryday.repository.auth.client.apple;
 
 import basakan.fryday.common.exception.auth.InvalidProviderTokenException;
-import basakan.fryday.domain.auth.AuthProvider;
+import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.repository.auth.client.SocialProviderClient;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
 import io.jsonwebtoken.Claims;
@@ -27,7 +27,7 @@ public class AppleOAuthClient implements SocialProviderClient {
     }
 
     @Override
-    public SocialUserInfo verifyToken(String accessToken, String idToken) {
+    public SocialUserInfo getUserInfo(String accessToken, String idToken) {
         if (idToken == null || idToken.isEmpty()) {
             throw new InvalidProviderTokenException();
         }

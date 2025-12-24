@@ -32,6 +32,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
 
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
@@ -47,6 +48,7 @@ dependencies {
 
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testRuntimeOnly 'com.h2database:h2'
 
@@ -76,6 +78,7 @@ asciidoctor {
 // API 문서를 static 리소스로 복사 (개발/배포 모두 접근 가능, Git 커밋 제외)
 task copyDocument(type: Copy) {
 	dependsOn asciidoctor
+	mustRunAfter processResources
 	from file("${asciidoctor.outputDir}")
 	into file('src/main/resources/static/docs')
 }

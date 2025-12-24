@@ -1,6 +1,6 @@
 package basakan.fryday.common.security;
 
-import basakan.fryday.domain.auth.User;
+import basakan.fryday.domain.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -27,13 +27,14 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateAccessToken(Long userId, User.Role role) {
+    public String generateAccessToken(Long userId, User.Role role, User.AccountStatus accountStatus) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("role", role.name())
+                .claim("accountStatus", accountStatus.name())
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(getSigningKey())

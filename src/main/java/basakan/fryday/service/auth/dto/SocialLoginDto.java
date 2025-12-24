@@ -1,8 +1,8 @@
 package basakan.fryday.service.auth.dto;
 
-import basakan.fryday.domain.auth.AuthProvider;
-import basakan.fryday.domain.auth.LoginStatus;
-import basakan.fryday.domain.auth.User;
+import basakan.fryday.domain.user.AuthProvider;
+import basakan.fryday.domain.user.OnboardingStatus;
+import basakan.fryday.domain.user.User;
 import lombok.Builder;
 
 @Builder
@@ -11,25 +11,21 @@ public record SocialLoginDto(
         AuthProvider provider,
         User.Role role,
         String nickname,
-        boolean consentAgreed,
-        boolean onboardingCompleted,
-        boolean nicknameSet,
-        LoginStatus loginStatus,
+        OnboardingStatus onboardingStatus,
         String accessToken,
-        String refreshToken
+        String refreshToken,
+        String deviceId
 ) {
-    public static SocialLoginDto from(User user, AuthProvider provider, String accessToken, String refreshToken) {
+    public static SocialLoginDto from(User user, AuthProvider provider, String accessToken, String refreshToken, String deviceId) {
         return SocialLoginDto.builder()
                 .userId(user.getId())
                 .provider(provider)
                 .role(user.getRole())
                 .nickname(user.getNickname())
-                .consentAgreed(user.isConsentAgreed())
-                .onboardingCompleted(user.isOnboardingCompleted())
-                .nicknameSet(user.isNicknameSet())
-                .loginStatus(user.calculateLoginStatus())
+                .onboardingStatus(user.getOnboardingStatus())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .deviceId(deviceId)
                 .build();
     }
 }

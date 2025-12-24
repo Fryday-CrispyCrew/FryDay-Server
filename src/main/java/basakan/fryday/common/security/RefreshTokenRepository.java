@@ -19,13 +19,16 @@ public class RefreshTokenRepository {
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
 
-    public String generateAndSave(Long userId) {
+    public String generateAndSave(Long userId, String deviceId) {
         String refreshToken = UUID.randomUUID().toString();
         String key = KEY_PREFIX + refreshToken;
 
+        // userId와 deviceId를 함께 저장 (형식: "userId:deviceId")
+        String value = userId + ":" + deviceId;
+
         redisTemplate.opsForValue().set(
                 key,
-                String.valueOf(userId),
+                value,
                 refreshTokenExpiration,
                 TimeUnit.MILLISECONDS
         );
@@ -35,10 +38,21 @@ public class RefreshTokenRepository {
 
     public Optional<Long> getUserId(String refreshToken) {
         String key = KEY_PREFIX + refreshToken;
-        String userId = redisTemplate.opsForValue().get(key);
+        String value = redisTemplate.opsForValue().get(key);
 
-        return Optional.ofNullable(userId)
+        return Optional.ofNullable(value)
+                .map(v -> v.split(":")[0])
                 .map(Long::parseLong);
+    }
+
+    public Optional<String> getDeviceId(String refreshToken) {
+        String key = KEY_PREFIX + refreshToken;
+        String value = redisTemplate.opsForValue().get(key);
+
+        return Optional.ofNullable(value)
+                .map(v -> v.split(":"))
+                .filter(parts -> parts.length > 1)
+                .map(parts -> parts[1]);
     }
 
     public void delete(String refreshToken) {

@@ -1,6 +1,6 @@
 package basakan.fryday.common.client;
 
-import basakan.fryday.domain.auth.AuthProvider;
+import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.repository.auth.client.SocialProviderClient;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
 
@@ -18,7 +18,7 @@ public class MockSocialProviderClient implements SocialProviderClient {
     }
 
     @Override
-    public SocialUserInfo verifyToken(String accessToken, String idToken) {
+    public SocialUserInfo getUserInfo(String accessToken, String idToken) {
         return new SocialUserInfo(
                 provider,
                 "mock-provider-user-id-" + accessToken

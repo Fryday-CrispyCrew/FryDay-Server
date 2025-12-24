@@ -1,7 +1,7 @@
 package basakan.fryday.repository.auth.client.naver;
 
 import basakan.fryday.common.exception.auth.InvalidProviderTokenException;
-import basakan.fryday.domain.auth.AuthProvider;
+import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.repository.auth.client.SocialProviderClient;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class NaverOAuthClient implements SocialProviderClient {
     }
 
     @Override
-    public SocialUserInfo verifyToken(String accessToken, String idToken) {
+    public SocialUserInfo getUserInfo(String accessToken, String idToken) {
         try {
             NaverUserInfoResponse userResponse = webClient.get()
                     .uri(NAVER_USER_INFO_URL)

@@ -1,6 +1,6 @@
 package basakan.fryday.repository.auth.client;
 
-import basakan.fryday.domain.auth.AuthProvider;
+import basakan.fryday.domain.user.AuthProvider;
 
 public record SocialUserInfo(
         AuthProvider provider,

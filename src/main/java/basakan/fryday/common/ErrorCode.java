@@ -30,7 +30,17 @@ public enum ErrorCode {
     UNSUPPORTED_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 Provider입니다."),
     USER_BLOCKED(HttpStatus.FORBIDDEN, "차단된 사용자입니다."),
     USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 사용자입니다."),
-    INTERNAL_AUTH_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "인증 처리 중 오류가 발생했습니다.");
+    INTERNAL_AUTH_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "인증 처리 중 오류가 발생했습니다."),
+    REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "Refresh Token이 유효하지 않거나 만료되었습니다."),
+
+    // Account
+    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+    INVALID_NICKNAME_LENGTH(HttpStatus.BAD_REQUEST, "닉네임은 2자 이상 10자 이하로 입력해주세요."),
+    FCM_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "FCM 토큰이 유효하지 않은 형식입니다."),
+
+    // Device
+    DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND, "디바이스를 찾을 수 없습니다."),
+    DEVICE_EXPIRED(HttpStatus.UNAUTHORIZED, "디바이스 세션이 만료되었습니다.");
 
     private final HttpStatus status;
     private final String message;

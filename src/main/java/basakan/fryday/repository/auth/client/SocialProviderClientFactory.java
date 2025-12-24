@@ -1,6 +1,9 @@
 package basakan.fryday.repository.auth.client;
 
-import basakan.fryday.domain.auth.AuthProvider;
+import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.domain.user.AuthProvider;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,21 +20,19 @@ public class SocialProviderClientFactory {
 
     private Map<AuthProvider, SocialProviderClient> clientMap;
 
-    private Map<AuthProvider, SocialProviderClient> getClientMap() {
-        if (clientMap == null) {
-            clientMap = clients.stream()
-                    .collect(Collectors.toMap(
-                            SocialProviderClient::getProvider,
-                            Function.identity()
-                    ));
-        }
-        return clientMap;
+    @PostConstruct
+    private void initializeClientMap() {
+        this.clientMap = clients.stream()
+                .collect(Collectors.toMap(
+                        SocialProviderClient::getProvider,
+                        Function.identity()
+                ));
     }
 
     public SocialProviderClient getClient(AuthProvider provider) {
-        SocialProviderClient client = getClientMap().get(provider);
+        SocialProviderClient client = clientMap.get(provider);
         if (client == null) {
-            throw new IllegalArgumentException("Unsupported provider: " + provider);
+            throw new BusinessException(ErrorCode.UNSUPPORTED_PROVIDER);
         }
         return client;
     }
