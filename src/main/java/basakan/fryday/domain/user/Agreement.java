@@ -20,26 +20,30 @@ public class Agreement extends BaseEntity {
     @Column(nullable = false)
     private boolean privacyAgreed = false;
 
-    @Column(nullable = false)
-    private boolean marketingAgreed = false;
+    @Column(name = "push_notification_agreed", nullable = false)
+    private boolean pushNotificationAgreed = false;
 
     @Builder
-    private Agreement(User user, boolean privacyAgreed, boolean marketingAgreed) {
+    private Agreement(User user, boolean privacyAgreed, boolean pushNotificationAgreed) {
         this.user = user;
         this.privacyAgreed = privacyAgreed;
-        this.marketingAgreed = marketingAgreed;
+        this.pushNotificationAgreed = pushNotificationAgreed;
     }
 
-    public static Agreement create(User user, boolean privacyAgreed, boolean marketingAgreed) {
+    public static Agreement create(User user, boolean privacyAgreed, boolean pushNotificationAgreed) {
         return Agreement.builder()
                 .user(user)
                 .privacyAgreed(privacyAgreed)
-                .marketingAgreed(marketingAgreed)
+                .pushNotificationAgreed(pushNotificationAgreed)
                 .build();
     }
 
-    public void updateConsent(boolean privacyAgreed, boolean marketingAgreed) {
+    public void updateConsent(boolean privacyAgreed, boolean pushNotificationAgreed) {
         this.privacyAgreed = privacyAgreed;
-        this.marketingAgreed = marketingAgreed;
+        this.pushNotificationAgreed = pushNotificationAgreed;
+    }
+
+    public void updatePushNotificationAgreement(boolean agreed) {
+        this.pushNotificationAgreed = agreed;
     }
 }
