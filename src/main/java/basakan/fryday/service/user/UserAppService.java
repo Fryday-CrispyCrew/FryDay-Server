@@ -40,14 +40,14 @@ public class UserAppService {
     private final UserDeviceReadService userDeviceReadService;
     private final UserDeviceWriteService userDeviceWriteService;
 
-    public void agreeConsent(boolean privacyRequired, boolean marketingOptional) {
+    public void agreeConsent(boolean privacyRequired, boolean pushNotificationOptional) {
         Long userId = UserContext.getCurrentUserId();
         User user = userReadService.findById(userId);
 
         Agreement agreement = userReadService.findAgreementByUser(user)
-                .orElseGet(() -> Agreement.create(user, privacyRequired, marketingOptional));
+                .orElseGet(() -> Agreement.create(user, privacyRequired, pushNotificationOptional));
 
-        userWriteService.agreeConsent(user, agreement, privacyRequired, marketingOptional);
+        userWriteService.agreeConsent(user, agreement, privacyRequired, pushNotificationOptional);
     }
 
     public void completeOnboarding() {

@@ -184,7 +184,7 @@ class UserControllerTest extends RestDocsSupport {
                 .andDo(document("user-consent",
                         requestFields(
                                 fieldWithPath("privacyRequired").type(JsonFieldType.BOOLEAN).description("개인정보 수집 및 이용 동의 (필수)"),
-                                fieldWithPath("marketingOptional").type(JsonFieldType.BOOLEAN).description("마케팅 수신 동의 (선택)")
+                                fieldWithPath("pushNotificationOptional").type(JsonFieldType.BOOLEAN).description("푸시 알림 수신 동의 (선택)")
                         ),
                         responseFields(
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
