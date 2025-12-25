@@ -33,6 +33,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/users/social/login").permitAll()
+                        .requestMatchers("/api/users/apple/login").permitAll()
                         .requestMatchers("/api/users/token/refresh").permitAll()
                         .requestMatchers("/api/users/nickname/check").permitAll()
                         .requestMatchers("/docs/**").permitAll()
