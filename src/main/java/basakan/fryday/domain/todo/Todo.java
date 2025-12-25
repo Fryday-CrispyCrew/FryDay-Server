@@ -40,6 +40,9 @@ public class Todo extends BaseEntity {
     @Column(name = "recurrence_id")
     private Long recurrenceId;
 
+    @Column(nullable = false)
+    private Boolean isBurnt = false;
+
     public enum Status {
         IN_PROGRESS, // 미완료 (체크 안 됨)
         COMPLETED    // 완료 (체크 됨)
@@ -53,6 +56,7 @@ public class Todo extends BaseEntity {
         this.date = (date != null) ? date : LocalDate.now();
         this.displayOrder = displayOrder != null ? displayOrder : 0L;
         this.recurrenceId = recurrenceId;
+        this.isBurnt = false;
     }
 
     public void toggleCompletion() {
