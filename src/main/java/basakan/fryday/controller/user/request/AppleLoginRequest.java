@@ -3,40 +3,34 @@ package basakan.fryday.controller.user.request;
 import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.service.auth.dto.SocialLoginServiceDto;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 카카오, 네이버 소셜 로그인 요청
- * (애플 로그인은 AppleLoginRequest 사용)
- */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class SocialLoginRequest {
+public class AppleLoginRequest {
 
-    @NotNull(message = "Provider는 필수입니다 (KAKAO, NAVER)")
-    private AuthProvider provider;  // KAKAO, NAVER만 허용
+    @NotBlank(message = "ID Token은 필수입니다")
+    private String idToken;
 
-    @NotBlank(message = "Access Token은 필수입니다")
-    private String accessToken;
+    private String authorizationCode;  // 선택, Refresh Token 갱신 시 사용
 
     @NotBlank(message = "DeviceId는 필수입니다")
     private String deviceId;
 
     private String deviceType;  // iOS, Android, Web
 
-    private String deviceName;  // "iPhone 14 Pro", "Galaxy S23" 등
+    private String deviceName;  // "iPhone 14 Pro", "iPad Pro" 등
 
     private String fcmToken;
 
     public SocialLoginServiceDto toServiceDto() {
         return new SocialLoginServiceDto(
-                provider,
-                accessToken,
-                null,  // idToken은 카카오/네이버에서 사용하지 않음
+                AuthProvider.APPLE,
+                null,  // accessToken은 사용하지 않음
+                idToken,
                 deviceId,
                 deviceType,
                 deviceName,

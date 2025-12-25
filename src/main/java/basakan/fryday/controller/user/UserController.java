@@ -1,6 +1,7 @@
 package basakan.fryday.controller.user;
 
 import basakan.fryday.common.response.MessageResponse;
+import basakan.fryday.controller.user.request.AppleLoginRequest;
 import basakan.fryday.controller.user.request.SocialLoginRequest;
 import basakan.fryday.controller.user.response.SocialLoginResponse;
 import basakan.fryday.controller.user.response.NicknameCheckResponse;
@@ -25,8 +26,18 @@ public class UserController {
 
     private final UserAppService userAppService;
 
+    /**
+     * 카카오, 네이버 소셜 로그인
+     */
     @PostMapping("/social/login")
     public ResponseEntity<SocialLoginResponse> socialLogin(@Valid @RequestBody SocialLoginRequest request) {
+        SocialLoginDto result = userAppService.socialLogin(request.toServiceDto());
+        SocialLoginResponse response = SocialLoginResponse.from(result);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/apple/login")
+    public ResponseEntity<SocialLoginResponse> appleLogin(@Valid @RequestBody AppleLoginRequest request) {
         SocialLoginDto result = userAppService.socialLogin(request.toServiceDto());
         SocialLoginResponse response = SocialLoginResponse.from(result);
         return ResponseEntity.ok(response);

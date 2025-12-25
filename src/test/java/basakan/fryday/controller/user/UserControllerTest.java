@@ -50,13 +50,12 @@ class UserControllerTest extends RestDocsSupport {
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
-    @DisplayName("소셜 로그인 API - 신규 사용자")
+    @DisplayName("소셜 로그인 API (카카오, 네이버) - 신규 사용자")
     void socialLogin_NewUser() throws Exception {
         // given
         SocialLoginRequest request = new SocialLoginRequest(
                 AuthProvider.KAKAO,
                 "kakao-access-token-123",
-                null,
                 "device-id-123",
                 "iOS",
                 "iPhone 14 Pro",
@@ -88,9 +87,66 @@ class UserControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.refreshToken").exists())
                 .andDo(document("user-social-login",
                         requestFields(
-                                fieldWithPath("provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자 (KAKAO, NAVER, APPLE)"),
+                                fieldWithPath("provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자 (KAKAO, NAVER)"),
                                 fieldWithPath("accessToken").type(JsonFieldType.STRING).description("소셜 제공자로부터 받은 Access Token"),
-                                fieldWithPath("idToken").type(JsonFieldType.STRING).description("Apple 로그인 시 필요한 ID Token (선택)").optional(),
+                                fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 고유 ID"),
+                                fieldWithPath("deviceType").type(JsonFieldType.STRING).description("디바이스 타입 (iOS, Android, Web)").optional(),
+                                fieldWithPath("deviceName").type(JsonFieldType.STRING).description("디바이스 이름").optional(),
+                                fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 푸시 토큰").optional()
+                        ),
+                        responseFields(
+                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_NICKNAME, NEEDS_AGREEMENT, NEEDS_ONBOARDING, COMPLETED)"),
+                                fieldWithPath("accessToken").type(JsonFieldType.STRING).description("JWT Access Token"),
+                                fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("JWT Refresh Token"),
+                                fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 ID"),
+                                fieldWithPath("user.id").type(JsonFieldType.NUMBER).description("사용자 ID"),
+                                fieldWithPath("user.provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자"),
+                                fieldWithPath("user.role").type(JsonFieldType.STRING).description("사용자 권한 (USER, ADMIN)"),
+                                fieldWithPath("user.nickname").type(JsonFieldType.STRING).description("사용자 닉네임").optional()
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("애플 로그인 API - 신규 사용자")
+    void appleLogin_NewUser() throws Exception {
+        // given
+        AppleLoginRequest request = new AppleLoginRequest(
+                "eyJraWQiOiJXNldjT0tC...",  // Apple ID Token
+                "c1234567890abc",            // Authorization Code (optional)
+                "device-id-123",
+                "iOS",
+                "iPhone 14 Pro",
+                "fcm-token-abc"
+        );
+
+        SocialLoginDto mockDto = SocialLoginDto.builder()
+                .userId(1L)
+                .provider(AuthProvider.APPLE)
+                .onboardingStatus(OnboardingStatus.NEEDS_AGREEMENT)
+                .role(User.Role.USER)
+                .nickname(null)
+                .accessToken("jwt-access-token")
+                .refreshToken("jwt-refresh-token")
+                .deviceId("device-id-123")
+                .build();
+
+        given(userAppService.socialLogin(any()))
+                .willReturn(mockDto);
+
+        // when & then
+        mockMvc.perform(post("/api/users/apple/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.onboardingStatus").value("NEEDS_AGREEMENT"))
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andDo(document("user-apple-login",
+                        requestFields(
+                                fieldWithPath("idToken").type(JsonFieldType.STRING).description("Apple ID Token (JWT)"),
+                                fieldWithPath("authorizationCode").type(JsonFieldType.STRING).description("Apple Authorization Code (선택)").optional(),
                                 fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 고유 ID"),
                                 fieldWithPath("deviceType").type(JsonFieldType.STRING).description("디바이스 타입 (iOS, Android, Web)").optional(),
                                 fieldWithPath("deviceName").type(JsonFieldType.STRING).description("디바이스 이름").optional(),
