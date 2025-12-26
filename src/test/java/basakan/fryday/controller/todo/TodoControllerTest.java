@@ -93,7 +93,8 @@ class TodoControllerTest extends RestDocsSupport {
                 .andDo(document("todo-create",
                         requestFields(
                                 fieldWithPath("description").type(JsonFieldType.STRING).description("할 일 내용"),
-                                fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID")
+                                fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("notifyAt").type(JsonFieldType.STRING).description("알림 시간 (선택, ISO 8601 형식)").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),

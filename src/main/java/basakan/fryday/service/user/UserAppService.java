@@ -74,6 +74,16 @@ public class UserAppService {
         userWriteService.updateNickname(user, nickname);
     }
 
+    public void updateNotificationSettings(boolean pushNotificationEnabled) {
+        Long userId = UserContext.getCurrentUserId();
+        User user = userReadService.findById(userId);
+
+        Agreement agreement = userReadService.findAgreementByUser(user)
+                .orElseGet(() -> Agreement.create(user, false, pushNotificationEnabled));
+
+        userWriteService.updateNotificationSettings(agreement, pushNotificationEnabled);
+    }
+
     public NicknameCheckResponse checkNicknameAvailability(String nickname) {
         if (nickname == null || nickname.length() < 2 || nickname.length() > 10) {
             throw new BusinessException(ErrorCode.INVALID_NICKNAME_LENGTH);

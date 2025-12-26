@@ -14,8 +14,12 @@ import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.domain.todo.TodoAlarm;
+import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
+import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.user.UserReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +36,8 @@ public class TodoService {
 
     private final TodoRepository todoRepository;
     private final CategoryRepository categoryRepository;
+    private final TodoAlarmRepository todoAlarmRepository;
+    private final UserReadService userReadService;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request) {
@@ -45,9 +51,16 @@ public class TodoService {
 
         todo.updateDisplayOrder(nextOrder);
 
-        Todo saveTodo = todoRepository.save(todo);
+        Todo savedTodo = todoRepository.save(todo);
 
-        return TodoResponse.from(saveTodo);
+        // 알림 시간이 설정되어 있으면 TodoAlarm 생성
+        if (request.getNotifyAt() != null) {
+            User user = userReadService.findById(category.getUserId());
+            TodoAlarm todoAlarm = TodoAlarm.create(savedTodo, user, request.getNotifyAt());
+            todoAlarmRepository.save(todoAlarm);
+        }
+
+        return TodoResponse.from(savedTodo);
     }
 
     @Transactional

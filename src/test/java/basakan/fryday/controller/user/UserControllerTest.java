@@ -348,4 +348,30 @@ class UserControllerTest extends RestDocsSupport {
                         )
                 ));
     }
+
+    @Test
+    @DisplayName("알림 설정 변경 API")
+    @WithMockUser
+    void updateNotificationSettings() throws Exception {
+        // given
+        NotificationSettingsRequest request = new NotificationSettingsRequest(true);
+
+        doNothing().when(userAppService).updateNotificationSettings(anyBoolean());
+
+        // when & then
+        mockMvc.perform(patch("/api/users/me/notification-settings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("알림 설정이 성공적으로 변경되었습니다."))
+                .andDo(document("user-notification-settings-update",
+                        requestFields(
+                                fieldWithPath("pushNotificationEnabled").type(JsonFieldType.BOOLEAN).description("푸시 알림 수신 여부 (true: 수신, false: 거부)")
+                        ),
+                        responseFields(
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
+                        )
+                ));
+    }
 }

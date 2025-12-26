@@ -60,6 +60,11 @@ public class UserWriteService {
         userJpaRepository.save(user);
     }
 
+    public void updateNotificationSettings(Agreement agreement, boolean pushNotificationEnabled) {
+        agreement.updatePushNotificationAgreement(pushNotificationEnabled);
+        agreementRepository.save(agreement);
+    }
+
     private void validateNicknameLength(String nickname) {
         if (nickname == null || nickname.length() < 2 || nickname.length() > 10) {
             throw new BusinessException(ErrorCode.INVALID_NICKNAME_LENGTH);
