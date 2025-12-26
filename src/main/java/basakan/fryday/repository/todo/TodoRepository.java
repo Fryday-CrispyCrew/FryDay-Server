@@ -15,20 +15,29 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("SELECT MAX(t.displayOrder) FROM Todo t JOIN t.category c WHERE c.userId = :userId AND t.date = :date AND t.deletedAt IS NULL")
     Long findMaxDisplayOrder(@Param("userId") Long userId, @Param("date") LocalDate date);
 
-    // 전체 보기
     @Query("SELECT t FROM Todo t " +
             "WHERE t.category.userId = :userId AND t.date = :date AND t.deletedAt IS NULL " +
             "ORDER BY t.displayOrder ASC")
     List<Todo> findAllByUserIdAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
 
-    // 카테고리별 보기
     @Query("SELECT t FROM Todo t " +
             "WHERE t.category.id = :categoryId AND t.date = :date AND t.deletedAt IS NULL " +
             "ORDER BY t.displayOrder ASC")
     List<Todo> findAllByCategoryIdAndDate(@Param("categoryId") Long categoryId, @Param("date") LocalDate date);
 
-    // 특정 날짜의 미완료 투두를 탄 튀김 상태로 일괄 업데이트
     @Modifying
     @Query("UPDATE Todo t SET t.isBurnt = true WHERE t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
     int updateBurntStatusByDate(@Param("date") LocalDate date, @Param("status") Todo.Status status);
+
+    @Query("SELECT COUNT(t) FROM Todo t JOIN t.category c " +
+            "WHERE c.userId = :userId AND t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
+    long countByUserIdAndDateAndStatus(@Param("userId") Long userId, @Param("date") LocalDate date, @Param("status") Todo.Status status);
+
+    @Query("SELECT COUNT(t) FROM Todo t JOIN t.category c " +
+            "WHERE c.userId = :userId AND t.date = :date AND t.deletedAt IS NULL")
+    long countByUserIdAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
+
+    @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
+            "WHERE t.date = :date AND t.isBurnt = true AND t.deletedAt IS NULL")
+    List<Long> findUserIdsWithBurntTodosByDate(@Param("date") LocalDate date);
 }

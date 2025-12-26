@@ -43,6 +43,9 @@ public class Todo extends BaseEntity {
     @Column(nullable = false)
     private Boolean isBurnt = false;
 
+    @OneToOne(mappedBy = "todo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private TodoAlarm todoAlarm;
+
     public enum Status {
         IN_PROGRESS, // 미완료 (체크 안 됨)
         COMPLETED    // 완료 (체크 됨)

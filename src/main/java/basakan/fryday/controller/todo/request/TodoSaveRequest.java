@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 public class TodoSaveRequest {
@@ -16,6 +18,8 @@ public class TodoSaveRequest {
 
     @NotNull
     private Long categoryId;
+
+    private LocalDateTime notifyAt;
 
     public TodoSaveRequest(String description, Long categoryId) {
         this.categoryId = categoryId;
