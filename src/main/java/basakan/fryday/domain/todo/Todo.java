@@ -99,4 +99,8 @@ public class Todo extends BaseEntity {
         this.recurrenceId = recurrenceId;
     }
 
+    public void updateCategory(Category category) {
+        this.category = category;
+    }
+
 }

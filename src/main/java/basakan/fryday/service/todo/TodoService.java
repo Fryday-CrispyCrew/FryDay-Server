@@ -4,6 +4,7 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.MemoRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
+import basakan.fryday.controller.todo.request.TodoCategoryUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
@@ -141,6 +142,28 @@ public class TodoService {
         }
 
         todo.updateDate(request.getDate());
+
+        return TodoResponse.from(todo);
+    }
+
+    @Transactional
+    public TodoResponse updateCategory(Long todoId, Long userId, TodoCategoryUpdateRequest request) {
+        Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        Category newCategory = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        if (!newCategory.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
+        }
+
+        todo.updateCategory(newCategory);
 
         return TodoResponse.from(todo);
     }
