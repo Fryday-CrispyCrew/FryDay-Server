@@ -416,6 +416,23 @@ include::{snippets}/todo-recurrence-create/http-request.adoc[]
 include::{snippets}/todo-recurrence-create/http-response.adoc[]
 
 
+=== 투두 카테고리 변경
+`PATCH /api/todos/{todoId}/category`
+
+투두의 카테고리를 변경합니다.
+
+==== 요청 필드
+include::{snippets}/todo-update-category/request-fields.adoc[]
+==== 경로 파라미터
+include::{snippets}/todo-update-category/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-update-category/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-update-category/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-update-category/response-fields.adoc[]
+
+
 == 카테고리(Category)
 
 === 카테고리 생성
