@@ -40,4 +40,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
             "WHERE t.date = :date AND t.isBurnt = true AND t.deletedAt IS NULL")
     List<Long> findUserIdsWithBurntTodosByDate(@Param("date") LocalDate date);
+
+    @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.deletedAt IS NULL")
+    List<Todo> findAllByRecurrenceId(@Param("recurrenceId") Long recurrenceId);
 }

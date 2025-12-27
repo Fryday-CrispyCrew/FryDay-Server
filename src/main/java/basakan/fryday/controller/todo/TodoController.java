@@ -135,4 +135,12 @@ public class TodoController {
         TodoResponse response = recurrenceService.createRecurrence(currentUserId, request);
         return ApiResponse.success(response, "반복 투두가 생성되었습니다.");
     }
+
+    @DeleteMapping("/{todoId}/recurrence")
+    public ApiResponse<Void> deleteRecurrence(@PathVariable Long todoId) {
+        Long currentUserId = 1L;
+
+        recurrenceService.deleteRecurrence(todoId, currentUserId);
+        return ApiResponse.success(null, "반복 투두가 모두 삭제되었습니다.");
+    }
 }
