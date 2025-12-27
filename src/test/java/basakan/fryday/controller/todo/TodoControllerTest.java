@@ -8,6 +8,7 @@ import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.todo.request.MemoRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
+import basakan.fryday.controller.todo.request.TodoCategoryUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
@@ -218,6 +219,29 @@ class TodoControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("반복 투두 전체 삭제 API")
+    void deleteRecurrence() throws Exception {
+        // given
+        Long todoId = 1L;
+
+        // when & then
+        mockMvc.perform(delete("/api/todos/{todoId}/recurrence", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-recurrence-delete",
+                        pathParameters(
+                                parameterWithName("todoId").description("반복 투두를 삭제할 투두 ID (원본 투두 포함 모든 반복 투두가 삭제됩니다)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
     @DisplayName("지난 투두 오늘로 가져오기 API")
     void bringTodoToToday() throws Exception {
         // given
@@ -418,6 +442,58 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경된 날짜"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 카테고리 변경")
+    void updateCategory() throws Exception {
+        // given
+        Long todoId = 1L;
+        Long newCategoryId = 2L;
+        TodoCategoryUpdateRequest request = new TodoCategoryUpdateRequest(newCategoryId);
+
+        // Mocking
+        Category oldCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(oldCategory, "id", 1L);
+
+        Category newCategory = Category.builder().name("운동").color(CategoryColor.CB).userId(1L).build();
+        ReflectionTestUtils.setField(newCategory, "id", newCategoryId);
+
+        Todo mockTodo = Todo.builder()
+                .description("장보기")
+                .category(newCategory) // 변경된 카테고리
+                .date(LocalDate.now())
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(todoService.updateCategory(anyLong(), anyLong(), any(TodoCategoryUpdateRequest.class)))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/category", todoId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-update-category",
+                        pathParameters(
+                                parameterWithName("todoId").description("카테고리를 변경할 투두 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("변경할 카테고리 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("변경된 카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

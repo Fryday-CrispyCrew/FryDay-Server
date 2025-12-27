@@ -113,4 +113,28 @@ public class RecurrenceService {
                 return false;
         }
     }
+
+    @Transactional
+    public void deleteRecurrence(Long todoId, Long userId) {
+        Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        Long recurrenceId = todo.getRecurrenceId();
+        if (recurrenceId == null) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        List<Todo> allRecurringTodos = todoRepository.findAllByRecurrenceId(recurrenceId);
+
+        todoRepository.deleteAll(allRecurringTodos);
+
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+        recurrenceRepository.delete(recurrence);
+    }
 }

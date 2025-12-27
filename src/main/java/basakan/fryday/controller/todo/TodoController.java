@@ -4,6 +4,7 @@ import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.todo.request.MemoRequest;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
+import basakan.fryday.controller.todo.request.TodoCategoryUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
 import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
@@ -107,6 +108,17 @@ public class TodoController {
         return ApiResponse.success(response, "날짜가 변경되었습니다.");
     }
 
+    @PatchMapping("/{todoId}/category")
+    public ApiResponse<TodoResponse> updateCategory(
+            @PathVariable Long todoId,
+            @Valid @RequestBody TodoCategoryUpdateRequest request
+    ) {
+        Long currentUserId = 1L;
+
+        TodoResponse response = todoService.updateCategory(todoId, currentUserId, request);
+        return ApiResponse.success(response, "카테고리가 변경되었습니다.");
+    }
+
     @PatchMapping("/reorder")
     public ApiResponse<Void> reorderTodos(
             @RequestParam LocalDate date,
@@ -134,5 +146,13 @@ public class TodoController {
 
         TodoResponse response = recurrenceService.createRecurrence(currentUserId, request);
         return ApiResponse.success(response, "반복 투두가 생성되었습니다.");
+    }
+
+    @DeleteMapping("/{todoId}/recurrence")
+    public ApiResponse<Void> deleteRecurrence(@PathVariable Long todoId) {
+        Long currentUserId = 1L;
+
+        recurrenceService.deleteRecurrence(todoId, currentUserId);
+        return ApiResponse.success(null, "반복 투두가 모두 삭제되었습니다.");
     }
 }
