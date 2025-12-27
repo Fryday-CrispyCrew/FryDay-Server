@@ -306,6 +306,19 @@ include::{snippets}/todo-delete/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-delete/response-fields.adoc[]
 
+=== 반복 설정 투두 삭제
+`DELETE /api/todos/{todoId}/recurrence`
+
+반복 설정이 된 투두를 전체 삭제합니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-recurrence-delete/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-recurrence-delete/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-recurrence-delete/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-recurrence-delete/response-fields.adoc[]
 
 === 탄 투두 오늘로 가져오기
 `POST /api/todos/{todoId}/bring-to-today`
