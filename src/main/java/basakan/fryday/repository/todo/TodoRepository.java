@@ -1,6 +1,7 @@
 package basakan.fryday.repository.todo;
 
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.service.report.dto.CategoryReportDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -43,4 +44,23 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.deletedAt IS NULL")
     List<Todo> findAllByRecurrenceId(@Param("recurrenceId") Long recurrenceId);
+
+    @Query("SELECT new basakan.fryday.service.report.dto.CategoryReportDto(" +
+           "c.name, " +
+           "c.color, " +
+           "CAST(COUNT(t.id) AS int), " +
+           "CAST(SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS int), " +
+           "CAST(SUM(CASE WHEN t.status = 'IN_PROGRESS' OR t.isBurnt = true THEN 1 ELSE 0 END) AS int)) " +
+           "FROM Todo t " +
+           "JOIN t.category c " +
+           "WHERE c.userId = :userId " +
+           "  AND YEAR(t.date) = :year " +
+           "  AND MONTH(t.date) = :month " +
+           "  AND t.deletedAt IS NULL " +
+           "GROUP BY c.id, c.name, c.color")
+    List<CategoryReportDto> findMonthlyReportByCategory(
+        @Param("userId") Long userId,
+        @Param("year") int year,
+        @Param("month") int month
+    );
 }
