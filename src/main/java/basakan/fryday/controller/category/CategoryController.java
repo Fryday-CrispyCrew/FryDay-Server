@@ -9,6 +9,7 @@ import basakan.fryday.controller.category.response.CategoryResponse;
 import basakan.fryday.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,10 +22,8 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public ApiResponse<List<CategoryReadResponse>> getCategories() {
-        Long currentUserId = 1L;
-
-        List<CategoryReadResponse> responses = categoryService.getCategoriesByUserId(currentUserId);
+    public ApiResponse<List<CategoryReadResponse>> getCategories(@AuthenticationPrincipal Long userId) {
+        List<CategoryReadResponse> responses = categoryService.getCategoriesByUserId(userId);
         return ApiResponse.success(responses);
     }
 
@@ -38,28 +37,25 @@ public class CategoryController {
     @PatchMapping("/{categoryId}")
     public ApiResponse<CategoryResponse> updateCategory(
             @PathVariable Long categoryId,
-            @Valid @RequestBody CategoryUpdateRequest request
+            @Valid @RequestBody CategoryUpdateRequest request,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L;
-
-        CategoryResponse response = categoryService.updateCategory(categoryId, currentUserId, request);
+        CategoryResponse response = categoryService.updateCategory(categoryId, userId, request);
 
         return ApiResponse.success(response, "카테고리가 수정되었습니다.");
     }
 
     @DeleteMapping("/{categoryId}")
-    public ApiResponse<Void> deleteCategory(@PathVariable Long categoryId) {
-        // TODO: 인증 정보에서 userId를 가져와서 전달해야 함
-        Long currentUserId = 1L;
-
-        categoryService.deleteCategory(categoryId, currentUserId);
+    public ApiResponse<Void> deleteCategory(@PathVariable Long categoryId,
+                                            @AuthenticationPrincipal Long userId) {
+        categoryService.deleteCategory(categoryId, userId);
         return ApiResponse.success(null, "카테고리가 삭제되었습니다.");
     }
 
     @PatchMapping("/reorder")
-    public ApiResponse<Void> updateCategoryOrder(@Valid @RequestBody OrderUpdateRequest request) {
-        Long currentUserId = 1L;
-        categoryService.reorderCategories(currentUserId, request);
+    public ApiResponse<Void> updateCategoryOrder(@Valid @RequestBody OrderUpdateRequest request,
+                                                 @AuthenticationPrincipal Long userId) {
+        categoryService.reorderCategories(userId, request);
         return ApiResponse.success(null, "카테고리 순서가 변경되었습니다.");
     }
 }
