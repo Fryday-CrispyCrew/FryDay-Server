@@ -28,20 +28,20 @@ public class CategoryService {
     private static final int MAX_CATEGORIES_COUNT = 6;
 
     @Transactional
-    public CategoryResponse createCategory(CategoryCreateRequest request) {
-        long currentCount = categoryRepository.countByUserIdAndDeletedAtIsNull(request.getUserId());
+    public CategoryResponse createCategory(CategoryCreateRequest request, Long userId) {
+        long currentCount = categoryRepository.countByUserIdAndDeletedAtIsNull(userId);
 
         if (currentCount >= MAX_CATEGORIES_COUNT) {
             throw new BusinessException(ErrorCode.CATEGORY_LIMIT_EXCEEDED);
         }
 
-        Long maxOrder = categoryRepository.findMaxDisplayOrder(request.getUserId());
+        Long maxOrder = categoryRepository.findMaxDisplayOrder(userId);
         long nextOrder = (maxOrder == null) ? 1 : maxOrder + 1;
 
         Category category = Category.builder()
                 .name(request.getName())
                 .color(request.getColor())
-                .userId(request.getUserId())
+                .userId(userId)
                 .displayOrder(nextOrder)
                 .build();
 

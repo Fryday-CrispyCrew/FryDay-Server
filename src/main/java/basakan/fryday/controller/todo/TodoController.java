@@ -41,9 +41,9 @@ public class TodoController {
     }
 
     @PostMapping
-    public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoSaveRequest request) {
-        TodoResponse response = todoService.saveTodo(request);
-
+    public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoSaveRequest request,
+                                                @AuthenticationPrincipal Long userId) {
+        TodoResponse response = todoService.saveTodo(request, userId);
         return ApiResponse.success(response);
     }
 

@@ -28,8 +28,9 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryCreateRequest request) {
-        CategoryResponse response = categoryService.createCategory(request);
+    public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryCreateRequest request,
+                                                        @AuthenticationPrincipal Long userId) {
+        CategoryResponse response = categoryService.createCategory(request, userId);
 
         return ApiResponse.success(response);
     }
