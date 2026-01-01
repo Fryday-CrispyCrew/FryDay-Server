@@ -71,13 +71,6 @@ public class TodoController {
         return ApiResponse.success(null, "투두가 삭제되었습니다.");
     }
 
-    @PostMapping("{todoId}/bring-to-today")
-    public ApiResponse<TodoResponse> bringTodoToToday(@PathVariable Long todoId,
-                                                      @AuthenticationPrincipal Long userId) {
-        TodoResponse response = todoService.bringTodoToToday(todoId, userId);
-        return ApiResponse.success(response, "투두가 오늘로 가져와졌습니다.");
-    }
-
     @PatchMapping("/{todoId}/tomorrow")
     public ApiResponse<TodoResponse> postponeToTomorrow(@PathVariable Long todoId,
                                                         @AuthenticationPrincipal Long userId) {

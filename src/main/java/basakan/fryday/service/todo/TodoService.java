@@ -98,21 +98,6 @@ public class TodoService {
     }
 
     @Transactional
-    public TodoResponse bringTodoToToday(Long todoId, Long userId) {
-        Todo originalTodo = todoRepository.findById(todoId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        Todo newTodo = Todo.builder()
-                .description(originalTodo.getDescription())
-                .category(originalTodo.getCategory())
-                .date(LocalDate.now())
-                .build();
-
-        Todo saveTodo = todoRepository.save(newTodo);
-        return TodoResponse.from(saveTodo);
-    }
-
-    @Transactional
     public TodoResponse postponeToTomorrow(Long todoId, Long userId) {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));

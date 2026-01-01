@@ -320,27 +320,11 @@ include::{snippets}/todo-recurrence-delete/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-recurrence-delete/response-fields.adoc[]
 
-=== 탄 투두 오늘로 가져오기
-`POST /api/todos/{todoId}/bring-to-today`
 
-탄 투두를 오늘 날짜로 가져옵니다.
-
-==== 경로 파라미터
-include::{snippets}/todo-bring-to-today/path-parameters.adoc[]
-
-==== HTTP 요청 예시
-include::{snippets}/todo-bring-to-today/http-request.adoc[]
-
-==== HTTP 응답 예시
-include::{snippets}/todo-bring-to-today/http-response.adoc[]
-
-==== 응답 필드
-include::{snippets}/todo-bring-to-today/response-fields.adoc[]
-
-=== 내일로 미루기
+=== 투두 내일 하기
 `POST /api/todos/{todoId}/postpone-to-tomorrow`
 
-투두를 내일로 미룹니다.
+투두 일자를 내일로 변경합니다.
 
 ==== 경로 파라미터
 include::{snippets}/todo-postpone-tomorrow/path-parameters.adoc[]

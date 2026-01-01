@@ -267,52 +267,6 @@ class TodoControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("지난 투두 오늘로 가져오기 API")
-    void bringTodoToToday() throws Exception {
-        // given
-        Long originalTodoId = 99L; // 과거의 투두 ID
-        Long newTodoId = 100L;     // 새로 생성될 투두 ID
-
-        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
-        ReflectionTestUtils.setField(mockCategory, "id", 1L);
-
-        Todo newMockTodo = Todo.builder()
-                .description("양파 썰기") // 내용은 그대로
-                .category(mockCategory)
-                .date(LocalDate.now())    // 날짜는 오늘
-                .build();
-        ReflectionTestUtils.setField(newMockTodo, "id", newTodoId);
-
-        // Service Mocking
-        given(todoService.bringTodoToToday(anyLong(), anyLong()))
-                .willReturn(TodoResponse.from(newMockTodo));
-
-        // when & then
-        mockMvc.perform(post("/api/todos/{todoId}/bring-to-today", originalTodoId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andDo(document("todo-bring-to-today",
-                        pathParameters(
-                                parameterWithName("todoId").description("가져올 과거의 투두 ID")
-                        ),
-                        responseFields(
-                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
-                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
-
-                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("새로 생성된 투두 ID"),
-                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
-                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (초기화됨: IN_PROGRESS)"),
-                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
-                                fieldWithPath("data.memo").type(JsonFieldType.NULL).description("메모 (초기엔 없음)").optional(),
-                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜 (오늘 날짜)"),
-
-                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
-                        )
-                ));
-    }
-
-    @Test
     @DisplayName("투두 내일 하기 (날짜 미루기)")
     void postponeToTomorrow() throws Exception {
         // given
