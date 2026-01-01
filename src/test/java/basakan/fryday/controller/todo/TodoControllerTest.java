@@ -2,6 +2,7 @@ package basakan.fryday.controller.todo;
 
 import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
@@ -22,16 +23,22 @@ import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.service.todo.RecurrenceService;
 import basakan.fryday.service.todo.TodoService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -45,7 +52,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(TodoController.class)
+@WebMvcTest(
+        controllers = TodoController.class,
+        excludeFilters = {
+            @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = SecurityConfig.class)
+        }
+)
 class TodoControllerTest extends RestDocsSupport {
 
     @MockitoBean
@@ -59,6 +71,13 @@ class TodoControllerTest extends RestDocsSupport {
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @BeforeEach
+    void setUpSecurityContext() {
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
 
     @Test
     @DisplayName("투두 생성 API")
@@ -79,10 +98,16 @@ class TodoControllerTest extends RestDocsSupport {
                 .description("양파 썰기")
                 .category(mockCategory)
                 .build();
+
         ReflectionTestUtils.setField(mockTodo, "id", 1L);
+        ReflectionTestUtils.setField(mockTodo, "status", Todo.Status.IN_PROGRESS);
+        ReflectionTestUtils.setField(mockTodo, "date", LocalDate.now());
+        ReflectionTestUtils.setField(mockTodo, "isBurnt", false);
+        ReflectionTestUtils.setField(mockTodo, "displayOrder", 1L);
+        ReflectionTestUtils.setField(mockTodo, "memo", null);
 
         // Service가 호출되면 위에서 만든 가짜 TodoResponse를 반환하도록 설정
-        given(todoService.saveTodo(any(TodoSaveRequest.class)))
+        given(todoService.saveTodo(any(TodoSaveRequest.class), anyLong()))
                 .willReturn(TodoResponse.from(mockTodo));
 
         // when & then

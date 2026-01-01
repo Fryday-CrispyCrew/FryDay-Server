@@ -41,9 +41,13 @@ public class TodoService {
     private final UserReadService userReadService;
 
     @Transactional
-    public TodoResponse saveTodo(TodoSaveRequest request) {
+    public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        if (!category.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
+        }
 
         Todo todo = request.toEntity(category);
 

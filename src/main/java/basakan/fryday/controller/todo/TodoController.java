@@ -15,6 +15,7 @@ import basakan.fryday.service.todo.RecurrenceService;
 import basakan.fryday.service.todo.TodoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -31,128 +32,116 @@ public class TodoController {
     @GetMapping
     public ApiResponse<List<TodoListResponse>> getTodoList(
             @RequestParam LocalDate date,
-            @RequestParam(required = false) Long categoryId
+            @RequestParam(required = false) Long categoryId,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
 
-        List<TodoListResponse> responses = todoService.getTodoList(currentUserId, date, categoryId);
+        List<TodoListResponse> responses = todoService.getTodoList(userId, date, categoryId);
         return ApiResponse.success(responses);
     }
 
     @PostMapping
-    public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoSaveRequest request) {
-        TodoResponse response = todoService.saveTodo(request);
-
+    public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoSaveRequest request,
+                                                @AuthenticationPrincipal Long userId) {
+        TodoResponse response = todoService.saveTodo(request, userId);
         return ApiResponse.success(response);
     }
 
     @PostMapping("/{todoId}/completion")
-    public ApiResponse<TodoResponse> toggleTodoCompletion(@PathVariable Long todoId) {
-        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
+    public ApiResponse<TodoResponse> toggleTodoCompletion(@PathVariable Long todoId, @AuthenticationPrincipal Long userId) {
 
-        TodoResponse response = todoService.toggleTodoCompletion(todoId, currentUserId);
+        TodoResponse response = todoService.toggleTodoCompletion(todoId, userId);
         return ApiResponse.success(response);
     }
 
     @PatchMapping("/{todoId}/memo")
     public ApiResponse<MemoResponse> updateMemo(
             @PathVariable Long todoId,
-            @Valid @RequestBody MemoRequest request
+            @Valid @RequestBody MemoRequest request,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
-
-        MemoResponse response = todoService.updateMemo(todoId, currentUserId, request);
+        MemoResponse response = todoService.updateMemo(todoId, userId, request);
         return ApiResponse.success(response, "메모가 저장되었습니다.");
     }
 
     @DeleteMapping("/{todoId}")
-    public ApiResponse<Void> deleteTodo(@PathVariable Long todoId) {
-        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
-
-        todoService.deleteTodo(todoId, currentUserId);
+    public ApiResponse<Void> deleteTodo(@PathVariable Long todoId,
+                                        @AuthenticationPrincipal Long userId) {
+        todoService.deleteTodo(todoId, userId);
         return ApiResponse.success(null, "투두가 삭제되었습니다.");
     }
 
     @PostMapping("{todoId}/bring-to-today")
-    public ApiResponse<TodoResponse> bringTodoToToday(@PathVariable Long todoId) {
-        Long currentUserId = 1L; // TODO: 실제 인증 로직이 구현되면 현재 사용자 ID를 가져오도록 수정 필요
-
-        TodoResponse response = todoService.bringTodoToToday(todoId, currentUserId);
+    public ApiResponse<TodoResponse> bringTodoToToday(@PathVariable Long todoId,
+                                                      @AuthenticationPrincipal Long userId) {
+        TodoResponse response = todoService.bringTodoToToday(todoId, userId);
         return ApiResponse.success(response, "투두가 오늘로 가져와졌습니다.");
     }
 
     @PatchMapping("/{todoId}/tomorrow")
-    public ApiResponse<TodoResponse> postponeToTomorrow(@PathVariable Long todoId) {
-        Long currentUserId = 1L;
-
-        TodoResponse response = todoService.postponeToTomorrow(todoId, currentUserId);
+    public ApiResponse<TodoResponse> postponeToTomorrow(@PathVariable Long todoId,
+                                                        @AuthenticationPrincipal Long userId) {
+        TodoResponse response = todoService.postponeToTomorrow(todoId, userId);
         return ApiResponse.success(response, "내일로 이동되었습니다.");
     }
 
     @PatchMapping("/{todoId}/today")
-    public ApiResponse<TodoResponse> moveToToday(@PathVariable Long todoId) {
-        Long currentUserId = 1L;
-
-        TodoResponse response = todoService.moveToToday(todoId, currentUserId);
+    public ApiResponse<TodoResponse> moveToToday(@PathVariable Long todoId,
+                                                 @AuthenticationPrincipal Long userId) {
+        TodoResponse response = todoService.moveToToday(todoId, userId);
         return ApiResponse.success(response, "오늘로 이동되었습니다.");
     }
 
     @PatchMapping("/{todoId}/date")
     public ApiResponse<TodoResponse> updateTodoDate(
             @PathVariable Long todoId,
-            @Valid @RequestBody TodoDateUpdateRequest request
+            @Valid @RequestBody TodoDateUpdateRequest request,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L;
-
-        TodoResponse response = todoService.updateTodoDate(todoId, currentUserId, request);
+        TodoResponse response = todoService.updateTodoDate(todoId, userId, request);
         return ApiResponse.success(response, "날짜가 변경되었습니다.");
     }
 
     @PatchMapping("/{todoId}/category")
     public ApiResponse<TodoResponse> updateCategory(
             @PathVariable Long todoId,
-            @Valid @RequestBody TodoCategoryUpdateRequest request
+            @Valid @RequestBody TodoCategoryUpdateRequest request,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L;
-
-        TodoResponse response = todoService.updateCategory(todoId, currentUserId, request);
+        TodoResponse response = todoService.updateCategory(todoId, userId, request);
         return ApiResponse.success(response, "카테고리가 변경되었습니다.");
     }
 
     @PatchMapping("/reorder")
     public ApiResponse<Void> reorderTodos(
             @RequestParam LocalDate date,
-            @Valid @RequestBody OrderUpdateRequest request
+            @Valid @RequestBody OrderUpdateRequest request,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L;
-
-        todoService.reorderTodos(currentUserId, date, request);
+        todoService.reorderTodos(userId, date, request);
         return ApiResponse.success(null, "투두 순서가 변경되었습니다.");
     }
 
     @GetMapping("/character-status")
     public ApiResponse<CharacterStatusResponse> getCharacterStatus(
-            @RequestParam LocalDate date
+            @RequestParam LocalDate date,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L;
-
-        CharacterStatusResponse response = todoService.getDailyCharacterStatus(currentUserId, date);
+        CharacterStatusResponse response = todoService.getDailyCharacterStatus(userId, date);
         return ApiResponse.success(response);
     }
 
     @PostMapping("/recurrence")
-    public ApiResponse<TodoResponse> createRecurringTodo(@Valid @RequestBody RecurrenceCreateRequest request) {
-        Long currentUserId = 1L;
-
-        TodoResponse response = recurrenceService.createRecurrence(currentUserId, request);
+    public ApiResponse<TodoResponse> createRecurringTodo(@Valid @RequestBody RecurrenceCreateRequest request,
+                                                         @AuthenticationPrincipal Long userId) {
+        TodoResponse response = recurrenceService.createRecurrence(userId, request);
         return ApiResponse.success(response, "반복 투두가 생성되었습니다.");
     }
 
     @DeleteMapping("/{todoId}/recurrence")
-    public ApiResponse<Void> deleteRecurrence(@PathVariable Long todoId) {
-        Long currentUserId = 1L;
-
-        recurrenceService.deleteRecurrence(todoId, currentUserId);
+    public ApiResponse<Void> deleteRecurrence(@PathVariable Long todoId,
+                                              @AuthenticationPrincipal Long userId) {
+        recurrenceService.deleteRecurrence(todoId, userId);
         return ApiResponse.success(null, "반복 투두가 모두 삭제되었습니다.");
     }
 }

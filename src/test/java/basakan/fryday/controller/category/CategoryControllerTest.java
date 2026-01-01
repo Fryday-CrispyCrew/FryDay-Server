@@ -1,6 +1,7 @@
 package basakan.fryday.controller.category;
 
 import basakan.fryday.RestDocsSupport;
+import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.category.request.CategoryCreateRequest;
@@ -11,14 +12,20 @@ import basakan.fryday.controller.category.response.CategoryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.service.CategoryService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -32,7 +39,12 @@ import static org.springframework.test.util.ReflectionTestUtils.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(CategoryController.class)
+@WebMvcTest(
+        controllers = CategoryController.class,
+        excludeFilters = {
+                @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = SecurityConfig.class)
+        }
+)
 class CategoryControllerTest extends RestDocsSupport {
 
     @MockitoBean
@@ -44,21 +56,28 @@ class CategoryControllerTest extends RestDocsSupport {
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
+    @BeforeEach
+    void setUpSecurityContext() {
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(1L, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
     @Test
     @DisplayName("카테고리 생성 API")
     void createCategory() throws Exception{
         // given
-        CategoryCreateRequest request = new CategoryCreateRequest("운동", CategoryColor.BR, 1L);
+        CategoryCreateRequest request = new CategoryCreateRequest("운동", CategoryColor.BR);
 
         Category mockCategory = Category.builder()
                 .name("운동")
                 .color(CategoryColor.BR)
                 .userId(1L)
                 .build();
-        // ID는 DB 저장 시 생성되므로, 리플렉션으로 강제 주입 (테스트니까요)
+        // ID는 DB 저장 시 생성되므로, 리플렉션으로 강제 주입
         setField(mockCategory, "id", 1L);
 
-        given(categoryService.createCategory(any(CategoryCreateRequest.class)))
+        given(categoryService.createCategory(any(CategoryCreateRequest.class), anyLong()))
                 .willReturn(CategoryResponse.from(mockCategory));
 
         // when & then
@@ -70,17 +89,16 @@ class CategoryControllerTest extends RestDocsSupport {
                 .andDo(document("category-create",
                         requestFields(
                                 fieldWithPath("name").type(JsonFieldType.STRING).description("카테고리 이름 (최대 8자)"),
-                                fieldWithPath("color").type(JsonFieldType.STRING).description("카테고리 색상 코드"),
-                                fieldWithPath("userId").type(JsonFieldType.NUMBER).description("사용자 ID")
+                                fieldWithPath("color").type(JsonFieldType.STRING).description("카테고리 색상 코드")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
 
-                                // ⭐️ data 필드 하위 내용 상세 정의
+                                // data 필드 하위 내용 상세 정의
                                 fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("생성된 카테고리 ID"),
                                 fieldWithPath("data.name").type(JsonFieldType.STRING).description("카테고리 이름"),
-                                fieldWithPath("data.color").type(JsonFieldType.STRING).description("카테고리 색상"),
+                                fieldWithPath("data.color").type(JsonFieldType.STRING).description("카테고리 색상 코드"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )

@@ -18,12 +18,8 @@ public class CategoryCreateRequest {
     @NotNull(message = "카테고리 색상은 필수입니다.")
     private CategoryColor color;
 
-    @NotNull
-    private Long userId;
-
-    public CategoryCreateRequest(String name, CategoryColor color, Long userId) {
+    public CategoryCreateRequest(String name, CategoryColor color) {
         this.name = name;
         this.color = color;
-        this.userId = userId;
     }
 }
