@@ -104,7 +104,7 @@ class TodoControllerTest extends RestDocsSupport {
         ReflectionTestUtils.setField(mockTodo, "date", LocalDate.now());
         ReflectionTestUtils.setField(mockTodo, "isBurnt", false);
         ReflectionTestUtils.setField(mockTodo, "displayOrder", 1L);
-        ReflectionTestUtils.setField(mockTodo, "memo", "메모 내용");
+        ReflectionTestUtils.setField(mockTodo, "memo", null);
 
         // Service가 호출되면 위에서 만든 가짜 TodoResponse를 반환하도록 설정
         given(todoService.saveTodo(any(TodoSaveRequest.class), anyLong()))
