@@ -19,8 +19,6 @@ public class TodoSaveRequest {
     @NotNull
     private Long categoryId;
 
-    private LocalDateTime notifyAt;
-
     public TodoSaveRequest(String description, Long categoryId) {
         this.categoryId = categoryId;
         this.description = description;
