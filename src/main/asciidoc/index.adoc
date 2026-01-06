@@ -238,6 +238,24 @@ include::{snippets}/todo-list/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-list/response-fields.adoc[]
 
+=== 투두 내용(제목) 수정
+`PATCH /api/todos/{todoId}/description`
+
+투두의 내용(제목)을 수정합니다.
+
+==== 요청 필드
+include::{snippets}/todo-update-description/request-fields.adoc[]
+==== 경로 파라미터
+include::{snippets}/todo-update-description/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-update-description/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-update-description/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-update-description/response-fields.adoc[]
+
+
+
 === 투두 캐릭터 상태 조회
 `GET /api/todos/character-status`
 

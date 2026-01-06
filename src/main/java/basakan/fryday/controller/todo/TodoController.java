@@ -1,12 +1,8 @@
 package basakan.fryday.controller.todo;
 
 import basakan.fryday.common.response.ApiResponse;
-import basakan.fryday.controller.todo.request.MemoRequest;
+import basakan.fryday.controller.todo.request.*;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
-import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
-import basakan.fryday.controller.todo.request.TodoCategoryUpdateRequest;
-import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
-import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
@@ -45,6 +41,16 @@ public class TodoController {
                                                 @AuthenticationPrincipal Long userId) {
         TodoResponse response = todoService.saveTodo(request, userId);
         return ApiResponse.success(response);
+    }
+
+    @PatchMapping("/{todoId}/description")
+    public ApiResponse<TodoResponse> updateDescription(
+            @PathVariable Long todoId,
+            @Valid @RequestBody TodoDescriptionUpdateRequest request,
+            @AuthenticationPrincipal Long userId
+    ) {
+        TodoResponse response = todoService.updateDescription(todoId, userId, request);
+        return ApiResponse.success(response, "내용이 수정되었습니다.");
     }
 
     @PostMapping("/{todoId}/completion")

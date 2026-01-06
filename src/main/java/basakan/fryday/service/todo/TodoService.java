@@ -2,11 +2,8 @@ package basakan.fryday.service.todo;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
-import basakan.fryday.controller.todo.request.MemoRequest;
+import basakan.fryday.controller.todo.request.*;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
-import basakan.fryday.controller.todo.request.TodoCategoryUpdateRequest;
-import basakan.fryday.controller.todo.request.TodoDateUpdateRequest;
-import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
@@ -216,6 +213,21 @@ public class TodoService {
                 .description(status.getDescription())
                 .build();
 
+    }
+
+    @Transactional
+    public TodoResponse updateDescription(Long todoId, Long userId, TodoDescriptionUpdateRequest request) {
+        Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        todo.updateDescription(request.getDescription());
+
+        return TodoResponse.from(todo);
     }
 
     private String resolveImageCode(CharacterStatus status) {
