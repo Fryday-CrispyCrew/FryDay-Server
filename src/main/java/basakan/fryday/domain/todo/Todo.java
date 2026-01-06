@@ -103,4 +103,8 @@ public class Todo extends BaseEntity {
         this.category = category;
     }
 
+    public void updateDescription(String description) {
+        this.description = description;
+    }
+
 }
