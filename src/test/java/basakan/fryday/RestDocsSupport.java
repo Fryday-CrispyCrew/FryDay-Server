@@ -25,12 +25,16 @@ public abstract class RestDocsSupport {
     void setUp(WebApplicationContext webApplicationContext,
                RestDocumentationContextProvider restDocumentation) {
 
-        // MockMvc를 빌더를 통해 수동으로 생성하면서 REST Docs 설정을 주입
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(documentationConfiguration(restDocumentation)
+                        .uris()
+                            .withScheme("https")
+                            .withHost("fryday.co.kr")
+                            .withPort(443)
+                        .and()
                         .operationPreprocessors()
-                        .withRequestDefaults(prettyPrint())
-                        .withResponseDefaults(prettyPrint())
+                            .withRequestDefaults(prettyPrint())
+                            .withResponseDefaults(prettyPrint())
                 )
                 .build();
     }
