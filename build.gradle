@@ -78,14 +78,10 @@ asciidoctor {
 	dependsOn test
 }
 
-// API 문서를 static 리소스로 복사 (개발/배포 모두 접근 가능, Git 커밋 제외)
-task copyDocument(type: Copy) {
-	dependsOn asciidoctor
-	mustRunAfter processResources
-	from file("${asciidoctor.outputDir}")
-	into file('src/main/resources/static/docs')
-}
 
-build {
-	dependsOn copyDocument
+bootJar {
+	dependsOn asciidoctor
+	from ("build/docs/asciidoc") {
+		into 'static/docs'
+	}
 }
