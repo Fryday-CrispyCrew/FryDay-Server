@@ -221,7 +221,7 @@ include::{snippets}/todo-create/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-create/response-fields.adoc[]
 
-=== 투두 조회
+=== 투두 조회(홈 화면)
 `GET /api/todos`
 
 투두 목록을 조회합니다.
@@ -237,6 +237,20 @@ include::{snippets}/todo-list/http-response.adoc[]
 
 ==== 응답 필드
 include::{snippets}/todo-list/response-fields.adoc[]
+
+=== 투두 단건 조회
+`GET /api/todos/{todoId}`
+
+특정 투두의 상세 정보를 조회합니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-detail/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-detail/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-detail/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-detail/response-fields.adoc[]
 
 === 투두 내용(제목) 수정
 `PATCH /api/todos/{todoId}/description`
