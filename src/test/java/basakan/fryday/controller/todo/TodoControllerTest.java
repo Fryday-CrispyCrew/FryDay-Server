@@ -8,10 +8,7 @@ import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.todo.request.*;
 import basakan.fryday.controller.dto.OrderUpdateRequest;
-import basakan.fryday.controller.todo.response.CharacterStatusResponse;
-import basakan.fryday.controller.todo.response.MemoResponse;
-import basakan.fryday.controller.todo.response.TodoListResponse;
-import basakan.fryday.controller.todo.response.TodoResponse;
+import basakan.fryday.controller.todo.response.*;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.CharacterStatus;
@@ -33,6 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
@@ -96,11 +94,11 @@ class TodoControllerTest extends RestDocsSupport {
                 .build();
 
         ReflectionTestUtils.setField(mockTodo, "id", 1L);
-        ReflectionTestUtils.setField(mockTodo, "status", Todo.Status.IN_PROGRESS);
-        ReflectionTestUtils.setField(mockTodo, "date", LocalDate.now());
-        ReflectionTestUtils.setField(mockTodo, "isBurnt", false);
-        ReflectionTestUtils.setField(mockTodo, "displayOrder", 1L);
-        ReflectionTestUtils.setField(mockTodo, "memo", null);
+//        ReflectionTestUtils.setField(mockTodo, "status", Todo.Status.IN_PROGRESS);
+//        ReflectionTestUtils.setField(mockTodo, "date", LocalDate.now());
+//        ReflectionTestUtils.setField(mockTodo, "isBurnt", false);
+//        ReflectionTestUtils.setField(mockTodo, "displayOrder", 1L);
+//        ReflectionTestUtils.setField(mockTodo, "memo", null);
 
         // Service가 호출되면 위에서 만든 가짜 TodoResponse를 반환하도록 설정
         given(todoService.saveTodo(any(TodoSaveRequest.class), anyLong()))
@@ -115,8 +113,7 @@ class TodoControllerTest extends RestDocsSupport {
                 .andDo(document("todo-create",
                         requestFields(
                                 fieldWithPath("description").type(JsonFieldType.STRING).description("할 일 내용"),
-                                fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
-                                fieldWithPath("notifyAt").type(JsonFieldType.STRING).description("알림 시간 (선택, ISO 8601 형식)").optional()
+                                fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -709,6 +706,84 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜 (시작일로 업데이트됨)"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 상세 조회 API")
+    void getTodoDetail() throws Exception {
+        // given
+        Long todoId = 1L;
+
+        // Mocking: 상세 조회 응답 데이터 생성
+        TodoDetailResponse.TodoAlarmInfo alarmInfo = TodoDetailResponse.TodoAlarmInfo.builder()
+                .alarmId(10L)
+                .notifyAt(LocalDateTime.of(2026, 1, 8, 14, 30))
+                .status("PENDING")
+                .build();
+
+        TodoDetailResponse.RecurrenceInfo recurrenceInfo = TodoDetailResponse.RecurrenceInfo.builder()
+                .recurrenceId(20L)
+                .type("WEEKLY")
+                .frequencyValues("MONDAY,WEDNESDAY,FRIDAY")
+                .startDate(LocalDate.of(2026, 1, 1))
+                .endDate(LocalDate.of(2026, 12, 31))
+                .notificationTime(null) // DTO 로직상 null
+                .build();
+
+        TodoDetailResponse response = TodoDetailResponse.builder()
+                .id(todoId)
+                .description("투두 상세 내용 확인하기")
+                .status("IN_PROGRESS")
+                .categoryId(1L)
+                .memo("꼼꼼하게 확인 필요")
+                .date(LocalDate.of(2026, 1, 8))
+                .alarm(alarmInfo)
+                .recurrence(recurrenceInfo)
+                .build();
+
+        // Service Mocking
+        given(todoService.getTodoDetail(anyLong(), anyLong()))
+                .willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/api/todos/{todoId}", todoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-detail",
+                        pathParameters(
+                                parameterWithName("todoId").description("조회할 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                // 기본 정보
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("날짜"),
+
+                                // 알림 정보 (Optional)
+                                fieldWithPath("data.alarm").type(JsonFieldType.OBJECT).description("알림 설정 정보").optional(),
+                                fieldWithPath("data.alarm.alarmId").type(JsonFieldType.NUMBER).description("알림 ID").optional(),
+                                fieldWithPath("data.alarm.notifyAt").type(JsonFieldType.STRING).description("알림 시간").optional(),
+                                fieldWithPath("data.alarm.status").type(JsonFieldType.STRING).description("알림 상태(PENDING, SENT)").optional(),
+
+                                // 반복 정보 (Optional)
+                                fieldWithPath("data.recurrence").type(JsonFieldType.OBJECT).description("반복 설정 정보").optional(),
+                                fieldWithPath("data.recurrence.recurrenceId").type(JsonFieldType.NUMBER).description("반복 규칙 ID").optional(),
+                                fieldWithPath("data.recurrence.type").type(JsonFieldType.STRING).description("반복 주기").optional(),
+                                fieldWithPath("data.recurrence.frequencyValues").type(JsonFieldType.STRING).description("반복 상세 값").optional(),
+                                fieldWithPath("data.recurrence.startDate").type(JsonFieldType.STRING).description("반복 시작일").optional(),
+                                fieldWithPath("data.recurrence.endDate").type(JsonFieldType.STRING).description("반복 종료일").optional(),
+                                fieldWithPath("data.recurrence.notificationTime").type(JsonFieldType.STRING).description("반복 알림 시간").optional(),
+
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

@@ -7,6 +7,7 @@ import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
 import basakan.fryday.controller.todo.response.TodoResponse;
+import basakan.fryday.controller.todo.response.TodoDetailResponse;
 import basakan.fryday.service.todo.RecurrenceService;
 import basakan.fryday.service.todo.TodoService;
 import jakarta.validation.Valid;
@@ -34,6 +35,15 @@ public class TodoController {
 
         List<TodoListResponse> responses = todoService.getTodoList(userId, date, categoryId);
         return ApiResponse.success(responses);
+    }
+
+    @GetMapping("/{todoId}")
+    public ApiResponse<TodoDetailResponse> getTodoDetail(
+            @PathVariable Long todoId,
+            @AuthenticationPrincipal Long userId
+    ) {
+        TodoDetailResponse response = todoService.getTodoDetail(todoId, userId);
+        return ApiResponse.success(response);
     }
 
     @PostMapping

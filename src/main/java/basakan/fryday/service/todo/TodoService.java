@@ -9,16 +9,19 @@ import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
 import basakan.fryday.controller.todo.response.TodoResponse;
 import basakan.fryday.domain.BaseEntity;
+import basakan.fryday.controller.todo.response.TodoDetailResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.todo.TodoAlarm;
+import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.service.user.UserReadService;
 import lombok.RequiredArgsConstructor;
+import basakan.fryday.repository.todo.RecurrenceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +38,7 @@ public class TodoService {
     private final TodoRepository todoRepository;
     private final CategoryRepository categoryRepository;
     private final TodoAlarmRepository todoAlarmRepository;
-    private final UserReadService userReadService;
+    private final RecurrenceRepository recurrenceRepository;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
@@ -54,13 +57,6 @@ public class TodoService {
         todo.updateDisplayOrder(nextOrder);
 
         Todo savedTodo = todoRepository.save(todo);
-
-        // 알림 시간이 설정되어 있으면 TodoAlarm 생성
-        if (request.getNotifyAt() != null) {
-            User user = userReadService.findById(category.getUserId());
-            TodoAlarm todoAlarm = TodoAlarm.create(savedTodo, user, request.getNotifyAt());
-            todoAlarmRepository.save(todoAlarm);
-        }
 
         return TodoResponse.from(savedTodo);
     }
@@ -228,6 +224,26 @@ public class TodoService {
         todo.updateDescription(request.getDescription());
 
         return TodoResponse.from(todo);
+    }
+
+    @Transactional(readOnly = true)
+    public TodoDetailResponse getTodoDetail(Long todoId, Long userId) {
+        Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        TodoAlarm todoAlarm = todoAlarmRepository.findByTodoId(todoId).orElse(null);
+
+        Recurrence recurrence = null;
+        if (todo.getRecurrenceId() != null) {
+            recurrence = recurrenceRepository.findById(todo.getRecurrenceId()).orElse(null);
+        }
+
+        return TodoDetailResponse.from(todo, todoAlarm, recurrence);
     }
 
     private String resolveImageCode(CharacterStatus status) {
