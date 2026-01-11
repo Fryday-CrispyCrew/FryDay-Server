@@ -36,9 +36,10 @@ public class MonthlyReportGenerateService {
         int completedTodos = categoryStatistics.stream()
             .mapToInt(CategoryReportDto::getCompletedTodos).sum();
         int incompleteTodos = totalTodos - completedTodos;
+        int attendanceDays = todoRepository.countAttendanceDays(userId, year, month);
         double achievementRate = calculateRate(completedTodos, totalTodos);
 
-        AttendanceIcon icon = AttendanceIcon.fromAchievementRate(achievementRate);
+        AttendanceIcon icon = AttendanceIcon.fromAttendanceDays(attendanceDays);
 
         MonthlyReport report = MonthlyReport.builder()
             .userId(userId)
@@ -47,6 +48,7 @@ public class MonthlyReportGenerateService {
             .totalTodos(totalTodos)
             .completedTodos(completedTodos)
             .incompleteTodos(incompleteTodos)
+            .attendanceDays(attendanceDays)
             .achievementRate(achievementRate)
             .attendanceIcon(icon)
             .attendanceMessage(icon.getMessage())
@@ -57,6 +59,7 @@ public class MonthlyReportGenerateService {
             double failureRate = calculateRate(dto.getIncompleteTodos(), dto.getTotalTodos());
 
             MonthlyReportCategory categoryReport = MonthlyReportCategory.builder()
+                .categoryId(dto.getCategoryId())
                 .categoryName(dto.getCategoryName())
                 .categoryColor(dto.getCategoryColor())
                 .totalTodos(dto.getTotalTodos())

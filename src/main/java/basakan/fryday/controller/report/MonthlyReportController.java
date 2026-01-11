@@ -1,7 +1,6 @@
 package basakan.fryday.controller.report;
 
 import basakan.fryday.controller.report.response.MonthlyReportResponse;
-import basakan.fryday.domain.report.MonthlyReport;
 import basakan.fryday.service.report.MonthlyReportReadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,8 +23,7 @@ public class MonthlyReportController {
             @RequestParam int month,
             @AuthenticationPrincipal Long userId) {
 
-        MonthlyReport report = monthlyReportReadService.getMonthlyReport(userId, year, month);
-        MonthlyReportResponse response = MonthlyReportResponse.from(report);
+        MonthlyReportResponse response = monthlyReportReadService.getMonthlyReportResponse(userId, year, month);
 
         return ResponseEntity.ok(response);
     }

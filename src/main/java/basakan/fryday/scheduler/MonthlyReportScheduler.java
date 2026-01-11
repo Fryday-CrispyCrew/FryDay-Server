@@ -18,7 +18,7 @@ public class MonthlyReportScheduler {
     private final MonthlyReportGenerateService reportGenerateService;
     private final UserJpaRepository userJpaRepository;
 
-    @Scheduled(cron = "0 10 0 1 * *")
+    @Scheduled(cron = "0 0 0 1 * *", zone = "Asia/Seoul")
     public void generateMonthlyReports() {
         log.info("[MonthlyReportScheduler] 월간 리포트 생성 시작");
 

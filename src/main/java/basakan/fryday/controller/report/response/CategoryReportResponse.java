@@ -8,6 +8,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class CategoryReportResponse {
+    private Long categoryId;
     private String categoryName;
     private CategoryColor categoryColor;
     private int totalTodos;
@@ -18,6 +19,7 @@ public class CategoryReportResponse {
 
     public static CategoryReportResponse from(MonthlyReportCategory category) {
         return CategoryReportResponse.builder()
+            .categoryId(category.getCategoryId())
             .categoryName(category.getCategoryName())
             .categoryColor(category.getCategoryColor())
             .totalTodos(category.getTotalTodos())
