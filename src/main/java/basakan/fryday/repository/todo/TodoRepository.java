@@ -46,6 +46,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     List<Todo> findAllByRecurrenceId(@Param("recurrenceId") Long recurrenceId);
 
     @Query("SELECT new basakan.fryday.service.report.dto.CategoryReportDto(" +
+           "c.id, " +
            "c.name, " +
            "c.color, " +
            "CAST(COUNT(t.id) AS int), " +
@@ -59,6 +60,19 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
            "  AND t.deletedAt IS NULL " +
            "GROUP BY c.id, c.name, c.color")
     List<CategoryReportDto> findMonthlyReportByCategory(
+        @Param("userId") Long userId,
+        @Param("year") int year,
+        @Param("month") int month
+    );
+
+    @Query("SELECT CAST(COUNT(DISTINCT DATE(t.date)) AS int) " +
+           "FROM Todo t " +
+           "JOIN t.category c " +
+           "WHERE c.userId = :userId " +
+           "  AND YEAR(t.date) = :year " +
+           "  AND MONTH(t.date) = :month " +
+           "  AND t.deletedAt IS NULL")
+    int countAttendanceDays(
         @Param("userId") Long userId,
         @Param("year") int year,
         @Param("month") int month

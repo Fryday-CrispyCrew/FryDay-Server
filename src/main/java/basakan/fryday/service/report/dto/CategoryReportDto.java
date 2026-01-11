@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class CategoryReportDto {
+    private Long categoryId;
     private String categoryName;
     private CategoryColor categoryColor;
     private int totalTodos;

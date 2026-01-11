@@ -6,10 +6,10 @@ import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
+import basakan.fryday.controller.report.response.CategoryReportResponse;
+import basakan.fryday.controller.report.response.MonthlyReportResponse;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.report.AttendanceIcon;
-import basakan.fryday.domain.report.MonthlyReport;
-import basakan.fryday.domain.report.MonthlyReportCategory;
 import basakan.fryday.service.report.MonthlyReportReadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.Collections;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -65,19 +66,8 @@ class MonthlyReportControllerTest extends RestDocsSupport {
     @DisplayName("월간 리포트 조회 API - 성공")
     void getMonthlyReport() throws Exception {
         // given
-        MonthlyReport report = MonthlyReport.builder()
-                .userId(1L)
-                .year(2025)
-                .month(4)
-                .totalTodos(45)
-                .completedTodos(30)
-                .incompleteTodos(15)
-                .achievementRate(66.67)
-                .attendanceIcon(AttendanceIcon.GOOD)
-                .attendanceMessage("노력이 보여요!")
-                .build();
-
-        MonthlyReportCategory category1 = MonthlyReportCategory.builder()
+        CategoryReportResponse category1 = CategoryReportResponse.builder()
+                .categoryId(1L)
                 .categoryName("운동")
                 .categoryColor(CategoryColor.BR)
                 .totalTodos(15)
@@ -87,7 +77,8 @@ class MonthlyReportControllerTest extends RestDocsSupport {
                 .failureRate(33.33)
                 .build();
 
-        MonthlyReportCategory category2 = MonthlyReportCategory.builder()
+        CategoryReportResponse category2 = CategoryReportResponse.builder()
+                .categoryId(2L)
                 .categoryName("공부")
                 .categoryColor(CategoryColor.CB)
                 .totalTodos(20)
@@ -97,11 +88,21 @@ class MonthlyReportControllerTest extends RestDocsSupport {
                 .failureRate(25.0)
                 .build();
 
-        report.addCategory(category1);
-        report.addCategory(category2);
+        MonthlyReportResponse response = MonthlyReportResponse.builder()
+                .year(2025)
+                .month(4)
+                .totalTodos(45)
+                .completedTodos(30)
+                .incompleteTodos(15)
+                .attendanceDays(18)
+                .achievementRate(66.67)
+                .attendanceIcon(AttendanceIcon.GOOD)
+                .attendanceMessage("튀김이 많아지고 있어요")
+                .categories(List.of(category1, category2))
+                .build();
 
-        given(monthlyReportReadService.getMonthlyReport(anyLong(), anyInt(), anyInt()))
-                .willReturn(report);
+        given(monthlyReportReadService.getMonthlyReportResponse(anyLong(), anyInt(), anyInt()))
+                .willReturn(response);
 
         // when & then
         mockMvc.perform(get("/api/reports/monthly")
@@ -114,10 +115,12 @@ class MonthlyReportControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.totalTodos").value(45))
                 .andExpect(jsonPath("$.completedTodos").value(30))
                 .andExpect(jsonPath("$.incompleteTodos").value(15))
+                .andExpect(jsonPath("$.attendanceDays").value(18))
                 .andExpect(jsonPath("$.achievementRate").value(66.67))
                 .andExpect(jsonPath("$.attendanceIcon").value("GOOD"))
-                .andExpect(jsonPath("$.attendanceMessage").value("노력이 보여요!"))
+                .andExpect(jsonPath("$.attendanceMessage").value("튀김이 많아지고 있어요"))
                 .andExpect(jsonPath("$.categories").isArray())
+                .andExpect(jsonPath("$.categories[0].categoryId").value(1))
                 .andExpect(jsonPath("$.categories[0].categoryName").value("운동"))
                 .andDo(document("monthly-report-get",
                         queryParameters(
@@ -130,10 +133,12 @@ class MonthlyReportControllerTest extends RestDocsSupport {
                                 fieldWithPath("totalTodos").type(JsonFieldType.NUMBER).description("전체 투두 개수"),
                                 fieldWithPath("completedTodos").type(JsonFieldType.NUMBER).description("완료한 투두 개수"),
                                 fieldWithPath("incompleteTodos").type(JsonFieldType.NUMBER).description("미완료 투두 개수"),
+                                fieldWithPath("attendanceDays").type(JsonFieldType.NUMBER).description("출석 일수 (투두를 1개라도 추가한 날의 개수)"),
                                 fieldWithPath("achievementRate").type(JsonFieldType.NUMBER).description("달성률 (%)"),
-                                fieldWithPath("attendanceIcon").type(JsonFieldType.STRING).description("출석 아이콘 (EXCELLENT, GREAT, GOOD, NEEDS_IMPROVEMENT, POOR)"),
+                                fieldWithPath("attendanceIcon").type(JsonFieldType.STRING).description("출석 아이콘 (EXCELLENT: 21-31일, GOOD: 11-20일, POOR: 0-10일)"),
                                 fieldWithPath("attendanceMessage").type(JsonFieldType.STRING).description("출석 메시지"),
-                                fieldWithPath("categories").type(JsonFieldType.ARRAY).description("카테고리별 통계 목록"),
+                                fieldWithPath("categories").type(JsonFieldType.ARRAY).description("카테고리별 통계 목록 (삭제된 카테고리 제외)"),
+                                fieldWithPath("categories[].categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("categories[].categoryName").type(JsonFieldType.STRING).description("카테고리 이름"),
                                 fieldWithPath("categories[].categoryColor").type(JsonFieldType.STRING).description("카테고리 색상 코드"),
                                 fieldWithPath("categories[].totalTodos").type(JsonFieldType.NUMBER).description("카테고리 전체 투두 개수"),
@@ -149,7 +154,7 @@ class MonthlyReportControllerTest extends RestDocsSupport {
     @DisplayName("월간 리포트 조회 API - 현재 월 조회 시 400 에러")
     void getMonthlyReportCurrentMonth() throws Exception {
         // given
-        given(monthlyReportReadService.getMonthlyReport(anyLong(), anyInt(), anyInt()))
+        given(monthlyReportReadService.getMonthlyReportResponse(anyLong(), anyInt(), anyInt()))
                 .willThrow(new BusinessException(ErrorCode.INVALID_REPORT_PERIOD));
 
         // when & then
@@ -166,7 +171,7 @@ class MonthlyReportControllerTest extends RestDocsSupport {
     @DisplayName("월간 리포트 조회 API - 리포트 없을 시 404 에러")
     void getMonthlyReportNotFound() throws Exception {
         // given
-        given(monthlyReportReadService.getMonthlyReport(anyLong(), anyInt(), anyInt()))
+        given(monthlyReportReadService.getMonthlyReportResponse(anyLong(), anyInt(), anyInt()))
                 .willThrow(new BusinessException(ErrorCode.REPORT_NOT_FOUND));
 
         // when & then

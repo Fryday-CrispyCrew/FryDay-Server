@@ -18,6 +18,9 @@ public class MonthlyReportCategory extends BaseEntity {
     @JoinColumn(name = "monthly_report_id", nullable = false)
     private MonthlyReport monthlyReport;
 
+    @Column(nullable = false)
+    private Long categoryId;
+
     @Column(nullable = false, length = 50)
     private String categoryName;
 
@@ -41,9 +44,10 @@ public class MonthlyReportCategory extends BaseEntity {
     private double failureRate;
 
     @Builder
-    public MonthlyReportCategory(String categoryName, CategoryColor categoryColor,
+    public MonthlyReportCategory(Long categoryId, String categoryName, CategoryColor categoryColor,
                                  int totalTodos, int completedTodos, int incompleteTodos,
                                  double successRate, double failureRate) {
+        this.categoryId = categoryId;
         this.categoryName = categoryName;
         this.categoryColor = categoryColor;
         this.totalTodos = totalTodos;

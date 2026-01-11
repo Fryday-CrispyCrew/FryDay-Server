@@ -15,24 +15,24 @@ public class MonthlyReportResponse {
     private int totalTodos;
     private int completedTodos;
     private int incompleteTodos;
+    private int attendanceDays;
     private double achievementRate;
     private AttendanceIcon attendanceIcon;
     private String attendanceMessage;
     private List<CategoryReportResponse> categories;
 
-    public static MonthlyReportResponse from(MonthlyReport report) {
+    public static MonthlyReportResponse from(MonthlyReport report, List<CategoryReportResponse> filteredCategories) {
         return MonthlyReportResponse.builder()
             .year(report.getYear())
             .month(report.getMonth())
             .totalTodos(report.getTotalTodos())
             .completedTodos(report.getCompletedTodos())
             .incompleteTodos(report.getIncompleteTodos())
+            .attendanceDays(report.getAttendanceDays())
             .achievementRate(report.getAchievementRate())
             .attendanceIcon(report.getAttendanceIcon())
             .attendanceMessage(report.getAttendanceMessage())
-            .categories(report.getCategories().stream()
-                .map(CategoryReportResponse::from)
-                .toList())
+            .categories(filteredCategories)
             .build();
     }
 }

@@ -43,6 +43,9 @@ public class MonthlyReport extends BaseEntity {
     private int incompleteTodos;
 
     @Column(nullable = false)
+    private int attendanceDays;
+
+    @Column(nullable = false)
     private double achievementRate;
 
     @Enumerated(EnumType.STRING)
@@ -58,14 +61,15 @@ public class MonthlyReport extends BaseEntity {
     @Builder
     public MonthlyReport(Long userId, int year, int month,
                          int totalTodos, int completedTodos, int incompleteTodos,
-                         double achievementRate, AttendanceIcon attendanceIcon,
-                         String attendanceMessage) {
+                         int attendanceDays, double achievementRate,
+                         AttendanceIcon attendanceIcon, String attendanceMessage) {
         this.userId = userId;
         this.year = year;
         this.month = month;
         this.totalTodos = totalTodos;
         this.completedTodos = completedTodos;
         this.incompleteTodos = incompleteTodos;
+        this.attendanceDays = attendanceDays;
         this.achievementRate = achievementRate;
         this.attendanceIcon = attendanceIcon;
         this.attendanceMessage = attendanceMessage;

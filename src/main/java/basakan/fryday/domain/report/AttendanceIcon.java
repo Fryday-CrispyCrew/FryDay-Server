@@ -6,20 +6,16 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum AttendanceIcon {
-    EXCELLENT("완벽한 한 달이었어요!", 90.0),
-    GREAT("잘 하고 있어요!", 70.0),
-    GOOD("노력이 보여요!", 50.0),
-    NEEDS_IMPROVEMENT("조금만 더 힘내요!", 30.0),
-    POOR("다음 달엔 할 수 있어요!", 0.0);
+    EXCELLENT("튀김 장인입니다!", 21),
+    GOOD("튀김이 많아지고 있어요", 11),
+    POOR("튀김을 열심히 튀겨주세요", 0);
 
     private final String message;
-    private final double minRate;
+    private final int minDays;
 
-    public static AttendanceIcon fromAchievementRate(double achievementRate) {
-        if (achievementRate >= 90.0) return EXCELLENT;
-        if (achievementRate >= 70.0) return GREAT;
-        if (achievementRate >= 50.0) return GOOD;
-        if (achievementRate >= 30.0) return NEEDS_IMPROVEMENT;
+    public static AttendanceIcon fromAttendanceDays(int attendanceDays) {
+        if (attendanceDays >= 21) return EXCELLENT;
+        if (attendanceDays >= 11) return GOOD;
         return POOR;
     }
 }
