@@ -205,6 +205,25 @@ include::{snippets}/user-withdraw/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/user-withdraw/response-fields.adoc[]
 
+== 월간 리포트(Monthly Report)
+
+=== 월간 리포트 조회
+`GET /api/reports/monthly`
+
+사용자의 특정 월간 리포트를 조회합니다.
+
+==== 요청 쿼리 파라미터
+include::{snippets}/monthly-report-get/query-parameters.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/monthly-report-get/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/monthly-report-get/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/monthly-report-get/response-fields.adoc[]
+
 == 투두(Todo)
 
 === 투두 생성
