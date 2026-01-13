@@ -358,7 +358,7 @@ include::{snippets}/todo-delete/http-response.adoc[]
 include::{snippets}/todo-delete/response-fields.adoc[]
 
 === 반복 설정 투두 삭제
-`DELETE /api/todos/{todoId}/recurrence`
+`DELETE /api/todos/recurrence/{recurrenceId}`
 
 반복 설정이 된 투두를 전체 삭제합니다.
 

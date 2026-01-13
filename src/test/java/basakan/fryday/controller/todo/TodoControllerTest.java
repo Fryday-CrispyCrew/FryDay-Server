@@ -606,12 +606,14 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
 
-                                fieldWithPath("data[].id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data[].id").type(JsonFieldType.NUMBER).description("투두 ID (가상 회차는 null)"),
                                 fieldWithPath("data[].description").type(JsonFieldType.STRING).description("할 일 내용"),
                                 fieldWithPath("data[].status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS 등)"),
                                 fieldWithPath("data[].categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data[].displayOrder").type(JsonFieldType.NUMBER).description("정렬 순서"),
                                 fieldWithPath("data[].date").type(JsonFieldType.STRING).description("날짜"),
+                                fieldWithPath("data[].recurrenceId").type(JsonFieldType.NUMBER).description("반복 투두 규칙 ID (일반 투두는 null)").optional(),
+                                fieldWithPath("data[].occurrenceDate").type(JsonFieldType.STRING).description("가상 회차의 발생일 (일반 투두는 null)").optional(),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
