@@ -42,14 +42,6 @@ public class RecurrenceService {
 
         originalTodo.updateDate(request.getStartDate());
 
-        LocalDate today = LocalDate.now();
-        LocalDate generationStartDate = request.getStartDate().isBefore(today) ? today : request.getStartDate();
-        
-        // 종료일이 없으면 오늘부터 +1년까지만 생성
-        LocalDate limitDate = (request.getEndDate() != null)
-                ? request.getEndDate()
-                : today.plusYears(1);
-
         Recurrence recurrence = Recurrence.builder()
                 .userId(userId)
                 .categoryId(originalTodo.getCategory().getId())
@@ -61,7 +53,7 @@ public class RecurrenceService {
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate()) // null이면 무한 반복
                 .notificationTime(request.getNotificationTime())
-                .lastGeneratedDate(limitDate)
+                .lastGeneratedDate(request.getStartDate())
                 .build();
 
         Recurrence savedRecurrence = recurrenceRepository.save(recurrence);
