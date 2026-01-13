@@ -77,6 +77,12 @@ public class RecurrenceService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
+        // 반복으로 생성된 모든 Todo 삭제 (soft delete)
+        List<Todo> todos = todoRepository.findAllByRecurrenceId(recurrenceId);
+        for (Todo todo : todos) {
+            todo.delete();
+        }
+
         // 관련 예외 삭제
         List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
         recurrenceExceptionRepository.deleteAll(exceptions);

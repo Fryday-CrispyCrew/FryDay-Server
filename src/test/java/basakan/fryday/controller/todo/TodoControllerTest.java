@@ -38,6 +38,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
@@ -300,16 +301,19 @@ class TodoControllerTest extends RestDocsSupport {
     @DisplayName("반복 투두 전체 삭제 API")
     void deleteRecurrence() throws Exception {
         // given
-        Long todoId = 1L;
+        Long recurrenceId = 1L;
+
+        // Mocking: void 메서드이므로 willDoNothing 사용
+        willDoNothing().given(recurrenceService).deleteRecurrence(anyLong(), anyLong());
 
         // when & then
-        mockMvc.perform(delete("/api/todos/{todoId}/recurrence", todoId)
+        mockMvc.perform(delete("/api/todos/recurrence/{recurrenceId}", recurrenceId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andDo(document("todo-recurrence-delete",
                         pathParameters(
-                                parameterWithName("todoId").description("반복 투두를 삭제할 투두 ID (원본 투두 포함 모든 반복 투두가 삭제됩니다)")
+                                parameterWithName("recurrenceId").description("삭제할 반복 투두 규칙 ID (반복 규칙과 반복으로 생성된 모든 투두가 삭제됩니다)")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
