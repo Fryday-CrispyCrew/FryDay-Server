@@ -16,6 +16,7 @@ import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.RecurrenceOccurrenceStateRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.todo.RecurrenceOccurrenceMaterializeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class RecurrenceService {
     private final RecurrenceOccurrenceStateRepository recurrenceOccurrenceStateRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final CategoryRepository categoryRepository;
+    private final RecurrenceOccurrenceMaterializeService materializeService;
 
     @Transactional
     public TodoResponse createRecurrence(Long userId, RecurrenceCreateRequest request) {
@@ -96,10 +98,10 @@ public class RecurrenceService {
     }
 
     /**
-     * 반복 투두의 가상 회차 완료 상태를 upsert
+     * 반복 투두의 가상 회차 완료 상태를 upsert하고 Todo 생성
      */
     @Transactional
-    public void toggleRecurrenceOccurrenceCompletion(Long recurrenceId, LocalDate occurrenceDate, Long userId) {
+    public TodoResponse toggleRecurrenceOccurrenceCompletion(Long recurrenceId, LocalDate occurrenceDate, Long userId) {
         Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
@@ -112,21 +114,35 @@ public class RecurrenceService {
                 .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
                 .orElse(null);
 
+        RecurrenceOccurrenceState.Status newStatus;
         if (existingState != null) {
             // 기존 상태 토글
-            RecurrenceOccurrenceState.Status newStatus = existingState.getStatus() == RecurrenceOccurrenceState.Status.COMPLETED
+            newStatus = existingState.getStatus() == RecurrenceOccurrenceState.Status.COMPLETED
                     ? RecurrenceOccurrenceState.Status.IN_PROGRESS
                     : RecurrenceOccurrenceState.Status.COMPLETED;
             existingState.updateStatus(newStatus);
         } else {
             // 새 상태 생성 (기본값은 COMPLETED)
+            newStatus = RecurrenceOccurrenceState.Status.COMPLETED;
             RecurrenceOccurrenceState newState = RecurrenceOccurrenceState.builder()
                     .recurrenceId(recurrenceId)
                     .occurrenceDate(occurrenceDate)
-                    .status(RecurrenceOccurrenceState.Status.COMPLETED)
+                    .status(newStatus)
                     .build();
             recurrenceOccurrenceStateRepository.save(newState);
         }
+
+        // Todo 생성 또는 조회 (이미 존재하면 기존 Todo 반환)
+        Todo todo = materializeService.materializeOccurrenceIfNotExists(userId, recurrenceId, occurrenceDate);
+
+        // Todo 상태를 RecurrenceOccurrenceState와 동기화
+        if (todo.getStatus() == Todo.Status.COMPLETED && newStatus == RecurrenceOccurrenceState.Status.IN_PROGRESS) {
+            todo.toggleCompletion();
+        } else if (todo.getStatus() == Todo.Status.IN_PROGRESS && newStatus == RecurrenceOccurrenceState.Status.COMPLETED) {
+            todo.toggleCompletion();
+        }
+
+        return TodoResponse.from(todo);
     }
 
     // 반복 투두의 특정 회차를 분리(DETACHED)하고 단건 todo로 변환

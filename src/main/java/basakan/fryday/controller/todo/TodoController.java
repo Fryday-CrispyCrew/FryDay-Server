@@ -155,13 +155,13 @@ public class TodoController {
     }
 
     @PostMapping("/recurrence/{recurrenceId}/completion")
-    public ApiResponse<Void> toggleRecurrenceOccurrenceCompletion(
+    public ApiResponse<TodoResponse> toggleRecurrenceOccurrenceCompletion(
             @PathVariable Long recurrenceId,
             @Valid @RequestBody RecurrenceOccurrenceCompletionRequest request,
             @AuthenticationPrincipal Long userId
     ) {
-        recurrenceService.toggleRecurrenceOccurrenceCompletion(recurrenceId, request.getOccurrenceDate(), userId);
-        return ApiResponse.success(null, "반복 투두 완료 상태가 변경되었습니다.");
+        TodoResponse response = recurrenceService.toggleRecurrenceOccurrenceCompletion(recurrenceId, request.getOccurrenceDate(), userId);
+        return ApiResponse.success(response, "반복 투두 완료 상태가 변경되었습니다.");
     }
 
     @PostMapping("/recurrence/{recurrenceId}/cancel")
