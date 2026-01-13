@@ -204,34 +204,35 @@ public class RecurrenceService {
     /**
      * 반복 투두의 특정 회차를 제외(CANCELLED)합니다.
      */
-    @Transactional
-    public void cancelRecurrenceOccurrence(Long recurrenceId, LocalDate occurrenceDate, Long userId) {
-        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        if (recurrence.getUserId() != userId) {
-            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-        }
-
-        RecurrenceException existingException = recurrenceExceptionRepository
-                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
-                .orElse(null);
-
-        if (existingException != null) {
-            if (existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-            }
-            return;
-        }
-
-        RecurrenceException exception = RecurrenceException.builder()
-                .recurrenceId(recurrenceId)
-                .occurrenceDate(occurrenceDate)
-                .type(RecurrenceException.ExceptionType.CANCELLED)
-                .build();
-
-        recurrenceExceptionRepository.save(exception);
-    }
+    // 현재 기획상 미존재
+//    @Transactional
+//    public void cancelRecurrenceOccurrence(Long recurrenceId, LocalDate occurrenceDate, Long userId) {
+//        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+//                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+//
+//        if (recurrence.getUserId() != userId) {
+//            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+//        }
+//
+//        RecurrenceException existingException = recurrenceExceptionRepository
+//                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
+//                .orElse(null);
+//
+//        if (existingException != null) {
+//            if (existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
+//                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+//            }
+//            return;
+//        }
+//
+//        RecurrenceException exception = RecurrenceException.builder()
+//                .recurrenceId(recurrenceId)
+//                .occurrenceDate(occurrenceDate)
+//                .type(RecurrenceException.ExceptionType.CANCELLED)
+//                .build();
+//
+//        recurrenceExceptionRepository.save(exception);
+//    }
 
     // 반복 규칙 수정
     @Transactional

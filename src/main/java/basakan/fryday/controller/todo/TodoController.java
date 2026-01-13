@@ -164,15 +164,16 @@ public class TodoController {
         return ApiResponse.success(response, "반복 투두 완료 상태가 변경되었습니다.");
     }
 
-    @PostMapping("/recurrence/{recurrenceId}/cancel")
-    public ApiResponse<Void> cancelRecurrenceOccurrence(
-            @PathVariable Long recurrenceId,
-            @Valid @RequestBody RecurrenceOccurrenceCancelRequest request,
-            @AuthenticationPrincipal Long userId
-    ) {
-        recurrenceService.cancelRecurrenceOccurrence(recurrenceId, request.getOccurrenceDate(), userId);
-        return ApiResponse.success(null, "반복 투두 회차가 제외되었습니다.");
-    }
+    // 현재 기획상은 미존재, 나중에 들어올 것 같음
+//    @PostMapping("/recurrence/{recurrenceId}/cancel")
+//    public ApiResponse<Void> cancelRecurrenceOccurrence(
+//            @PathVariable Long recurrenceId,
+//            @Valid @RequestBody RecurrenceOccurrenceCancelRequest request,
+//            @AuthenticationPrincipal Long userId
+//    ) {
+//        recurrenceService.cancelRecurrenceOccurrence(recurrenceId, request.getOccurrenceDate(), userId);
+//        return ApiResponse.success(null, "반복 투두 회차가 제외되었습니다.");
+//    }
 
     @PostMapping("/recurrence/{recurrenceId}/detach")
     public ApiResponse<TodoResponse> detachRecurrenceOccurrence(
