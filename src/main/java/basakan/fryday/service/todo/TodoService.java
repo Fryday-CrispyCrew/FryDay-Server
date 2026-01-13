@@ -15,21 +15,23 @@ import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.todo.TodoAlarm;
 import basakan.fryday.domain.todo.Recurrence;
-import basakan.fryday.domain.user.User;
+import basakan.fryday.domain.todo.RecurrenceException;
+import basakan.fryday.domain.todo.RecurrenceOccurrenceState;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
-import basakan.fryday.service.user.UserReadService;
-import lombok.RequiredArgsConstructor;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
+import basakan.fryday.repository.todo.RecurrenceOccurrenceStateRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +41,9 @@ public class TodoService {
     private final CategoryRepository categoryRepository;
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceRepository recurrenceRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
+    private final RecurrenceOccurrenceStateRepository recurrenceOccurrenceStateRepository;
+    private final RecurrenceOccurrenceCalculator occurrenceCalculator;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
@@ -167,19 +172,89 @@ public class TodoService {
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
+        // 1. 일반 투두 목록 조회 (recurrenceId가 null인 투두 + DETACHED된 단건 투두)
         List<Todo> todos;
-
         if (categoryId == null) {
             todos = todoRepository.findAllByUserIdAndDate(userId, date);
         } else {
             todos = todoRepository.findAllByCategoryIdAndDate(categoryId, date);
         }
 
-        return todos.stream()
-                .map(TodoListResponse::from)
-                .collect(Collectors.toList());
+        // 2. 해당 날짜에 해당하는 반복 규칙 조회
+        List<Recurrence> recurrences = recurrenceRepository.findByUserIdAndDateRange(userId, date);
+        
+        // 카테고리 필터링
+        if (categoryId != null) {
+            recurrences = recurrences.stream()
+                    .filter(r -> r.getCategoryId() == categoryId)
+                    .collect(Collectors.toList());
+        }
+
+        // 3. 반복 투두의 가상 회차 생성
+        List<TodoListResponse> virtualOccurrences = new ArrayList<>();
+        
+        for (Recurrence recurrence : recurrences) {
+            // 예외 조회 (CANCELLED와 DETACHED 모두 제외)
+            List<RecurrenceException> exceptions = recurrenceExceptionRepository
+                    .findByRecurrenceId(recurrence.getId());
+            
+            // 해당 날짜가 예외인지 확인
+            boolean isException = exceptions.stream()
+                    .anyMatch(e -> e.getOccurrenceDate().equals(date));
+            
+            if (isException) {
+                continue;
+            }
+
+            // 발생일 계산 (해당 날짜만)
+            Set<LocalDate> cancelledDates = exceptions.stream()
+                    .map(RecurrenceException::getOccurrenceDate)
+                    .collect(Collectors.toSet());
+
+            List<LocalDate> occurrenceDates = occurrenceCalculator.calculateOccurrences(
+                    recurrence, date, date, cancelledDates
+            );
+
+            // 해당 날짜에 발생하는 회차가 있는지 확인
+            if (occurrenceDates.isEmpty() || !occurrenceDates.contains(date)) {
+                continue;
+            }
+
+            // 상태 정보 조회
+            Map<LocalDate, RecurrenceOccurrenceState.Status> statusMap = 
+                    recurrenceOccurrenceStateRepository.findStatusMapByRecurrenceId(recurrence.getId());
+
+            RecurrenceOccurrenceState.Status status = statusMap.getOrDefault(
+                    date, RecurrenceOccurrenceState.Status.IN_PROGRESS
+            );
+
+            Long maxOrder = todoRepository.findMaxDisplayOrder(userId, date);
+            long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+
+            virtualOccurrences.add(TodoListResponse.fromVirtualOccurrence(
+                    recurrence.getId(),
+                    recurrence.getDescription(),
+                    status.name(),
+                    recurrence.getCategoryId(),
+                    displayOrder,
+                    date
+            ));
+        }
+
+        // 4. 일반 투두와 가상 회차 합치기
+        List<TodoListResponse> allResponses = Stream.concat(
+                todos.stream()
+                        .filter(todo -> todo.getRecurrenceId() == null)  // 일반 투두만 (기존 반복 투두 제외)
+                        .map(TodoListResponse::from),
+                virtualOccurrences.stream()
+        ).collect(Collectors.toList());
+
+        // displayOrder 기준으로 정렬
+        allResponses.sort(Comparator.comparing(TodoListResponse::getDisplayOrder));
+
+        return allResponses;
     }
 
     @Transactional(readOnly = true)

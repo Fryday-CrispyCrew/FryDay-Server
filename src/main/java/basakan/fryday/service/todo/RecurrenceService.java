@@ -3,18 +3,24 @@ package basakan.fryday.service.todo;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
+import basakan.fryday.controller.todo.request.RecurrenceOccurrenceCompletionRequest;
+import basakan.fryday.controller.todo.request.RecurrenceUpdateRequest;
 import basakan.fryday.controller.todo.response.TodoResponse;
+import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.Recurrence;
+import basakan.fryday.domain.todo.RecurrenceException;
+import basakan.fryday.domain.todo.RecurrenceOccurrenceState;
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.repository.CategoryRepository;
+import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.repository.todo.RecurrenceOccurrenceStateRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,6 +29,9 @@ public class RecurrenceService {
 
     private final RecurrenceRepository recurrenceRepository;
     private final TodoRepository todoRepository;
+    private final RecurrenceOccurrenceStateRepository recurrenceOccurrenceStateRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
+    private final CategoryRepository categoryRepository;
 
     @Transactional
     public TodoResponse createRecurrence(Long userId, RecurrenceCreateRequest request) {
@@ -55,86 +64,181 @@ public class RecurrenceService {
 
         Recurrence savedRecurrence = recurrenceRepository.save(recurrence);
 
+        // 원본 투두에 recurrenceId 연결
         originalTodo.setRecurrenceId(savedRecurrence.getId());
 
-        List<Todo> todoList = new ArrayList<>();
-
-        // 시작일부터 limitDate까지 투두 생성
-        LocalDate currentDate = generationStartDate.plusDays(1);
-
-        while (!currentDate.isAfter(limitDate)) {
-            if (isMatch(request, currentDate)) {
-                Long maxOrder = todoRepository.findMaxDisplayOrder(userId, currentDate);
-                long nextOrder = (maxOrder == null) ? 1 : maxOrder + 1;
-
-                Todo todo = Todo.builder()
-                        .description(originalTodo.getDescription())
-                        .category(originalTodo.getCategory())
-                        .date(currentDate)
-                        .displayOrder(nextOrder)
-                        .recurrenceId(savedRecurrence.getId())
-                        .build();
-                todoList.add(todo);
-            }
-            currentDate = currentDate.plusDays(1);
-        }
-        todoRepository.saveAll(todoList);
+        // 반복 규칙만 저장하고, 투두는 대량 생성하지 않음
+        // 가상 회차는 조회 시 동적으로 생성됨
 
         return TodoResponse.from(originalTodo);
     }
 
-    private boolean isMatch(RecurrenceCreateRequest request, LocalDate date) {
-        List<String> values = request.getFrequencyValues();
+    // 반복 해제
+    @Transactional
+    public void deleteRecurrence(Long recurrenceId, Long userId) {
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        switch (request.getType()) {
-            case DAILY:
-                return true;
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
 
-            case WEEKLY:
-                if (values == null || values.isEmpty()) {
-                    return false;
-                }
-                return values.contains(date.getDayOfWeek().name());
+        // 관련 예외 삭제
+        List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
+        recurrenceExceptionRepository.deleteAll(exceptions);
 
-            case MONTHLY:
-                if (values == null || values.isEmpty()) {
-                    return false;
-                }
-                return values.contains(String.valueOf(date.getDayOfMonth()));
+        // 관련 상태 삭제
+        List<RecurrenceOccurrenceState> states = recurrenceOccurrenceStateRepository.findByRecurrenceId(recurrenceId);
+        recurrenceOccurrenceStateRepository.deleteAll(states);
 
-            case YEARLY:
-                if (values == null || values.isEmpty()) {
-                    return false;
-                }
-                String monthDay = date.format(DateTimeFormatter.ofPattern("MM-dd"));
-                return values.contains(monthDay);
+        // 반복 규칙 삭제
+        recurrenceRepository.delete(recurrence);
+    }
 
-            default:
-                return false;
+    /**
+     * 반복 투두의 가상 회차 완료 상태를 upsert
+     */
+    @Transactional
+    public void toggleRecurrenceOccurrenceCompletion(Long recurrenceId, LocalDate occurrenceDate, Long userId) {
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        // 기존 상태 조회
+        RecurrenceOccurrenceState existingState = recurrenceOccurrenceStateRepository
+                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
+                .orElse(null);
+
+        if (existingState != null) {
+            // 기존 상태 토글
+            RecurrenceOccurrenceState.Status newStatus = existingState.getStatus() == RecurrenceOccurrenceState.Status.COMPLETED
+                    ? RecurrenceOccurrenceState.Status.IN_PROGRESS
+                    : RecurrenceOccurrenceState.Status.COMPLETED;
+            existingState.updateStatus(newStatus);
+        } else {
+            // 새 상태 생성 (기본값은 COMPLETED)
+            RecurrenceOccurrenceState newState = RecurrenceOccurrenceState.builder()
+                    .recurrenceId(recurrenceId)
+                    .occurrenceDate(occurrenceDate)
+                    .status(RecurrenceOccurrenceState.Status.COMPLETED)
+                    .build();
+            recurrenceOccurrenceStateRepository.save(newState);
         }
     }
 
+    // 반복 투두의 특정 회차를 분리(DETACHED)하고 단건 todo로 변환
     @Transactional
-    public void deleteRecurrence(Long todoId, Long userId) {
-        Todo todo = todoRepository.findById(todoId)
-                .filter(t -> !t.isDeleted())
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        if (!todo.getCategory().getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-        }
-
-        Long recurrenceId = todo.getRecurrenceId();
-        if (recurrenceId == null) {
-            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-        }
-
-        List<Todo> allRecurringTodos = todoRepository.findAllByRecurrenceId(recurrenceId);
-
-        todoRepository.deleteAll(allRecurringTodos);
-
+    public TodoResponse detachRecurrenceOccurrence(Long recurrenceId, LocalDate occurrenceDate, LocalDate newDate, Long userId) {
         Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-        recurrenceRepository.delete(recurrence);
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        // DETACHED 예외가 이미 존재하는지 확인
+        RecurrenceException existingException = recurrenceExceptionRepository
+                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
+                .orElse(null);
+
+        if (existingException != null && existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        // DETACHED 예외 생성
+        RecurrenceException exception = RecurrenceException.builder()
+                .recurrenceId(recurrenceId)
+                .occurrenceDate(occurrenceDate)
+                .type(RecurrenceException.ExceptionType.DETACHED)
+                .build();
+
+        // 단건 todo 생성
+        Category category = categoryRepository.findById(recurrence.getCategoryId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
+        long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+
+        // Todo.builder()는 recurrenceId를 필수로 받으므로, 0L을 전달하고 나중에 setRecurrenceId(null)로 변경
+        Todo detachedTodo = Todo.builder()
+                .description(recurrence.getDescription())
+                .category(category)
+                .date(newDate)
+                .displayOrder(displayOrder)
+                .recurrenceId(0L)  // 임시값, Builder 패턴 때문에 필요
+                .build();
+        detachedTodo.setRecurrenceId(null);  // 반복에서 분리되었으므로 null
+
+        Todo savedTodo = todoRepository.save(detachedTodo);
+
+        // 예외에 detached_todo_id 저장
+        exception = RecurrenceException.builder()
+                .recurrenceId(recurrenceId)
+                .occurrenceDate(occurrenceDate)
+                .type(RecurrenceException.ExceptionType.DETACHED)
+                .detachedTodoId(savedTodo.getId())
+                .build();
+
+        recurrenceExceptionRepository.save(exception);
+
+        return TodoResponse.from(savedTodo);
+    }
+
+    /**
+     * 반복 투두의 특정 회차를 제외(CANCELLED)합니다.
+     */
+    @Transactional
+    public void cancelRecurrenceOccurrence(Long recurrenceId, LocalDate occurrenceDate, Long userId) {
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        RecurrenceException existingException = recurrenceExceptionRepository
+                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
+                .orElse(null);
+
+        if (existingException != null) {
+            if (existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            return;
+        }
+
+        RecurrenceException exception = RecurrenceException.builder()
+                .recurrenceId(recurrenceId)
+                .occurrenceDate(occurrenceDate)
+                .type(RecurrenceException.ExceptionType.CANCELLED)
+                .build();
+
+        recurrenceExceptionRepository.save(exception);
+    }
+
+    // 반복 규칙 수정
+    @Transactional
+    public void updateRecurrence(Long recurrenceId, RecurrenceUpdateRequest request, Long userId) {
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        String frequencyValuesStr = (request.getFrequencyValues() != null && !request.getFrequencyValues().isEmpty())
+                ? String.join(",", request.getFrequencyValues())
+                : null;
+
+        recurrence.update(
+                request.getType(),
+                frequencyValuesStr,
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getNotificationTime()
+        );
     }
 }

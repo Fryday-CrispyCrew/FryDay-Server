@@ -61,4 +61,13 @@ public class Recurrence extends BaseEntity {
     public void updateLastGeneratedDate(LocalDate date) {
         this.lastGeneratedDate = date;
     }
+
+    public void update(RecurrenceType type, String frequencyValues, LocalDate startDate, 
+                      LocalDate endDate, LocalTime notificationTime) {
+        this.type = type;
+        this.frequencyValues = frequencyValues;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.notificationTime = notificationTime;
+    }
 }

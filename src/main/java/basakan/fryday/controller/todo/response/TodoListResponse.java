@@ -14,6 +14,8 @@ public class TodoListResponse {
     private final Long categoryId;
     private final Long displayOrder;
     private final LocalDate date;
+    private final Long recurrenceId;  // 반복 투두 ID (일반 투두는 null)
+    private final LocalDate occurrenceDate;  // 가상 회차의 발생일 (반복 투두만)
 
     public TodoListResponse(Todo todo) {
         this.id = todo.getId();
@@ -22,9 +24,30 @@ public class TodoListResponse {
         this.categoryId = todo.getCategory().getId();
         this.displayOrder = todo.getDisplayOrder();
         this.date = todo.getDate();
+        this.recurrenceId = todo.getRecurrenceId();
+        this.occurrenceDate = null;
+    }
+
+    // 가상 회차(반복 투두)용 생성자
+    public TodoListResponse(Long recurrenceId, String description, String status, Long categoryId, 
+                           Long displayOrder, LocalDate occurrenceDate) {
+        this.id = null;  // 가상 회차는 DB id가 없음
+        this.description = description;
+        this.status = status;
+        this.categoryId = categoryId;
+        this.displayOrder = displayOrder;
+        this.date = occurrenceDate;
+        this.recurrenceId = recurrenceId;
+        this.occurrenceDate = occurrenceDate;
     }
 
     public static TodoListResponse from(Todo todo) {
         return new TodoListResponse(todo);
+    }
+
+    public static TodoListResponse fromVirtualOccurrence(Long recurrenceId, String description, 
+                                                        String status, Long categoryId, 
+                                                        Long displayOrder, LocalDate occurrenceDate) {
+        return new TodoListResponse(recurrenceId, description, status, categoryId, displayOrder, occurrenceDate);
     }
 }
