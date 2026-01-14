@@ -193,6 +193,6 @@ public class TodoController {
             @AuthenticationPrincipal Long userId
     ) {
         recurrenceService.updateRecurrence(recurrenceId, request, userId);
-        return ApiResponse.success(null, "반복 투두가 수정되었습니다.");
+        return ApiResponse.success(null, "반복 투두 규칙이 수정되었습니다.");
     }
 }
