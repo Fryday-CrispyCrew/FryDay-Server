@@ -8,12 +8,10 @@ import basakan.fryday.controller.todo.response.TodoResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceException;
-import basakan.fryday.domain.todo.RecurrenceOccurrenceState;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
-import basakan.fryday.repository.todo.RecurrenceOccurrenceStateRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +26,6 @@ public class RecurrenceService {
 
     private final RecurrenceRepository recurrenceRepository;
     private final TodoRepository todoRepository;
-    private final RecurrenceOccurrenceStateRepository recurrenceOccurrenceStateRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final CategoryRepository categoryRepository;
 
@@ -83,10 +80,6 @@ public class RecurrenceService {
         // 관련 예외 삭제
         List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
         recurrenceExceptionRepository.deleteAll(exceptions);
-
-        // 관련 상태 삭제
-        List<RecurrenceOccurrenceState> states = recurrenceOccurrenceStateRepository.findByRecurrenceId(recurrenceId);
-        recurrenceOccurrenceStateRepository.deleteAll(states);
 
         // 반복 규칙 삭제
         recurrenceRepository.delete(recurrence);
