@@ -7,18 +7,22 @@ import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceException;
 import basakan.fryday.domain.todo.RecurrenceOccurrenceState;
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.domain.todo.TodoAlarm;
+import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceOccurrenceStateRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.user.UserReadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,6 +41,8 @@ public class RecurrenceOccurrenceMaterializeService {
     private final TodoRepository todoRepository;
     private final CategoryRepository categoryRepository;
     private final RecurrenceOccurrenceCalculator occurrenceCalculator;
+    private final TodoAlarmRepository todoAlarmRepository;
+    private final UserReadService userReadService;
 
     /**
      * 특정 반복 투두의 가상 회차를 실제 Todo로 생성 (이미 존재하면 생성하지 않음)
@@ -115,7 +121,29 @@ public class RecurrenceOccurrenceMaterializeService {
             todo.toggleCompletion();
         }
 
-        return todoRepository.save(todo);
+        Todo savedTodo = todoRepository.save(todo);
+
+        // notificationTime이 있으면 TodoAlarm 생성
+        if (recurrence.getNotificationTime() != null) {
+            // 이미 TodoAlarm이 있는지 확인
+            todoAlarmRepository.findByTodoId(savedTodo.getId())
+                    .ifPresentOrElse(
+                            existingAlarm -> {
+                                // 기존 알림이 있으면 시간만 업데이트 (occurrenceDate + notificationTime)
+                                LocalDateTime notifyAt = LocalDateTime.of(occurrenceDate, recurrence.getNotificationTime());
+                                existingAlarm.changeTime(notifyAt);
+                            },
+                            () -> {
+                                // 새로운 알림 생성
+                                User user = userReadService.findById(userId);
+                                LocalDateTime notifyAt = LocalDateTime.of(occurrenceDate, recurrence.getNotificationTime());
+                                TodoAlarm todoAlarm = TodoAlarm.create(savedTodo, user, notifyAt);
+                                todoAlarmRepository.save(todoAlarm);
+                            }
+                    );
+        }
+
+        return savedTodo;
     }
 
     /**
