@@ -12,4 +12,9 @@ public interface RecurrenceRepository extends JpaRepository<Recurrence, Long> {
 
     @Query("SELECT r FROM Recurrence r WHERE r.endDate IS NULL AND r.lastGeneratedDate < :thresholdDate")
     List<Recurrence> findRecurrencesToExtend(@Param("thresholdDate") LocalDate thresholdDate);
+
+    @Query("SELECT r FROM Recurrence r WHERE r.userId = :userId " +
+           "AND (r.endDate IS NULL OR r.endDate >= :date) " +
+           "AND r.startDate <= :date")
+    List<Recurrence> findByUserIdAndDateRange(@Param("userId") Long userId, @Param("date") LocalDate date);
 }

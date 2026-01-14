@@ -310,13 +310,10 @@ include::{snippets}/todo-character-status/response-fields.adoc[]
 
 ==== 경로 파라미터
 include::{snippets}/todo-toggle/path-parameters.adoc[]
-
 ==== HTTP 요청 예시
 include::{snippets}/todo-toggle/http-request.adoc[]
-
 ==== HTTP 응답 예시
 include::{snippets}/todo-toggle/http-response.adoc[]
-
 ==== 응답 필드
 include::{snippets}/todo-toggle/response-fields.adoc[]
 
@@ -327,16 +324,12 @@ include::{snippets}/todo-toggle/response-fields.adoc[]
 
 ==== 요청 필드
 include::{snippets}/todo-update-memo/request-fields.adoc[]
-
 ==== 경로 파라미터
 include::{snippets}/todo-update-memo/path-parameters.adoc[]
-
 ==== HTTP 요청 예시
 include::{snippets}/todo-update-memo/http-request.adoc[]
-
 ==== HTTP 응답 예시
 include::{snippets}/todo-update-memo/http-response.adoc[]
-
 ==== 응답 필드
 include::{snippets}/todo-update-memo/response-fields.adoc[]
 
@@ -347,18 +340,57 @@ include::{snippets}/todo-update-memo/response-fields.adoc[]
 
 ==== 경로 파라미터
 include::{snippets}/todo-delete/path-parameters.adoc[]
-
 ==== HTTP 요청 예시
 include::{snippets}/todo-delete/http-request.adoc[]
-
 ==== HTTP 응답 예시
 include::{snippets}/todo-delete/http-response.adoc[]
-
 ==== 응답 필드
 include::{snippets}/todo-delete/response-fields.adoc[]
 
+=== 투두 반복 설정
+`POST /api/todos/recurrence`
+
+투두 반복 기능을 설정합니다.
+
+==== 요청 필드
+include::{snippets}/todo-recurrence-create/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-recurrence-create/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-recurrence-create/http-response.adoc[]
+
+
+=== 반복 투두 규칙 수정
+`PATCH /api/todos/recurrence/{recurrenceId}`
+
+반복 설정이 된 투두의 반복 규칙을 수정합니다.
+
+==== 요청 필드
+include::{snippets}/todo-recurrence-update/request-fields.adoc[]
+==== 경로 파라미터
+include::{snippets}/todo-recurrence-update/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-recurrence-update/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-recurrence-update/http-response.adoc[]
+
+=== 반복 설정된 투두 회차 분리
+`POST /api/todos/recurrence/{recurrenceId}/detach`
+
+반복 설정이 된 투두의 특정 회차를 분리하여 개별 투두로 만듭니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-recurrence-occurrence-detach/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-recurrence-occurrence-detach/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-recurrence-occurrence-detach/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-recurrence-occurrence-detach/response-fields.adoc[]
+
+
 === 반복 설정 투두 삭제
-`DELETE /api/todos/{todoId}/recurrence`
+`DELETE /api/todos/recurrence/{recurrenceId}`
 
 반복 설정이 된 투두를 전체 삭제합니다.
 
@@ -379,13 +411,10 @@ include::{snippets}/todo-recurrence-delete/response-fields.adoc[]
 
 ==== 경로 파라미터
 include::{snippets}/todo-postpone-tomorrow/path-parameters.adoc[]
-
 ==== HTTP 요청 예시
 include::{snippets}/todo-postpone-tomorrow/http-request.adoc[]
-
 ==== HTTP 응답 예시
 include::{snippets}/todo-postpone-tomorrow/http-response.adoc[]
-
 ==== 응답 필드
 include::{snippets}/todo-postpone-tomorrow/response-fields.adoc[]
 
@@ -396,13 +425,10 @@ include::{snippets}/todo-postpone-tomorrow/response-fields.adoc[]
 
 ==== 경로 파라미터
 include::{snippets}/todo-move-today/path-parameters.adoc[]
-
 ==== HTTP 요청 예시
 include::{snippets}/todo-move-today/http-request.adoc[]
-
 ==== HTTP 응답 예시
 include::{snippets}/todo-move-today/http-response.adoc[]
-
 ==== 응답 필드
 include::{snippets}/todo-move-today/response-fields.adoc[]
 
@@ -438,17 +464,6 @@ include::{snippets}/todo-reorder/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/todo-reorder/response-fields.adoc[]
 
-=== 투두 반복 설정
-`POST /api/todos/recurrence`
-
-투두 반복 기능을 설정합니다.
-
-==== 요청 필드
-include::{snippets}/todo-recurrence-create/request-fields.adoc[]
-==== HTTP 요청 예시
-include::{snippets}/todo-recurrence-create/http-request.adoc[]
-==== HTTP 응답 예시
-include::{snippets}/todo-recurrence-create/http-response.adoc[]
 
 
 === 투두 카테고리 변경
@@ -525,10 +540,8 @@ include::{snippets}/category-update/response-fields.adoc[]
 
 ==== HTTP 요청 예시
 include::{snippets}/category-delete/http-request.adoc[]
-
 ==== HTTP 응답 예시
 include::{snippets}/category-delete/http-response.adoc[]
-
 === 카테고리 순서 변경
 `PATCH /api/categories/order`
 
@@ -536,13 +549,10 @@ include::{snippets}/category-delete/http-response.adoc[]
 
 ==== 요청 필드
 include::{snippets}/category-reorder/request-fields.adoc[]
-
 ==== HTTP 요청 예시
 include::{snippets}/category-reorder/http-request.adoc[]
-
 ==== HTTP 응답 예시
 include::{snippets}/category-reorder/http-response.adoc[]
-
 ==== 응답 필드
 include::{snippets}/category-reorder/response-fields.adoc[]
 

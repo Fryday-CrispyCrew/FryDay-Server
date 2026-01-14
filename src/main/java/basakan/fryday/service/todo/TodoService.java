@@ -15,20 +15,18 @@ import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.todo.TodoAlarm;
 import basakan.fryday.domain.todo.Recurrence;
-import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
-import basakan.fryday.service.user.UserReadService;
-import lombok.RequiredArgsConstructor;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.service.todo.RecurrenceOccurrenceMaterializeService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +37,7 @@ public class TodoService {
     private final CategoryRepository categoryRepository;
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceRepository recurrenceRepository;
+    private final RecurrenceOccurrenceMaterializeService materializeService;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
@@ -169,17 +168,39 @@ public class TodoService {
 
     @Transactional
     public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
-        List<Todo> todos;
+        List<Recurrence> recurrences = recurrenceRepository.findByUserIdAndDateRange(userId, date);
 
+        if (categoryId != null) {
+            recurrences = recurrences.stream()
+                    .filter(r -> r.getCategoryId() == categoryId)
+                    .collect(Collectors.toList());
+        }
+
+        for (Recurrence recurrence : recurrences) {
+            try {
+                materializeService.materializeOccurrenceIfNotExists(userId, recurrence.getId(), date);
+            } catch (BusinessException e) {
+                if (e.getErrorCode() == ErrorCode.INVALID_INPUT_VALUE) {
+                    continue;
+                }
+                throw e;
+            }
+        }
+
+        List<Todo> todos;
         if (categoryId == null) {
             todos = todoRepository.findAllByUserIdAndDate(userId, date);
         } else {
             todos = todoRepository.findAllByCategoryIdAndDate(categoryId, date);
         }
 
-        return todos.stream()
+        List<TodoListResponse> allResponses = todos.stream()
                 .map(TodoListResponse::from)
                 .collect(Collectors.toList());
+
+        allResponses.sort(Comparator.comparing(TodoListResponse::getDisplayOrder));
+
+        return allResponses;
     }
 
     @Transactional(readOnly = true)

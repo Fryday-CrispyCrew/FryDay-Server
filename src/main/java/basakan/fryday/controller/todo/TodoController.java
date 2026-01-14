@@ -147,10 +147,42 @@ public class TodoController {
         return ApiResponse.success(response, "반복 투두가 생성되었습니다.");
     }
 
-    @DeleteMapping("/{todoId}/recurrence")
-    public ApiResponse<Void> deleteRecurrence(@PathVariable Long todoId,
+    @DeleteMapping("/recurrence/{recurrenceId}")
+    public ApiResponse<Void> deleteRecurrence(@PathVariable Long recurrenceId,
                                               @AuthenticationPrincipal Long userId) {
-        recurrenceService.deleteRecurrence(todoId, userId);
-        return ApiResponse.success(null, "반복 투두가 모두 삭제되었습니다.");
+        recurrenceService.deleteRecurrence(recurrenceId, userId);
+        return ApiResponse.success(null, "반복 투두가 모두 해제(삭제)되었습니다.");
+    }
+
+    // 현재 기획상은 미존재, 나중에 들어올 것 같음
+//    @PostMapping("/recurrence/{recurrenceId}/cancel")
+//    public ApiResponse<Void> cancelRecurrenceOccurrence(
+//            @PathVariable Long recurrenceId,
+//            @Valid @RequestBody RecurrenceOccurrenceCancelRequest request,
+//            @AuthenticationPrincipal Long userId
+//    ) {
+//        recurrenceService.cancelRecurrenceOccurrence(recurrenceId, request.getOccurrenceDate(), userId);
+//        return ApiResponse.success(null, "반복 투두 회차가 제외되었습니다.");
+//    }
+
+    @PostMapping("/recurrence/{recurrenceId}/detach")
+    public ApiResponse<TodoResponse> detachRecurrenceOccurrence(
+            @PathVariable Long recurrenceId,
+            @Valid @RequestBody RecurrenceOccurrenceDetachRequest request,
+            @AuthenticationPrincipal Long userId
+    ) {
+        TodoResponse response = recurrenceService.detachRecurrenceOccurrence(
+                recurrenceId, request.getOccurrenceDate(), request.getNewDate(), userId);
+        return ApiResponse.success(response, "반복 투두가 단건 투두로 분리되었습니다.");
+    }
+
+    @PatchMapping("/recurrence/{recurrenceId}")
+    public ApiResponse<Void> updateRecurrence(
+            @PathVariable Long recurrenceId,
+            @Valid @RequestBody RecurrenceUpdateRequest request,
+            @AuthenticationPrincipal Long userId
+    ) {
+        recurrenceService.updateRecurrence(recurrenceId, request, userId);
+        return ApiResponse.success(null, "반복 투두 규칙이 수정되었습니다.");
     }
 }
