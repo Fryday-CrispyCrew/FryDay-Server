@@ -5,13 +5,11 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceException;
-import basakan.fryday.domain.todo.RecurrenceOccurrenceState;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.todo.TodoAlarm;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
-import basakan.fryday.repository.todo.RecurrenceOccurrenceStateRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -37,7 +35,6 @@ public class RecurrenceOccurrenceMaterializeService {
 
     private final RecurrenceRepository recurrenceRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
-    private final RecurrenceOccurrenceStateRepository recurrenceOccurrenceStateRepository;
     private final TodoRepository todoRepository;
     private final CategoryRepository categoryRepository;
     private final RecurrenceOccurrenceCalculator occurrenceCalculator;
@@ -91,16 +88,6 @@ public class RecurrenceOccurrenceMaterializeService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 상태 정보 조회
-        RecurrenceOccurrenceState.Status status = RecurrenceOccurrenceState.Status.IN_PROGRESS;
-        RecurrenceOccurrenceState existingState = recurrenceOccurrenceStateRepository
-                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
-                .orElse(null);
-
-        if (existingState != null) {
-            status = existingState.getStatus();
-        }
-
         // Category 조회
         Category category = categoryRepository.findById(recurrence.getCategoryId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -116,10 +103,6 @@ public class RecurrenceOccurrenceMaterializeService {
                 .displayOrder(displayOrder)
                 .recurrenceId(recurrence.getId())
                 .build();
-
-        if (status == RecurrenceOccurrenceState.Status.COMPLETED) {
-            todo.toggleCompletion();
-        }
 
         Todo savedTodo = todoRepository.save(todo);
 
