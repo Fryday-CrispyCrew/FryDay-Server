@@ -92,7 +92,7 @@ public class RecurrenceService {
         recurrenceRepository.delete(recurrence);
     }
 
-    // 반복 투두의 특정 회차를 분리(DETACHED)하고 단건 todo로 변환
+    // 반복 투두의 특정 회차를 분리
     @Transactional
     public TodoResponse detachRecurrenceOccurrence(Long recurrenceId, LocalDate occurrenceDate, LocalDate newDate, Long userId) {
         Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
@@ -111,43 +111,38 @@ public class RecurrenceService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
+        // 기존 Todo 조회
+        List<Todo> existingTodos = todoRepository.findAllByUserIdAndDate(userId, occurrenceDate);
+        Todo existingTodo = existingTodos.stream()
+                .filter(todo -> todo.getRecurrenceId() != null
+                        && todo.getRecurrenceId().equals(recurrenceId)
+                        && todo.getDeletedAt() == null)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        // 날짜 변경
+        if (!occurrenceDate.equals(newDate)) {
+            existingTodo.updateDate(newDate);
+            // displayOrder 재계산 (새 날짜 기준)
+            Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
+            long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+            existingTodo.updateDisplayOrder(displayOrder);
+        }
+
+        // recurrenceId를 null로 변경 (반복에서 분리)
+        existingTodo.setRecurrenceId(null);
+
         // DETACHED 예외 생성
         RecurrenceException exception = RecurrenceException.builder()
                 .recurrenceId(recurrenceId)
                 .occurrenceDate(occurrenceDate)
                 .type(RecurrenceException.ExceptionType.DETACHED)
-                .build();
-
-        // 단건 todo 생성
-        Category category = categoryRepository.findById(recurrence.getCategoryId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
-
-        Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
-        long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
-
-        // Todo.builder()는 recurrenceId를 필수로 받으므로, 0L을 전달하고 나중에 setRecurrenceId(null)로 변경
-        Todo detachedTodo = Todo.builder()
-                .description(recurrence.getDescription())
-                .category(category)
-                .date(newDate)
-                .displayOrder(displayOrder)
-                .recurrenceId(0L)  // 임시값, Builder 패턴 때문에 필요
-                .build();
-        detachedTodo.setRecurrenceId(null);  // 반복에서 분리되었으므로 null
-
-        Todo savedTodo = todoRepository.save(detachedTodo);
-
-        // 예외에 detached_todo_id 저장
-        exception = RecurrenceException.builder()
-                .recurrenceId(recurrenceId)
-                .occurrenceDate(occurrenceDate)
-                .type(RecurrenceException.ExceptionType.DETACHED)
-                .detachedTodoId(savedTodo.getId())
+                .detachedTodoId(existingTodo.getId())
                 .build();
 
         recurrenceExceptionRepository.save(exception);
 
-        return TodoResponse.from(savedTodo);
+        return TodoResponse.from(existingTodo);
     }
 
     /**
