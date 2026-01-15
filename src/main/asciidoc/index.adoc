@@ -233,6 +233,9 @@ include::{snippets}/monthly-report-get/response-fields.adoc[]
 
 ==== 요청 필드
 include::{snippets}/todo-create/request-fields.adoc[]
+
+NOTE: `date` 필드는 선택사항입니다. 제공하지 않으면 오늘 날짜로 생성됩니다. 과거 날짜는 허용되지 않습니다.
+
 ==== HTTP 요청 예시
 include::{snippets}/todo-create/http-request.adoc[]
 ==== HTTP 응답 예시
