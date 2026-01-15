@@ -17,6 +17,7 @@ import basakan.fryday.service.user.UserReadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -44,7 +45,7 @@ public class RecurrenceOccurrenceMaterializeService {
     /**
      * 특정 반복 투두의 가상 회차를 실제 Todo로 생성 (이미 존재하면 생성하지 않음)
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Todo materializeOccurrenceIfNotExists(Long userId, Long recurrenceId, LocalDate occurrenceDate) {
         Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
@@ -102,6 +103,7 @@ public class RecurrenceOccurrenceMaterializeService {
                 .date(occurrenceDate)
                 .displayOrder(displayOrder)
                 .recurrenceId(recurrence.getId())
+                .memo(recurrence.getMemo())
                 .build();
 
         Todo savedTodo = todoRepository.save(todo);

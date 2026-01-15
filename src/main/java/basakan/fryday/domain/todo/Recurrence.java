@@ -27,6 +27,9 @@ public class Recurrence extends BaseEntity {
     @Column(nullable = false)
     private String description;
 
+    @Column(length = 300)
+    private String memo;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RecurrenceType type;
@@ -44,12 +47,13 @@ public class Recurrence extends BaseEntity {
     private LocalDate lastGeneratedDate;
 
     @Builder
-    public Recurrence(long userId, long categoryId, String description, RecurrenceType type,
+    public Recurrence(long userId, long categoryId, String description, String memo, RecurrenceType type,
                       String frequencyValues, LocalDate startDate, LocalDate endDate,
                       LocalTime notificationTime, LocalDate lastGeneratedDate) {
         this.userId = userId;
         this.categoryId = categoryId;
         this.description = description;
+        this.memo = memo;
         this.type = type;
         this.frequencyValues = frequencyValues;
         this.startDate = startDate;

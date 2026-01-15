@@ -12,6 +12,7 @@ import basakan.fryday.controller.todo.response.*;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.CharacterStatus;
+import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.service.todo.RecurrenceService;
@@ -79,7 +80,8 @@ class TodoControllerTest extends RestDocsSupport {
     void createTodo() throws Exception {
         // given
         Long categoryId = 1L;
-        TodoSaveRequest request = new TodoSaveRequest("양파 썰기", categoryId);
+        LocalDate todoDate = LocalDate.now();
+        TodoSaveRequest request = new TodoSaveRequest("양파 썰기", categoryId, todoDate);
 
         // Mocking을 위한 가짜 데이터 생성
         Category mockCategory = Category.builder()
@@ -92,6 +94,7 @@ class TodoControllerTest extends RestDocsSupport {
         Todo mockTodo = Todo.builder()
                 .description("양파 썰기")
                 .category(mockCategory)
+                .date(todoDate)
                 .build();
 
         ReflectionTestUtils.setField(mockTodo, "id", 1L);
@@ -114,7 +117,8 @@ class TodoControllerTest extends RestDocsSupport {
                 .andDo(document("todo-create",
                         requestFields(
                                 fieldWithPath("description").type(JsonFieldType.STRING).description("할 일 내용"),
-                                fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID")
+                                fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("date").type(JsonFieldType.STRING).description("투두 날짜 (YYYY-MM-DD, optional, 미래 날짜 가능, null이면 오늘 날짜)").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -830,7 +834,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 parameterWithName("recurrenceId").description("반복 투두 규칙 ID")
                         ),
                         requestFields(
-                                fieldWithPath("occurrenceDate").type(JsonFieldType.STRING).description("원본 가상 회차의 발생일 (YYYY-MM-DD)"),
+                                fieldWithPath("occurrenceDate").type(JsonFieldType.STRING).description("반복 투두의 발생일 (YYYY-MM-DD)"),
                                 fieldWithPath("newDate").type(JsonFieldType.STRING).description("단건 투두로 분리할 새로운 날짜 (YYYY-MM-DD)")
                         ),
                         responseFields(
@@ -861,8 +865,22 @@ class TodoControllerTest extends RestDocsSupport {
         ReflectionTestUtils.setField(request, "endDate", LocalDate.of(2026, 1, 31));
         ReflectionTestUtils.setField(request, "notificationTime", LocalTime.of(10, 0));
 
-        // Mocking: void 메서드이므로 willDoNothing 사용
-        willDoNothing().given(recurrenceService).updateRecurrence(anyLong(), any(RecurrenceUpdateRequest.class), anyLong());
+        // Mocking: 수정된 Recurrence 엔티티 생성
+        Recurrence mockRecurrence = Recurrence.builder()
+                .userId(1L)
+                .categoryId(1L)
+                .description("매주 운동하기")
+                .type(RecurrenceType.WEEKLY)
+                .frequencyValues("TUESDAY,THURSDAY")
+                .startDate(startDate)
+                .endDate(LocalDate.of(2026, 1, 31))
+                .notificationTime(LocalTime.of(10, 0))
+                .lastGeneratedDate(startDate)
+                .build();
+        ReflectionTestUtils.setField(mockRecurrence, "id", recurrenceId);
+
+        given(recurrenceService.updateRecurrence(anyLong(), any(RecurrenceUpdateRequest.class), anyLong()))
+                .willReturn(mockRecurrence);
 
         // when & then
         mockMvc.perform(patch("/api/todos/recurrence/{recurrenceId}", recurrenceId)
@@ -884,6 +902,12 @@ class TodoControllerTest extends RestDocsSupport {
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.recurrenceId").type(JsonFieldType.NUMBER).description("반복 규칙 ID"),
+                                fieldWithPath("data.type").type(JsonFieldType.STRING).description("반복 주기"),
+                                fieldWithPath("data.frequencyValues").type(JsonFieldType.STRING).description("반복 상세 값").optional(),
+                                fieldWithPath("data.startDate").type(JsonFieldType.STRING).description("반복 시작일"),
+                                fieldWithPath("data.endDate").type(JsonFieldType.STRING).description("반복 종료일").optional(),
+                                fieldWithPath("data.notificationTime").type(JsonFieldType.STRING).description("반복 알림 시간").optional(),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

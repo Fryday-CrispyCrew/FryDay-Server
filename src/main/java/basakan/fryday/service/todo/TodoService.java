@@ -19,9 +19,10 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
-import basakan.fryday.service.todo.RecurrenceOccurrenceMaterializeService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -29,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TodoService {
@@ -166,8 +168,11 @@ public class TodoService {
         }
     }
 
-    @Transactional
-    public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
+    /**
+     * 반복 투두 materialization을 별도 트랜잭션에서 수행
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void materializeRecurrenceOccurrences(Long userId, LocalDate date, Long categoryId) {
         List<Recurrence> recurrences = recurrenceRepository.findByUserIdAndDateRange(userId, date);
 
         if (categoryId != null) {
@@ -184,9 +189,21 @@ public class TodoService {
                     continue;
                 }
                 throw e;
+            } catch (Exception e) {
+                // REQUIRES_NEW로 분리된 트랜잭션에서 발생한 예외는 외부 트랜잭션에 영향을 주지 않음
+                log.error("반복 투두 materialize 중 예상치 못한 예외 발생 - recurrenceId: {}, date: {}. 스킵하고 계속 진행", 
+                        recurrence.getId(), date, e);
+                continue;
             }
         }
+    }
 
+    /**
+     * 투두 목록 조회를 별도 트랜잭션에서 수행
+     * materialization이 완료된 후 조회하므로 새로 생성된 Todo를 포함하여 반환
+     */
+    @Transactional(readOnly = true)
+    public List<TodoListResponse> getTodoListInternal(Long userId, LocalDate date, Long categoryId) {
         List<Todo> todos;
         if (categoryId == null) {
             todos = todoRepository.findAllByUserIdAndDate(userId, date);
@@ -201,6 +218,17 @@ public class TodoService {
         allResponses.sort(Comparator.comparing(TodoListResponse::getDisplayOrder));
 
         return allResponses;
+    }
+
+    /**
+     * 투두 목록 조회
+     * 1. 먼저 반복 투두를 materialize (별도 트랜잭션)
+     * 2. 그 다음 투두 목록을 조회 (별도 읽기 전용 트랜잭션)
+     * 이렇게 분리하여 materialization이 커밋된 후 조회하므로 새로 생성된 Todo를 포함하여 반환
+     */
+    public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
+        materializeRecurrenceOccurrences(userId, date, categoryId);
+        return getTodoListInternal(userId, date, categoryId);
     }
 
     @Transactional(readOnly = true)

@@ -25,7 +25,8 @@ public class TodoListResponse {
         this.displayOrder = todo.getDisplayOrder();
         this.date = todo.getDate();
         this.recurrenceId = todo.getRecurrenceId();
-        this.occurrenceDate = null;
+        // 반복 투두의 경우 date가 occurrenceDate와 같음 (생성 시 occurrenceDate로 설정됨)
+        this.occurrenceDate = todo.getRecurrenceId() != null ? todo.getDate() : null;
     }
 
     // 가상 회차(반복 투두)용 생성자
