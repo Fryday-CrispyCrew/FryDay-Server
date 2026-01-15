@@ -830,7 +830,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 parameterWithName("recurrenceId").description("반복 투두 규칙 ID")
                         ),
                         requestFields(
-                                fieldWithPath("occurrenceDate").type(JsonFieldType.STRING).description("원본 가상 회차의 발생일 (YYYY-MM-DD)"),
+                                fieldWithPath("occurrenceDate").type(JsonFieldType.STRING).description("반복 투두의 발생일 (YYYY-MM-DD)"),
                                 fieldWithPath("newDate").type(JsonFieldType.STRING).description("단건 투두로 분리할 새로운 날짜 (YYYY-MM-DD)")
                         ),
                         responseFields(
