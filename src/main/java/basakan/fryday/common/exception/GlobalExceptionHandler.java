@@ -17,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.List;
@@ -68,9 +69,14 @@ public class GlobalExceptionHandler {
         log.warn("BusinessException: {}", e.getMessage());
         ErrorCode errorCode = e.getErrorCode();
 
+        // 커스텀 메시지가 있으면 사용, 없으면 ErrorCode의 기본 메시지 사용
+        String message = e.getMessage() != null && !e.getMessage().equals(errorCode.getMessage())
+                ? e.getMessage()
+                : errorCode.getMessage();
+
         return ResponseEntity
                 .status(errorCode.getStatus())
-                .body(ApiResponse.fail(errorCode.getMessage()));
+                .body(ApiResponse.fail(message));
     }
 
     // 6. @Valid 유효성 검사 실패 처리
@@ -157,7 +163,26 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(message));
     }
 
-    // 11. 요청 본문 파싱 실패 (400 Bad Request)
+    // 11-1. 요청 파라미터 타입 불일치 (400 Bad Request)
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException e) {
+        log.warn("Type Mismatch: {} (Required: {}, Provided: {})", 
+                e.getName(), e.getRequiredType(), e.getValue());
+
+        String parameterName = e.getName();
+        String requiredType = e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "알 수 없음";
+        String providedValue = e.getValue() != null ? e.getValue().toString() : "null";
+
+        String message = String.format("파라미터 타입이 올바르지 않습니다. 파라미터명: %s, 요구 타입: %s, 제공된 값: %s",
+                parameterName, requiredType, providedValue);
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail(message));
+    }
+
+    // 11-2. 요청 본문 파싱 실패 (400 Bad Request)
     @ExceptionHandler(HttpMessageNotReadableException.class)
     protected ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException e) {
