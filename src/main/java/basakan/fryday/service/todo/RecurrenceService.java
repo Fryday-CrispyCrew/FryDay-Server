@@ -5,11 +5,9 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
 import basakan.fryday.controller.todo.request.RecurrenceUpdateRequest;
 import basakan.fryday.controller.todo.response.TodoResponse;
-import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceException;
 import basakan.fryday.domain.todo.Todo;
-import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -27,7 +25,6 @@ public class RecurrenceService {
     private final RecurrenceRepository recurrenceRepository;
     private final TodoRepository todoRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
-    private final CategoryRepository categoryRepository;
 
     @Transactional
     public TodoResponse createRecurrence(Long userId, RecurrenceCreateRequest request) {
@@ -173,7 +170,7 @@ public class RecurrenceService {
 
     // 반복 규칙 수정
     @Transactional
-    public void updateRecurrence(Long recurrenceId, RecurrenceUpdateRequest request, Long userId) {
+    public Recurrence updateRecurrence(Long recurrenceId, RecurrenceUpdateRequest request, Long userId) {
         Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
@@ -192,5 +189,7 @@ public class RecurrenceService {
                 request.getEndDate(),
                 request.getNotificationTime()
         );
+
+        return recurrence;
     }
 }

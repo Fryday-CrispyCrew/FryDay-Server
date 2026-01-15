@@ -8,6 +8,7 @@ import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.controller.todo.response.TodoListResponse;
 import basakan.fryday.controller.todo.response.TodoResponse;
 import basakan.fryday.controller.todo.response.TodoDetailResponse;
+import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.service.todo.RecurrenceService;
 import basakan.fryday.service.todo.TodoService;
 import jakarta.validation.Valid;
@@ -177,12 +178,12 @@ public class TodoController {
     }
 
     @PatchMapping("/recurrence/{recurrenceId}")
-    public ApiResponse<Void> updateRecurrence(
+    public ApiResponse<TodoDetailResponse.RecurrenceInfo> updateRecurrence(
             @PathVariable Long recurrenceId,
             @Valid @RequestBody RecurrenceUpdateRequest request,
             @AuthenticationPrincipal Long userId
     ) {
-        recurrenceService.updateRecurrence(recurrenceId, request, userId);
-        return ApiResponse.success(null, "반복 투두 규칙이 수정되었습니다.");
+        Recurrence recurrence = recurrenceService.updateRecurrence(recurrenceId, request, userId);
+        return ApiResponse.success(TodoDetailResponse.RecurrenceInfo.from(recurrence), "반복 투두 규칙이 수정되었습니다.");
     }
 }
