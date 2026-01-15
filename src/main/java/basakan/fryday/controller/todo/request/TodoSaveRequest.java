@@ -7,8 +7,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
 @NoArgsConstructor
 public class TodoSaveRequest {
@@ -28,6 +26,7 @@ public class TodoSaveRequest {
         return Todo.builder()
                 .description(this.description)
                 .category(category)
+                .recurrenceId(null)
                 .build();
     }
 }
