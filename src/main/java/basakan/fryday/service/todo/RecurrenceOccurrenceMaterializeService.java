@@ -102,6 +102,7 @@ public class RecurrenceOccurrenceMaterializeService {
                 .date(occurrenceDate)
                 .displayOrder(displayOrder)
                 .recurrenceId(recurrence.getId())
+                .memo(recurrence.getMemo())
                 .build();
 
         Todo savedTodo = todoRepository.save(todo);

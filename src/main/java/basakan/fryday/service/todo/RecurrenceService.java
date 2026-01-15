@@ -37,6 +37,7 @@ public class RecurrenceService {
                 .userId(userId)
                 .categoryId(originalTodo.getCategory().getId())
                 .description(originalTodo.getDescription())
+                .memo(originalTodo.getMemo())
                 .type(request.getType())
                 .frequencyValues(request.getFrequencyValues() != null 
                         ? String.join(",", request.getFrequencyValues()) 

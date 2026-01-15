@@ -52,7 +52,7 @@ public class Todo extends BaseEntity {
     }
 
     @Builder
-    public Todo(String description, Category category, LocalDate date, Long displayOrder, Long recurrenceId) {
+    public Todo(String description, Category category, LocalDate date, Long displayOrder, Long recurrenceId, String memo) {
         this.description = description;
         this.status = Status.IN_PROGRESS;
         this.category = category;
@@ -60,6 +60,7 @@ public class Todo extends BaseEntity {
         this.displayOrder = displayOrder != null ? displayOrder : 0L;
         // recurrenceId가 0이면 null로 변환 (반복 없는 투두는 null)
         this.recurrenceId = (recurrenceId != null && recurrenceId == 0) ? null : recurrenceId;
+        this.memo = memo;
         this.isBurnt = false;
     }
 
