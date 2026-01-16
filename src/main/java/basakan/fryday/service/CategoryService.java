@@ -108,7 +108,7 @@ public class CategoryService {
                         .build(),
                 Category.builder()
                         .name("카테고리3")
-                        .color(CategoryColor.YL)
+                        .color(CategoryColor.OR)
                         .userId(userId)
                         .build()
         );
