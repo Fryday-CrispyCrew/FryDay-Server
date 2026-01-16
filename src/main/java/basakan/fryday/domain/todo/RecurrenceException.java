@@ -31,7 +31,7 @@ public class RecurrenceException extends BaseEntity {
     private Long detachedTodoId;
 
     public enum ExceptionType {
-        CANCELLED,  // 제외(삭제)
+        DELETED,    // 삭제 (반복 투두를 삭제하여 재생성 방지)
         DETACHED    // 분리(반복에서 제외하고 단건 todo로 변환)
     }
 

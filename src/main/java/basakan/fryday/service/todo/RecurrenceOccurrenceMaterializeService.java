@@ -67,7 +67,7 @@ public class RecurrenceOccurrenceMaterializeService {
             return existingTodo;
         }
 
-        // 예외 확인 (CANCELLED와 DETACHED 제외)
+        // 예외 확인 (DELETED와 DETACHED 제외)
         List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
         boolean isException = exceptions.stream()
                 .anyMatch(e -> e.getOccurrenceDate().equals(occurrenceDate));
@@ -147,7 +147,7 @@ public class RecurrenceOccurrenceMaterializeService {
 
         for (Recurrence recurrence : recurrences) {
             try {
-                // 2. 예외 조회 (CANCELLED와 DETACHED 모두 제외)
+                // 2. 예외 조회 (DELETED와 DETACHED 모두 제외)
                 List<RecurrenceException> exceptions = recurrenceExceptionRepository
                         .findByRecurrenceId(recurrence.getId());
 
