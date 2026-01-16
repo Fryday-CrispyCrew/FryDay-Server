@@ -668,14 +668,14 @@ class TodoControllerTest extends RestDocsSupport {
     void createRecurringTodo() throws Exception {
         // given
         Long todoId = 1L;
-        LocalDate startDate = LocalDate.of(2025, 12, 1);
+        LocalDate startDate = LocalDate.of(2026, 1, 30);
         
         RecurrenceCreateRequest request = new RecurrenceCreateRequest();
         ReflectionTestUtils.setField(request, "todoId", todoId);
         ReflectionTestUtils.setField(request, "type", RecurrenceType.WEEKLY);
         ReflectionTestUtils.setField(request, "frequencyValues", List.of("MONDAY", "WEDNESDAY", "FRIDAY"));
         ReflectionTestUtils.setField(request, "startDate", startDate);
-        ReflectionTestUtils.setField(request, "endDate", LocalDate.of(2025, 12, 31));
+        ReflectionTestUtils.setField(request, "endDate", LocalDate.of(2026, 4, 25));
         ReflectionTestUtils.setField(request, "notificationTime", LocalTime.of(9, 0));
 
         // Mocking: 반복 설정 후 원본 투두 응답 생성
@@ -856,13 +856,13 @@ class TodoControllerTest extends RestDocsSupport {
     void updateRecurrence() throws Exception {
         // given
         Long recurrenceId = 1L;
-        LocalDate startDate = LocalDate.of(2025, 12, 1);
+        LocalDate startDate = LocalDate.of(2026, 1, 30);
         
         RecurrenceUpdateRequest request = new RecurrenceUpdateRequest();
         ReflectionTestUtils.setField(request, "type", RecurrenceType.WEEKLY);
         ReflectionTestUtils.setField(request, "frequencyValues", List.of("TUESDAY", "THURSDAY"));
         ReflectionTestUtils.setField(request, "startDate", startDate);
-        ReflectionTestUtils.setField(request, "endDate", LocalDate.of(2026, 1, 31));
+        ReflectionTestUtils.setField(request, "endDate", LocalDate.of(2026, 5, 31));
         ReflectionTestUtils.setField(request, "notificationTime", LocalTime.of(10, 0));
 
         // Mocking: 수정된 Recurrence 엔티티 생성
