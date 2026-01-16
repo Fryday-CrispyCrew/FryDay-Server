@@ -42,3 +42,8 @@ tasks/**
 
 ### REST Docs ###
 src/main/resources/static/docs/
+
+
+### for local test ###
+application-dev.yml
+DevTokenController.java
