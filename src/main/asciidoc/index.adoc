@@ -377,18 +377,12 @@ include::{snippets}/todo-recurrence-update/http-request.adoc[]
 ==== HTTP 응답 예시
 include::{snippets}/todo-recurrence-update/http-response.adoc[]
 
-=== 반복 설정된 투두 회차 분리
+=== 반복 설정된 투두 회차 분리(날짜 변경)
 `POST /api/todos/recurrence/{recurrenceId}/detach`
 
 반복 투두로 생성된 특정 회차를 단건 투두로 분리하고, 날짜를 변경합니다.
 
 IMPORTANT: 반복 투두의 날짜를 변경하려면 이 API를 사용하세요. `newDate` 필드에 변경할 날짜를 지정하면 분리와 동시에 날짜가 변경됩니다.
-
-==== 동작 방식
-1. 지정된 날짜(`occurrenceDate`)의 반복 투두를 찾습니다.
-2. `newDate`가 제공된 경우, 투두의 날짜를 `newDate`로 변경합니다.
-3. 해당 투두의 `recurrenceId`를 `null`로 변경하여 단건 투두로 만듭니다.
-4. DETACHED 예외를 생성하여 해당 날짜(`occurrenceDate`)에 다시 반복 투두가 생성되지 않도록 합니다.
 
 ==== 경로 파라미터
 include::{snippets}/todo-recurrence-occurrence-detach/path-parameters.adoc[]
