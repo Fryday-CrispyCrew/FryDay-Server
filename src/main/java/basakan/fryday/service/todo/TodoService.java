@@ -19,6 +19,8 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
+import basakan.fryday.domain.todo.RecurrenceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class TodoService {
     private final CategoryRepository categoryRepository;
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceRepository recurrenceRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final RecurrenceOccurrenceMaterializeService materializeService;
 
     @Transactional
@@ -88,7 +91,37 @@ public class TodoService {
                 .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        todoRepository.delete(todo);
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        // 반복 투두인 경우 DELETED 예외 생성하여 재생성 방지
+        if (todo.getRecurrenceId() != null) {
+            Long recurrenceId = todo.getRecurrenceId();
+            LocalDate occurrenceDate = todo.getDate();
+
+            // 이미 예외가 존재하는지 확인
+            RecurrenceException existingException = recurrenceExceptionRepository
+                    .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
+                    .orElse(null);
+
+            // DETACHED 예외가 있으면 이미 분리된 투두이므로 예외 생성 불필요
+            // DELETED 예외가 없으면 생성
+            if (existingException == null) {
+                RecurrenceException exception = RecurrenceException.builder()
+                        .recurrenceId(recurrenceId)
+                        .occurrenceDate(occurrenceDate)
+                        .type(RecurrenceException.ExceptionType.DELETED)
+                        .build();
+                recurrenceExceptionRepository.save(exception);
+            } else if (existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
+                // 이미 분리된 투두는 예외 생성 불필요
+            }
+            // 이미 DELETED 예외가 있으면 추가 생성 불필요
+        }
+
+        // Todo 삭제 (soft delete)
+        todo.delete();
     }
 
     @Transactional
