@@ -28,6 +28,10 @@ public class RecurrenceService {
 
     @Transactional
     public TodoResponse createRecurrence(Long userId, RecurrenceCreateRequest request) {
+        if (request.getStartDate().isBefore(LocalDate.now())) {
+            throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
+        }
+
         Todo originalTodo = todoRepository.findById(request.getTodoId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
@@ -172,6 +176,11 @@ public class RecurrenceService {
     // 반복 규칙 수정
     @Transactional
     public Recurrence updateRecurrence(Long recurrenceId, RecurrenceUpdateRequest request, Long userId) {
+        // 과거 날짜 검증
+        if (request.getStartDate().isBefore(LocalDate.now())) {
+            throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
+        }
+
         Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
