@@ -110,13 +110,13 @@ class CategoryControllerTest extends RestDocsSupport {
     void updateCategory() throws Exception {
         // given
         Long categoryId = 1L;
-        CategoryUpdateRequest request = new CategoryUpdateRequest("독서", CategoryColor.YL);
+        CategoryUpdateRequest request = new CategoryUpdateRequest("독서", CategoryColor.MB);
 
         given(categoryService.updateCategory(any(), any(), any()))
                 .willReturn(new CategoryResponse(
                         Category.builder()
                                 .name("독서")           // 수정된 이름
-                                .color(CategoryColor.YL) // 수정된 색상
+                                .color(CategoryColor.MB) // 수정된 색상
                                 .userId(1L)
                                 .build()
                 ));
@@ -205,7 +205,7 @@ class CategoryControllerTest extends RestDocsSupport {
         Category cat1 = Category.builder().name("운동").color(CategoryColor.BR).userId(1L).displayOrder(1L).build();
         ReflectionTestUtils.setField(cat1, "id", 10L);
 
-        Category cat2 = Category.builder().name("요리").color(CategoryColor.YL).userId(1L).displayOrder(2L).build();
+        Category cat2 = Category.builder().name("요리").color(CategoryColor.MB).userId(1L).displayOrder(2L).build();
         ReflectionTestUtils.setField(cat2, "id", 11L);
 
         List<CategoryReadResponse> responses = List.of(
