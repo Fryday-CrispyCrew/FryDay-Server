@@ -10,6 +10,7 @@ import java.util.Arrays;
 @Getter
 @RequiredArgsConstructor
 public enum CategoryColor {
+    OR("OR", "#FF5B22"),
     BR("BR", "#693838"),
     LG("LG", "#82B236"),
     CB("CB", "#3E78AE"),
@@ -17,8 +18,7 @@ public enum CategoryColor {
     MT("MT", "#3CB492"),
     VL("VL", "#9351A1"),
     PK("PK", "#F06B9C"),
-    MB("MB", "#AA7459"),
-    YL("YL", "#FFA100");
+    MB("MB", "#AA7459");
 
     private final String code; // API 통신용 코드
     private final String hex;  // 프론트엔드 표시용 헥사 코드
