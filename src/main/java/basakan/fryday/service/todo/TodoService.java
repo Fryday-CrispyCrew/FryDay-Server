@@ -153,6 +153,11 @@ public class TodoService {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
+        if (todo.getRecurrenceId() != null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE,
+                    "반복 투두의 날짜는 이 API로 변경할 수 없습니다. detach API를 사용하세요.");
+        }
+
         if (request.getDate().isBefore(LocalDate.now())) {
             throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
         }

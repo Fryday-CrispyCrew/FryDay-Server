@@ -35,8 +35,6 @@ public class RecurrenceService {
         Todo originalTodo = todoRepository.findById(request.getTodoId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        originalTodo.updateDate(request.getStartDate());
-
         Recurrence recurrence = Recurrence.builder()
                 .userId(userId)
                 .categoryId(originalTodo.getCategory().getId())
