@@ -467,7 +467,7 @@ class TodoControllerTest extends RestDocsSupport {
                 .andExpect(status().isOk())
                 .andDo(document("todo-update-date",
                         pathParameters(
-                                parameterWithName("todoId").description("수정할 투두 ID")
+                                parameterWithName("todoId").description("수정할 투두 ID (반복 투두인 경우 자동으로 분리됨)")
                         ),
                         requestFields(
                                 fieldWithPath("date").type(JsonFieldType.STRING).description("변경할 날짜 (YYYY-MM-DD, 오늘 이후만 가능)")
@@ -973,57 +973,6 @@ class TodoControllerTest extends RestDocsSupport {
                 ));
     }
 
-    @Test
-    @DisplayName("반복 투두 회차 분리")
-    void detachRecurrenceOccurrence() throws Exception {
-        // given
-        Long recurrenceId = 1L;
-        LocalDate occurrenceDate = LocalDate.of(2025, 12, 8);
-        LocalDate newDate = LocalDate.of(2025, 12, 10);
-        
-        RecurrenceOccurrenceDetachRequest request = new RecurrenceOccurrenceDetachRequest(occurrenceDate, newDate);
-
-        // Mocking: 분리된 단건 Todo 응답
-        Category mockCategory = Category.builder().name("운동").color(CategoryColor.BR).userId(1L).build();
-        ReflectionTestUtils.setField(mockCategory, "id", 1L);
-
-        Todo mockTodo = Todo.builder()
-                .description("매일 운동하기")
-                .category(mockCategory)
-                .date(newDate)
-                .build();
-        ReflectionTestUtils.setField(mockTodo, "id", 101L);
-
-        given(recurrenceService.detachRecurrenceOccurrence(anyLong(), any(LocalDate.class), any(LocalDate.class), anyLong()))
-                .willReturn(TodoResponse.from(mockTodo));
-
-        // when & then
-        mockMvc.perform(post("/api/todos/recurrence/{recurrenceId}/detach", recurrenceId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andDo(document("todo-recurrence-occurrence-detach",
-                        pathParameters(
-                                parameterWithName("recurrenceId").description("반복 투두 규칙 ID")
-                        ),
-                        requestFields(
-                                fieldWithPath("occurrenceDate").type(JsonFieldType.STRING).description("반복 투두의 발생일 (YYYY-MM-DD)"),
-                                fieldWithPath("newDate").type(JsonFieldType.STRING).description("단건 투두로 분리할 새로운 날짜 (YYYY-MM-DD)")
-                        ),
-                        responseFields(
-                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
-                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
-                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("분리된 단건 투두 ID"),
-                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
-                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
-                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
-                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
-                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("새로운 투두 날짜"),
-                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
-                        )
-                ));
-    }
 
     @Test
     @DisplayName("반복 투두 규칙 수정")

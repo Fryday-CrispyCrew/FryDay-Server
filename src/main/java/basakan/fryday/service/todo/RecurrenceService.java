@@ -85,58 +85,6 @@ public class RecurrenceService {
         recurrenceRepository.delete(recurrence);
     }
 
-    // 반복 투두의 특정 회차를 분리
-    @Transactional
-    public TodoResponse detachRecurrenceOccurrence(Long recurrenceId, LocalDate occurrenceDate, LocalDate newDate, Long userId) {
-        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        if (recurrence.getUserId() != userId) {
-            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-        }
-
-        // DETACHED 예외가 이미 존재하는지 확인
-        RecurrenceException existingException = recurrenceExceptionRepository
-                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
-                .orElse(null);
-
-        if (existingException != null && existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
-        // 기존 Todo 조회
-        List<Todo> existingTodos = todoRepository.findAllByUserIdAndDate(userId, occurrenceDate);
-        Todo existingTodo = existingTodos.stream()
-                .filter(todo -> todo.getRecurrenceId() != null
-                        && todo.getRecurrenceId().equals(recurrenceId)
-                        && todo.getDeletedAt() == null)
-                .findFirst()
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        // 날짜 변경
-        if (!occurrenceDate.equals(newDate)) {
-            existingTodo.updateDate(newDate);
-            // displayOrder 재계산 (새 날짜 기준)
-            Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
-            long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
-            existingTodo.updateDisplayOrder(displayOrder);
-        }
-
-        // recurrenceId를 null로 변경 (반복에서 분리)
-        existingTodo.setRecurrenceId(null);
-
-        // DETACHED 예외 생성
-        RecurrenceException exception = RecurrenceException.builder()
-                .recurrenceId(recurrenceId)
-                .occurrenceDate(occurrenceDate)
-                .type(RecurrenceException.ExceptionType.DETACHED)
-                .detachedTodoId(existingTodo.getId())
-                .build();
-
-        recurrenceExceptionRepository.save(exception);
-
-        return TodoResponse.from(existingTodo);
-    }
 
     /**
      * 반복 투두의 특정 회차를 제외(CANCELLED)합니다.

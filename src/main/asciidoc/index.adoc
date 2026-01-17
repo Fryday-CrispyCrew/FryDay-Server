@@ -398,23 +398,6 @@ include::{snippets}/todo-recurrence-update/http-request.adoc[]
 ==== HTTP 응답 예시
 include::{snippets}/todo-recurrence-update/http-response.adoc[]
 
-=== 반복 설정된 투두 회차 분리(날짜 변경)
-`POST /api/todos/recurrence/{recurrenceId}/detach`
-
-반복 투두로 생성된 특정 회차를 단건 투두로 분리하고, 날짜를 변경합니다.
-
-IMPORTANT: 반복 투두의 날짜를 변경하려면 이 API를 사용하세요. `newDate` 필드에 변경할 날짜를 지정하면 분리와 동시에 날짜가 변경됩니다.
-
-==== 경로 파라미터
-include::{snippets}/todo-recurrence-occurrence-detach/path-parameters.adoc[]
-==== 요청 필드
-include::{snippets}/todo-recurrence-occurrence-detach/request-fields.adoc[]
-==== HTTP 요청 예시
-include::{snippets}/todo-recurrence-occurrence-detach/http-request.adoc[]
-==== HTTP 응답 예시
-include::{snippets}/todo-recurrence-occurrence-detach/http-response.adoc[]
-==== 응답 필드
-include::{snippets}/todo-recurrence-occurrence-detach/response-fields.adoc[]
 
 
 === 반복 설정 투두 삭제(반복 해제)
@@ -463,20 +446,21 @@ include::{snippets}/todo-move-today/response-fields.adoc[]
 === 투두 날짜 변경
 `PATCH /api/todos/{todoId}/date`
 
-일반 투두(반복 설정이 없는 단건 투두)의 날짜를 변경합니다.
+투두의 날짜를 변경합니다. 반복 투두인 경우 자동으로 반복에서 분리되어 단건 투두로 변환됩니다.
 
-IMPORTANT: 반복 투두(`recurrenceId`가 있는 투두)의 날짜는 이 API로 변경할 수 없습니다. 
-반복 투두의 날짜를 변경하려면 `POST /api/todos/recurrence/{recurrenceId}/detach` API를 사용하세요.
+NOTE: 반복 투두의 날짜를 변경하면 해당 투두는 반복 규칙에서 분리되어 단건 투두로 변환됩니다.
+반복 규칙 자체는 유지되며, 이후 해당 날짜에는 새로운 투두가 생성되지 않습니다.
 
-==== 경로 파라미터
+
+===== 경로 파라미터
 include::{snippets}/todo-update-date/path-parameters.adoc[]
-==== 요청 필드
+===== 요청 필드
 include::{snippets}/todo-update-date/request-fields.adoc[]
-==== HTTP 요청 예시
+===== HTTP 요청 예시
 include::{snippets}/todo-update-date/http-request.adoc[]
-==== HTTP 응답 예시
+===== HTTP 응답 예시
 include::{snippets}/todo-update-date/http-response.adoc[]
-==== 응답 필드
+===== 응답 필드
 include::{snippets}/todo-update-date/response-fields.adoc[]
 
 === 투두 순서 변경
