@@ -355,12 +355,33 @@ include::{snippets}/todo-delete/response-fields.adoc[]
 
 투두 반복 기능을 설정합니다.
 
-==== 요청 필드
-include::{snippets}/todo-recurrence-create/request-fields.adoc[]
-==== HTTP 요청 예시
-include::{snippets}/todo-recurrence-create/http-request.adoc[]
-==== HTTP 응답 예시
-include::{snippets}/todo-recurrence-create/http-response.adoc[]
+==== 요청 필드(DAILY)
+include::{snippets}/todo-recurrence-create-daily/request-fields.adoc[]
+==== HTTP 요청 예시(DAILY)
+include::{snippets}/todo-recurrence-create-daily/http-request.adoc[]
+==== HTTP 응답 예시(DAILY)
+include::{snippets}/todo-recurrence-create-daily/http-response.adoc[]
+
+==== 요청 필드(WEEKLY)
+include::{snippets}/todo-recurrence-create-weekly/request-fields.adoc[]
+==== HTTP 요청 예시(WEEKLY)
+include::{snippets}/todo-recurrence-create-weekly/http-request.adoc[]
+==== HTTP 응답 예시(WEEKLY)
+include::{snippets}/todo-recurrence-create-weekly/http-response.adoc[]
+
+==== 요청 필드(MONTHLY)
+include::{snippets}/todo-recurrence-create-monthly/request-fields.adoc[]
+==== HTTP 요청 예시(MONTHLY)
+include::{snippets}/todo-recurrence-create-monthly/http-request.adoc[]
+==== HTTP 응답 예시(MONTHLY)
+include::{snippets}/todo-recurrence-create-monthly/http-response.adoc[]
+
+==== 요청 필드(YEARLY)
+include::{snippets}/todo-recurrence-create-yearly/request-fields.adoc[]
+==== HTTP 요청 예시(YEARLY)
+include::{snippets}/todo-recurrence-create-yearly/http-request.adoc[]
+==== HTTP 응답 예시(YEARLY)
+include::{snippets}/todo-recurrence-create-yearly/http-response.adoc[]
 
 
 === 반복 투두 규칙 수정
@@ -396,7 +417,7 @@ include::{snippets}/todo-recurrence-occurrence-detach/http-response.adoc[]
 include::{snippets}/todo-recurrence-occurrence-detach/response-fields.adoc[]
 
 
-=== 반복 설정 투두 삭제
+=== 반복 설정 투두 삭제(반복 해제)
 `DELETE /api/todos/recurrence/{recurrenceId}`
 
 반복 설정이 된 투두를 전체 삭제합니다.
