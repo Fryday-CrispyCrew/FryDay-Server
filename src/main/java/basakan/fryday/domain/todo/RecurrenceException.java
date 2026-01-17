@@ -32,8 +32,7 @@ public class RecurrenceException extends BaseEntity {
 
     public enum ExceptionType {
         DELETED,    // 삭제 (반복 투두를 삭제하여 재생성 방지)
-        DETACHED,   // 분리(반복에서 제외하고 단건 todo로 변환)
-        MOVED       // 이동 (반복 투두를 다른 날짜로 이동하여 해당 날짜에 자동 생성 방지)
+        DETACHED    // 분리(반복에서 제외하고 단건 todo로 변환)
     }
 
     @Builder

@@ -34,7 +34,6 @@ public class Recurrence extends BaseEntity {
     @Column(nullable = false)
     private RecurrenceType type;
 
-    @Column(columnDefinition = "TEXT")
     private String frequencyValues;
 
     @Column(nullable = false)
