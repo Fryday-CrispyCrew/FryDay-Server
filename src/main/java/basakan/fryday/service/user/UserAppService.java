@@ -18,6 +18,7 @@ import basakan.fryday.repository.auth.client.SocialProviderClientFactory;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
 import basakan.fryday.service.auth.dto.SocialLoginDto;
 import basakan.fryday.service.auth.dto.SocialLoginServiceDto;
+import basakan.fryday.service.CategoryService;
 import basakan.fryday.service.fcm.UserDeviceReadService;
 import basakan.fryday.service.fcm.UserDeviceWriteService;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ public class UserAppService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserDeviceReadService userDeviceReadService;
     private final UserDeviceWriteService userDeviceWriteService;
+    private final CategoryService categoryService;
 
     public void agreeConsent(boolean privacyRequired, boolean pushNotificationOptional) {
         Long userId = UserContext.getCurrentUserId();
@@ -56,6 +58,9 @@ public class UserAppService {
         Long userId = UserContext.getCurrentUserId();
         User user = userReadService.findById(userId);
         userWriteService.completeOnboarding(user);
+
+        // 온보딩 완료 시 기본 카테고리 생성
+        categoryService.initDefaultCategories(userId);
     }
 
     public void setNickname(String nickname) {
