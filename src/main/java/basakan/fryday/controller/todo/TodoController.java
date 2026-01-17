@@ -166,17 +166,6 @@ public class TodoController {
 //        return ApiResponse.success(null, "반복 투두 회차가 제외되었습니다.");
 //    }
 
-    @PostMapping("/recurrence/{recurrenceId}/detach")
-    public ApiResponse<TodoResponse> detachRecurrenceOccurrence(
-            @PathVariable Long recurrenceId,
-            @Valid @RequestBody RecurrenceOccurrenceDetachRequest request,
-            @AuthenticationPrincipal Long userId
-    ) {
-        TodoResponse response = recurrenceService.detachRecurrenceOccurrence(
-                recurrenceId, request.getOccurrenceDate(), request.getNewDate(), userId);
-        return ApiResponse.success(response, "반복 투두가 단건 투두로 분리되었습니다.");
-    }
-
     @PatchMapping("/recurrence/{recurrenceId}")
     public ApiResponse<TodoDetailResponse.RecurrenceInfo> updateRecurrence(
             @PathVariable Long recurrenceId,

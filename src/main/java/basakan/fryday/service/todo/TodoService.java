@@ -153,15 +153,62 @@ public class TodoService {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        if (todo.getRecurrenceId() != null) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE,
-                    "반복 투두의 날짜는 이 API로 변경할 수 없습니다. detach API를 사용하세요.");
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
         if (request.getDate().isBefore(LocalDate.now())) {
             throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
         }
 
+        // 반복 투두인 경우 자동으로 detach 처리
+        if (todo.getRecurrenceId() != null) {
+            Long recurrenceId = todo.getRecurrenceId();
+            LocalDate occurrenceDate = todo.getDate();
+            LocalDate newDate = request.getDate();
+
+            // Recurrence 검증
+            Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+            if (recurrence.getUserId() != userId) {
+                throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+            }
+
+            // DETACHED 예외가 이미 존재하는지 확인
+            RecurrenceException existingException = recurrenceExceptionRepository
+                    .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
+                    .orElse(null);
+
+            if (existingException != null && existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+
+            // 날짜 변경
+            if (!occurrenceDate.equals(newDate)) {
+                todo.updateDate(newDate);
+                // displayOrder 재계산
+                Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
+                long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+                todo.updateDisplayOrder(displayOrder);
+            }
+
+            todo.setRecurrenceId(null);
+
+            // DETACHED 예외 생성
+            RecurrenceException exception = RecurrenceException.builder()
+                    .recurrenceId(recurrenceId)
+                    .occurrenceDate(occurrenceDate)
+                    .type(RecurrenceException.ExceptionType.DETACHED)
+                    .detachedTodoId(todo.getId())
+                    .build();
+
+            recurrenceExceptionRepository.save(exception);
+
+            return TodoResponse.from(todo);
+        }
+
+        // 일반 투두인 경우 기존 로직
         todo.updateDate(request.getDate());
 
         return TodoResponse.from(todo);
