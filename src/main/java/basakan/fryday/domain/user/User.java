@@ -7,12 +7,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"provider", "providerUserId"})
-})
+@Table(name = "users")
 public class User extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
@@ -35,6 +35,8 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
+
+    private LocalDateTime withdrawnAt;
 
     @Builder
     private User(AuthProvider provider, String providerUserId, String nickname,
@@ -77,6 +79,14 @@ public class User extends BaseEntity {
 
     public void withdraw() {
         this.accountStatus = AccountStatus.WITHDRAWN;
+        this.withdrawnAt = java.time.LocalDateTime.now();
+    }
+
+    public boolean canReregister() {
+        if (this.withdrawnAt == null) {
+            return true;
+        }
+        return java.time.LocalDateTime.now().isAfter(this.withdrawnAt.plusDays(7));
     }
 
     public void block() {
