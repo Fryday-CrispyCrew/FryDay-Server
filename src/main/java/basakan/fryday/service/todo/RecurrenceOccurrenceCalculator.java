@@ -25,7 +25,7 @@ public class RecurrenceOccurrenceCalculator {
      * @param recurrence 반복 규칙
      * @param fromDate 시작 날짜 (포함)
      * @param toDate 종료 날짜 (포함)
-     * @param cancelledDates 제외된 날짜 목록 (DELETED 예외)
+     * @param cancelledDates 제외된 날짜 목록 (DELETED, MOVED 예외)
      * @return 발생일 목록 (정렬됨)
      */
     public List<LocalDate> calculateOccurrences(Recurrence recurrence, LocalDate fromDate, LocalDate toDate, Set<LocalDate> cancelledDates) {

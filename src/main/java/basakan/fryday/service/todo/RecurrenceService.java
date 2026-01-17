@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +56,14 @@ public class RecurrenceService {
 
         // 원본 투두에 recurrenceId 연결
         originalTodo.setRecurrenceId(savedRecurrence.getId());
+
+        // Todo 의미 확인 필요
+        RecurrenceException exception = RecurrenceException.builder()
+                .recurrenceId(savedRecurrence.getId())
+                .occurrenceDate(originalTodo.getDate())
+                .type(RecurrenceException.ExceptionType.DELETED)
+                .build();
+        recurrenceExceptionRepository.save(exception);
 
         // 반복 규칙만 저장하고, 투두는 대량 생성하지 않음
         // 가상 회차는 조회 시 동적으로 생성됨
@@ -134,6 +144,23 @@ public class RecurrenceService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
+        List<RecurrenceException> detachedExceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId)
+                .stream()
+                .filter(e -> e.getType() == RecurrenceException.ExceptionType.DETACHED && e.getDetachedTodoId() != null)
+                .toList();
+        
+        Set<Long> detachedTodoIds = detachedExceptions.stream()
+                .map(RecurrenceException::getDetachedTodoId)
+                .collect(Collectors.toSet());
+
+        // 기존 반복 투두들 삭제 (분리된 투두 제외)
+        List<Todo> todos = todoRepository.findAllByRecurrenceId(recurrenceId);
+        for (Todo todo : todos) {
+            if (!detachedTodoIds.contains(todo.getId())) {
+                todo.delete();
+            }
+        }
+
         String frequencyValuesStr = (request.getFrequencyValues() != null && !request.getFrequencyValues().isEmpty())
                 ? String.join(",", request.getFrequencyValues())
                 : null;
@@ -145,6 +172,9 @@ public class RecurrenceService {
                 request.getEndDate(),
                 request.getNotificationTime()
         );
+
+        // lastGeneratedDate를 새로운 startDate로 업데이트
+        recurrence.updateLastGeneratedDate(request.getStartDate());
 
         return recurrence;
     }

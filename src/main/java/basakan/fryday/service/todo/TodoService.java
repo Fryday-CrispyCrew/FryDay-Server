@@ -43,6 +43,7 @@ public class TodoService {
     private final RecurrenceRepository recurrenceRepository;
     private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final RecurrenceOccurrenceMaterializeService materializeService;
+    private final RecurrenceOccurrenceCalculator occurrenceCalculator;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
@@ -129,11 +130,24 @@ public class TodoService {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
         if (!todo.getDate().equals(LocalDate.now())) {
             throw new BusinessException(ErrorCode.TODO_NOT_TODAY);
         }
 
-        todo.updateDate(LocalDate.now().plusDays(1));
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        LocalDate originalDate = todo.getDate();
+
+        // 반복 투두인 경우, 원래 날짜와 이동할 날짜에 예외 생성
+        if (todo.getRecurrenceId() != null) {
+            preventRecurrenceOccurrenceRecreation(todo.getRecurrenceId(), originalDate, userId);
+            preventDuplicateRecurrenceOccurrence(todo.getRecurrenceId(), tomorrow, userId);
+        }
+
+        todo.updateDate(tomorrow);
 
         return TodoResponse.from(todo);
     }
@@ -143,7 +157,20 @@ public class TodoService {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        todo.updateDate(LocalDate.now());
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate originalDate = todo.getDate();
+
+        // 반복 투두인 경우, 원래 날짜와 이동할 날짜에 예외 생성
+        if (todo.getRecurrenceId() != null) {
+            preventRecurrenceOccurrenceRecreation(todo.getRecurrenceId(), originalDate, userId);
+            preventDuplicateRecurrenceOccurrence(todo.getRecurrenceId(), today, userId);
+        }
+
+        todo.updateDate(today);
 
         return TodoResponse.from(todo);
     }
@@ -175,17 +202,26 @@ public class TodoService {
                 throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
             }
 
-            // DETACHED 예외가 이미 존재하는지 확인
+            // 이미 예외가 존재하는지 확인
             RecurrenceException existingException = recurrenceExceptionRepository
                     .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
                     .orElse(null);
 
+            // DETACHED 예외가 이미 존재하면 이미 분리된 투두
             if (existingException != null && existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
                 throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
             }
 
-            // 날짜 변경
+            // DELETED나 MOVED 예외가 이미 존재하면 중복 키 오류를 방지하기 위해 예외 발생
+            // (같은 날짜에 이미 예외가 존재하는데 DETACHED 예외를 생성하려고 하면 unique constraint 위반)
+            if (existingException != null) {
+                throw new BusinessException(ErrorCode.DUPLICATE_TODO_DATE);
+            }
+
+            // 날짜 변경 시 중복 체크
             if (!occurrenceDate.equals(newDate)) {
+                preventDuplicateRecurrenceOccurrence(recurrenceId, newDate, userId);
+                
                 todo.updateDate(newDate);
                 // displayOrder 재계산
                 Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
@@ -378,6 +414,87 @@ public class TodoService {
         }
 
         return TodoDetailResponse.from(todo, todoAlarm, recurrence);
+    }
+
+    /**
+     * 반복 투두를 이동한 원래 날짜에 MOVED 예외를 생성하여 재생성을 방지합니다.
+     */
+    private void preventRecurrenceOccurrenceRecreation(Long recurrenceId, LocalDate originalDate, Long userId) {
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        RecurrenceException existingException = recurrenceExceptionRepository
+                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, originalDate)
+                .orElse(null);
+
+        if (existingException != null) {
+            return;
+        }
+
+        // 원래 날짜에 MOVED 예외 생성하여 재생성 방지
+        RecurrenceException exception = RecurrenceException.builder()
+                .recurrenceId(recurrenceId)
+                .occurrenceDate(originalDate)
+                .type(RecurrenceException.ExceptionType.MOVED)
+                .build();
+        recurrenceExceptionRepository.save(exception);
+    }
+
+    /**
+     * 반복 투두를 특정 날짜로 이동할 때, 해당 날짜에 이미 같은 반복 투두가 존재하거나
+     * 반복 주기와 겹치면 예외를 발생시키거나 MOVED 예외를 생성하여 중복 생성을 방지합니다.
+     */
+    private void preventDuplicateRecurrenceOccurrence(Long recurrenceId, LocalDate targetDate, Long userId) {
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        // 해당 날짜에 이미 같은 recurrenceId를 가진 투두가 존재하는지 확인
+        List<Todo> existingTodos = todoRepository.findAllByUserIdAndDate(userId, targetDate);
+        boolean hasExistingRecurrenceTodo = existingTodos.stream()
+                .anyMatch(todo -> todo.getRecurrenceId() != null
+                        && todo.getRecurrenceId().equals(recurrenceId)
+                        && todo.getDeletedAt() == null);
+
+        if (hasExistingRecurrenceTodo) {
+            throw new BusinessException(ErrorCode.DUPLICATE_TODO_DATE);
+        }
+
+        // 이미 예외가 존재하는지 확인
+        RecurrenceException existingException = recurrenceExceptionRepository
+                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, targetDate)
+                .orElse(null);
+
+        if (existingException != null) {
+            return;
+        }
+
+        // 해당 날짜에 반복으로 생성될 예정인지 확인
+        List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
+        Set<LocalDate> cancelledDates = exceptions.stream()
+                .map(RecurrenceException::getOccurrenceDate)
+                .collect(Collectors.toSet());
+
+        List<LocalDate> occurrenceDates = occurrenceCalculator.calculateOccurrences(
+                recurrence, targetDate, targetDate, cancelledDates
+        );
+
+        // 해당 날짜에 반복으로 생성될 예정이면 MOVED 예외 생성
+        if (!occurrenceDates.isEmpty() && occurrenceDates.contains(targetDate)) {
+            RecurrenceException exception = RecurrenceException.builder()
+                    .recurrenceId(recurrenceId)
+                    .occurrenceDate(targetDate)
+                    .type(RecurrenceException.ExceptionType.MOVED)
+                    .build();
+            recurrenceExceptionRepository.save(exception);
+        }
     }
 
     private String resolveImageCode(CharacterStatus status) {

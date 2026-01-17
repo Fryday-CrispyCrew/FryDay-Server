@@ -914,7 +914,7 @@ class TodoControllerTest extends RestDocsSupport {
                 .frequencyValues("MONDAY,WEDNESDAY,FRIDAY")
                 .startDate(LocalDate.of(2026, 1, 1))
                 .endDate(LocalDate.of(2026, 12, 31))
-                .notificationTime(null) // DTO 로직상 null
+                .notificationTime(null) // 테스트 데이터 (null 가능)
                 .build();
 
         TodoDetailResponse response = TodoDetailResponse.builder()

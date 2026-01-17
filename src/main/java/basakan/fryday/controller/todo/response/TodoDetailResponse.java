@@ -8,6 +8,7 @@ import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Getter
 @Builder
@@ -50,7 +51,7 @@ public class TodoDetailResponse {
         private final String frequencyValues;
         private final LocalDate startDate;
         private final LocalDate endDate;
-        private final LocalDateTime notificationTime;
+        private final LocalTime notificationTime;
 
         public static RecurrenceInfo from(Recurrence recurrence) {
             if (recurrence == null) {
@@ -62,7 +63,7 @@ public class TodoDetailResponse {
                     .frequencyValues(recurrence.getFrequencyValues())
                     .startDate(recurrence.getStartDate())
                     .endDate(recurrence.getEndDate())
-                    .notificationTime(null) // notificationTime은 LocalTime이므로 필요시 변환
+                    .notificationTime(recurrence.getNotificationTime())
                     .build();
         }
     }
