@@ -39,4 +39,4 @@ oauth:
 fcm:
   enabled: ${FCM_ENABLED:false}
   credentials:
-    path: ${FCM_CREDENTIALS_PATH:firebase-adminsdk.json}
+    json: ${FCM_CREDENTIALS_JSON:#{null}}

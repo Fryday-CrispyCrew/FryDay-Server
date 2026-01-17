@@ -43,6 +43,12 @@ tasks/**
 ### REST Docs ###
 src/main/resources/static/docs/
 
+### Firebase / Secrets ###
+src/main/resources/firebase-adminsdk.json
+src/main/resources/firebase-adminsdk*.json
+src/main/resources/*-adminsdk.json
+src/main/resources/google-services.json
+src/main/r
 
 ### for local test ###
 application-dev.yml

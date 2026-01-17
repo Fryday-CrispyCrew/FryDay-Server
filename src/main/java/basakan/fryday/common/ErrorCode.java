@@ -30,6 +30,7 @@ public enum ErrorCode {
     UNSUPPORTED_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 Provider입니다."),
     USER_BLOCKED(HttpStatus.FORBIDDEN, "차단된 사용자입니다."),
     USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 사용자입니다."),
+    USER_REREGISTER_NOT_ALLOWED(HttpStatus.FORBIDDEN, "탈퇴 후 7일 이내에는 재가입할 수 없습니다."),
     INTERNAL_AUTH_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "인증 처리 중 오류가 발생했습니다."),
     REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "Refresh Token이 유효하지 않거나 만료되었습니다."),
 

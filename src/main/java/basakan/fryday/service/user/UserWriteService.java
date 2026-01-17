@@ -2,6 +2,7 @@ package basakan.fryday.service.user;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.common.exception.auth.UserReregisterNotAllowedException;
 import basakan.fryday.domain.user.Agreement;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.AgreementJpaRepository;
@@ -83,5 +84,18 @@ public class UserWriteService {
                 socialUserInfo.providerUserId()
         );
         return userJpaRepository.save(newUser);
+    }
+
+    public User handleWithdrawnUserReregister(User withdrawnUser, SocialUserInfo socialUserInfo) {
+        // 재가입 가능 여부 확인 (7일 경과 여부)
+        if (!withdrawnUser.canReregister()) {
+            throw new UserReregisterNotAllowedException();
+        }
+
+        // 7일이 지났으므로 기존 계정 삭제 후 신규 생성
+        userJpaRepository.delete(withdrawnUser);
+        userJpaRepository.flush(); // 즉시 삭제 반영
+
+        return createUser(socialUserInfo);
     }
 }

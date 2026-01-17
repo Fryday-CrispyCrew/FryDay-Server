@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.util.Optional;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -113,12 +115,24 @@ public class UserAppService {
             throw new BusinessException(ErrorCode.INTERNAL_AUTH_ERROR);
         }
 
-        User user = userReadService.findByProviderAndProviderUserId(
-                        socialUserInfo.provider(),
-                        socialUserInfo.providerUserId()
-                ).orElseGet(() -> userWriteService.createUser(socialUserInfo));
+        User user;
 
-        validateUserStatus(user);
+        // 1. 탈퇴한 사용자가 있는지 확인 (재가입 처리)
+        Optional<User> withdrawnUser = userReadService.findWithdrawnUserByProviderAndProviderUserId(
+                socialUserInfo.provider(), socialUserInfo.providerUserId());
+
+        if (withdrawnUser.isPresent()) {
+            // 탈퇴한 사용자 재가입 처리 (7일 체크 후 기존 계정 삭제 + 신규 생성)
+            user = userWriteService.handleWithdrawnUserReregister(withdrawnUser.get(), socialUserInfo);
+        } else {
+            // 2. ACTIVE 상태인 사용자 확인 (기존 로그인) 또는 신규 생성
+            user = userReadService.findActiveUserByProviderAndProviderUserId(
+                            socialUserInfo.provider(),
+                            socialUserInfo.providerUserId()
+                    ).orElseGet(() -> userWriteService.createUser(socialUserInfo));
+
+            validateUserStatus(user);
+        }
 
         userDeviceReadService.findByUserIdAndDeviceId(user.getId(), serviceDto.deviceId())
                 .ifPresentOrElse(

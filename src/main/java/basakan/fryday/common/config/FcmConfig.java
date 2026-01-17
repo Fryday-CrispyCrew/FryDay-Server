@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -22,11 +23,13 @@ import java.io.InputStream;
 @Configuration
 public class FcmConfig {
 
+    private static final String DEFAULT_CREDENTIALS_PATH = "firebase-adminsdk.json";
+
     @Value("${fcm.enabled:false}")
     private boolean fcmEnabled;
 
-    @Value("${fcm.credentials.path:firebase-adminsdk.json}")
-    private String credentialsPath;
+    @Value("${fcm.credentials.json:#{null}}")
+    private String credentialsJson;
 
     @PostConstruct
     public void initialize() {
@@ -36,15 +39,26 @@ public class FcmConfig {
         }
 
         try {
-            ClassPathResource resource = new ClassPathResource(credentialsPath);
+            InputStream serviceAccount;
 
-            if (!resource.exists()) {
-                log.error("FCM credentials file not found: {}", credentialsPath);
-                log.error("Push notifications will not work. Please add {} to src/main/resources/", credentialsPath);
-                return;
+            // 1. 환경변수로 JSON 내용이 제공된 경우 우선 사용 (운영 환경)
+            if (credentialsJson != null && !credentialsJson.isEmpty()) {
+                log.info("Loading FCM credentials from environment variable");
+                serviceAccount = new ByteArrayInputStream(credentialsJson.getBytes());
             }
+            // 2. 파일 경로로 로드 (로컬 환경)
+            else {
+                log.info("Loading FCM credentials from file: {}", DEFAULT_CREDENTIALS_PATH);
+                ClassPathResource resource = new ClassPathResource(DEFAULT_CREDENTIALS_PATH);
 
-            InputStream serviceAccount = resource.getInputStream();
+                if (!resource.exists()) {
+                    log.error("FCM credentials file not found: {}", DEFAULT_CREDENTIALS_PATH);
+                    log.error("Push notifications will not work. Please add {} to src/main/resources/", DEFAULT_CREDENTIALS_PATH);
+                    return;
+                }
+
+                serviceAccount = resource.getInputStream();
+            }
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
