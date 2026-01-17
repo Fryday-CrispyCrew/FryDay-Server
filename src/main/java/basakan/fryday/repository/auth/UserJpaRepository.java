@@ -14,6 +14,8 @@ public interface UserJpaRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByProviderAndProviderUserId(AuthProvider provider, String providerUserId);
 
+    Optional<User> findByProviderAndProviderUserIdAndAccountStatus(AuthProvider provider, String providerUserId, User.AccountStatus accountStatus);
+
     @Query("SELECT u.id FROM User u WHERE u.accountStatus = 'ACTIVE'")
     List<Long> findAllActiveUserIds();
 }

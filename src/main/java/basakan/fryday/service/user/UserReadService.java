@@ -34,6 +34,16 @@ public class UserReadService {
         return userJpaRepository.findByProviderAndProviderUserId(provider, providerUserId);
     }
 
+    public Optional<User> findActiveUserByProviderAndProviderUserId(AuthProvider provider, String providerUserId) {
+        return userJpaRepository.findByProviderAndProviderUserIdAndAccountStatus(
+                provider, providerUserId, User.AccountStatus.ACTIVE);
+    }
+
+    public Optional<User> findWithdrawnUserByProviderAndProviderUserId(AuthProvider provider, String providerUserId) {
+        return userJpaRepository.findByProviderAndProviderUserIdAndAccountStatus(
+                provider, providerUserId, User.AccountStatus.WITHDRAWN);
+    }
+
     public Optional<Agreement> findAgreementByUser(User user) {
         return agreementRepository.findByUser(user);
     }
