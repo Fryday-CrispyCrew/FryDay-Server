@@ -55,6 +55,14 @@ public class RecurrenceService {
         // 원본 투두에 recurrenceId 연결
         originalTodo.setRecurrenceId(savedRecurrence.getId());
 
+        // Todo 의미 확인 필요
+        RecurrenceException exception = RecurrenceException.builder()
+                .recurrenceId(savedRecurrence.getId())
+                .occurrenceDate(originalTodo.getDate())
+                .type(RecurrenceException.ExceptionType.DELETED)
+                .build();
+        recurrenceExceptionRepository.save(exception);
+
         // 반복 규칙만 저장하고, 투두는 대량 생성하지 않음
         // 가상 회차는 조회 시 동적으로 생성됨
 

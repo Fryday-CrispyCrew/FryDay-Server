@@ -24,6 +24,7 @@ public enum ErrorCode {
     CANNOT_DELETE_FAILED_TODO(HttpStatus.BAD_REQUEST, "타버린(미완료) 투두는 삭제할 수 없습니다."),
     TODO_NOT_TODAY(HttpStatus.BAD_REQUEST, "오늘 날짜의 투두만 내일로 미룰 수 있습니다."),
     PAST_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "과거 날짜로 변경할 수 없습니다."),
+    DUPLICATE_TODO_DATE(HttpStatus.BAD_REQUEST, "해당 날짜에 이미 같은 반복 투두가 존재합니다."),
 
     // Auth
     PROVIDER_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "소셜 토큰이 유효하지 않거나 만료되었습니다."),
