@@ -664,7 +664,7 @@ class TodoControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("투두 반복 설정 API")
+    @DisplayName("투두 반복 설정 API - WEEKLY (매주)")
     void createRecurringTodo() throws Exception {
         // given
         Long todoId = 1L;
@@ -698,14 +698,14 @@ class TodoControllerTest extends RestDocsSupport {
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andDo(document("todo-recurrence-create",
+                .andDo(document("todo-recurrence-create-weekly",
                         requestFields(
                                 fieldWithPath("todoId").type(JsonFieldType.NUMBER).description("반복 설정할 원본 투두 ID"),
-                                fieldWithPath("type").type(JsonFieldType.STRING).description("반복 주기 (DAILY, WEEKLY, MONTHLY, YEARLY)"),
-                                fieldWithPath("frequencyValues").type(JsonFieldType.ARRAY).description("반복 상세 값 리스트 (요일, 날짜 등)"),
+                                fieldWithPath("type").type(JsonFieldType.STRING).description("반복 주기: WEEKLY (매주)"),
+                                fieldWithPath("frequencyValues").type(JsonFieldType.ARRAY).description("반복 상세 값: 매주 발생할 요일 (예: [\"MONDAY\", \"WEDNESDAY\", \"FRIDAY\"] - 매주 월, 수, 금, [\"MONDAY\"] - 매주 월요일)"),
                                 fieldWithPath("startDate").type(JsonFieldType.STRING).description("반복 시작일 (YYYY-MM-DD)"),
                                 fieldWithPath("endDate").type(JsonFieldType.STRING).description("반복 종료일 (YYYY-MM-DD, null이면 무한 반복)").optional(),
-                                fieldWithPath("notificationTime").type(JsonFieldType.STRING).description("알림 시간 (HH:mm)").optional()
+                                fieldWithPath("notificationTime").type(JsonFieldType.STRING).description("알림 시간 (HH:mm:ss 형식)").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -715,7 +715,181 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
-                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜 (시작일로 업데이트됨)"),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 반복 설정 API - DAILY (매일)")
+    void createRecurringTodoDaily() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate startDate = LocalDate.of(2026, 1, 30);
+        
+        RecurrenceCreateRequest request = new RecurrenceCreateRequest();
+        ReflectionTestUtils.setField(request, "todoId", todoId);
+        ReflectionTestUtils.setField(request, "type", RecurrenceType.DAILY);
+        ReflectionTestUtils.setField(request, "frequencyValues", null); // DAILY는 frequencyValues 불필요
+        ReflectionTestUtils.setField(request, "startDate", startDate);
+        ReflectionTestUtils.setField(request, "endDate", LocalDate.of(2026, 4, 25));
+        ReflectionTestUtils.setField(request, "notificationTime", LocalTime.of(9, 0));
+
+        // Mocking: 반복 설정 후 원본 투두 응답 생성
+        Category mockCategory = Category.builder().name("운동").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo mockTodo = Todo.builder()
+                .description("매일 운동하기")
+                .category(mockCategory)
+                .date(startDate)
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(recurrenceService.createRecurrence(anyLong(), any(RecurrenceCreateRequest.class)))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(post("/api/todos/recurrence")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-recurrence-create-daily",
+                        requestFields(
+                                fieldWithPath("todoId").type(JsonFieldType.NUMBER).description("반복 설정할 원본 투두 ID"),
+                                fieldWithPath("type").type(JsonFieldType.STRING).description("반복 주기: DAILY (매일)"),
+                                fieldWithPath("frequencyValues").type(JsonFieldType.ARRAY).description("반복 상세 값 (DAILY는 null 또는 빈 배열)").optional(),
+                                fieldWithPath("startDate").type(JsonFieldType.STRING).description("반복 시작일 (YYYY-MM-DD)"),
+                                fieldWithPath("endDate").type(JsonFieldType.STRING).description("반복 종료일 (YYYY-MM-DD, null이면 무한 반복)").optional(),
+                                fieldWithPath("notificationTime").type(JsonFieldType.STRING).description("알림 시간 (HH:mm:ss 형식)").optional()
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("원본 투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 반복 설정 API - MONTHLY (매월)")
+    void createRecurringTodoMonthly() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate startDate = LocalDate.of(2026, 1, 25);
+        
+        RecurrenceCreateRequest request = new RecurrenceCreateRequest();
+        ReflectionTestUtils.setField(request, "todoId", todoId);
+        ReflectionTestUtils.setField(request, "type", RecurrenceType.MONTHLY);
+        ReflectionTestUtils.setField(request, "frequencyValues", List.of("25"));
+        ReflectionTestUtils.setField(request, "startDate", startDate);
+        ReflectionTestUtils.setField(request, "endDate", null); // 무한 반복
+        ReflectionTestUtils.setField(request, "notificationTime", LocalTime.of(9, 0));
+
+        // Mocking: 반복 설정 후 원본 투두 응답 생성
+        Category mockCategory = Category.builder().name("가계부").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo mockTodo = Todo.builder()
+                .description("월세 납부")
+                .category(mockCategory)
+                .date(startDate)
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(recurrenceService.createRecurrence(anyLong(), any(RecurrenceCreateRequest.class)))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(post("/api/todos/recurrence")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-recurrence-create-monthly",
+                        requestFields(
+                                fieldWithPath("todoId").type(JsonFieldType.NUMBER).description("반복 설정할 원본 투두 ID"),
+                                fieldWithPath("type").type(JsonFieldType.STRING).description("반복 주기: MONTHLY (매월)"),
+                                fieldWithPath("frequencyValues").type(JsonFieldType.ARRAY).description("반복 상세 값: 매월 발생할 날짜 숫자 (예: [\"7\"] - 매월 7일, [\"1\", \"15\"] - 매월 1일과 15일)"),
+                                fieldWithPath("startDate").type(JsonFieldType.STRING).description("반복 시작일 (YYYY-MM-DD)"),
+                                fieldWithPath("endDate").type(JsonFieldType.STRING).description("반복 종료일 (YYYY-MM-DD, null이면 무한 반복)").optional(),
+                                fieldWithPath("notificationTime").type(JsonFieldType.STRING).description("알림 시간 (HH:mm:ss 형식)").optional()
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("원본 투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 반복 설정 API - YEARLY (매년)")
+    void createRecurringTodoYearly() throws Exception {
+        // given
+        Long todoId = 1L;
+        LocalDate startDate = LocalDate.of(2026, 3, 30);
+        
+        RecurrenceCreateRequest request = new RecurrenceCreateRequest();
+        ReflectionTestUtils.setField(request, "todoId", todoId);
+        ReflectionTestUtils.setField(request, "type", RecurrenceType.YEARLY);
+        ReflectionTestUtils.setField(request, "frequencyValues", List.of("03-30"));
+        ReflectionTestUtils.setField(request, "startDate", startDate);
+        ReflectionTestUtils.setField(request, "endDate", null); // 무한 반복
+        ReflectionTestUtils.setField(request, "notificationTime", LocalTime.of(9, 0));
+
+        // Mocking: 반복 설정 후 원본 투두 응답 생성
+        Category mockCategory = Category.builder().name("기념일").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo mockTodo = Todo.builder()
+                .description("매년 기념일")
+                .category(mockCategory)
+                .date(startDate)
+                .build();
+        ReflectionTestUtils.setField(mockTodo, "id", todoId);
+
+        given(recurrenceService.createRecurrence(anyLong(), any(RecurrenceCreateRequest.class)))
+                .willReturn(TodoResponse.from(mockTodo));
+
+        // when & then
+        mockMvc.perform(post("/api/todos/recurrence")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-recurrence-create-yearly",
+                        requestFields(
+                                fieldWithPath("todoId").type(JsonFieldType.NUMBER).description("반복 설정할 원본 투두 ID"),
+                                fieldWithPath("type").type(JsonFieldType.STRING).description("반복 주기: YEARLY (매년)"),
+                                fieldWithPath("frequencyValues").type(JsonFieldType.ARRAY).description("반복 상세 값: 매년 발생할 날짜 (MM-dd 형식, 예: [\"01-15\"] - 매년 1월 15일, [\"01-15\", \"12-25\"] - 매년 1월 15일과 12월 25일)"),
+                                fieldWithPath("startDate").type(JsonFieldType.STRING).description("반복 시작일 (YYYY-MM-DD)"),
+                                fieldWithPath("endDate").type(JsonFieldType.STRING).description("반복 종료일 (YYYY-MM-DD, null이면 무한 반복)").optional(),
+                                fieldWithPath("notificationTime").type(JsonFieldType.STRING).description("알림 시간 (HH:mm:ss 형식)").optional()
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("원본 투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("투두 날짜"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
