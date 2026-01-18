@@ -141,10 +141,15 @@ public class TodoService {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         LocalDate originalDate = todo.getDate();
 
-        // 반복 투두인 경우, 원래 날짜와 이동할 날짜에 예외 생성
+        // 반복 투두인 경우: 원래 날짜에 재생성 방지, 기존 투두 삭제 없이 옮기기만
         if (todo.getRecurrenceId() != null) {
             preventRecurrenceOccurrenceRecreation(todo.getRecurrenceId(), originalDate, userId);
-            preventDuplicateRecurrenceOccurrence(todo.getRecurrenceId(), tomorrow, userId);
+            Recurrence recurrence = recurrenceRepository.findById(todo.getRecurrenceId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+            if (recurrence.getUserId() != userId) {
+                throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+            }
+            ensureMovedExceptionIfInSchedule(todo.getRecurrenceId(), tomorrow, recurrence);
         }
 
         todo.updateDate(tomorrow);
@@ -164,10 +169,15 @@ public class TodoService {
         LocalDate today = LocalDate.now();
         LocalDate originalDate = todo.getDate();
 
-        // 반복 투두인 경우, 원래 날짜와 이동할 날짜에 예외 생성
+        // 반복 투두인 경우: 원래 날짜에 재생성 방지, 기존 투두 삭제 없이 옮기기만
         if (todo.getRecurrenceId() != null) {
             preventRecurrenceOccurrenceRecreation(todo.getRecurrenceId(), originalDate, userId);
-            preventDuplicateRecurrenceOccurrence(todo.getRecurrenceId(), today, userId);
+            Recurrence recurrence = recurrenceRepository.findById(todo.getRecurrenceId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+            if (recurrence.getUserId() != userId) {
+                throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+            }
+            ensureMovedExceptionIfInSchedule(todo.getRecurrenceId(), today, recurrence);
         }
 
         todo.updateDate(today);
@@ -458,7 +468,10 @@ public class TodoService {
             throw new BusinessException(ErrorCode.DUPLICATE_TODO_DATE);
         }
 
-        // 이미 예외가 존재하는지 확인
+        ensureMovedExceptionIfInSchedule(recurrenceId, targetDate, recurrence);
+    }
+
+    private void ensureMovedExceptionIfInSchedule(Long recurrenceId, LocalDate targetDate, Recurrence recurrence) {
         RecurrenceException existingException = recurrenceExceptionRepository
                 .findByRecurrenceIdAndOccurrenceDate(recurrenceId, targetDate)
                 .orElse(null);
@@ -467,7 +480,6 @@ public class TodoService {
             return;
         }
 
-        // 해당 날짜에 반복으로 생성될 예정인지 확인
         List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
         Set<LocalDate> cancelledDates = exceptions.stream()
                 .map(RecurrenceException::getOccurrenceDate)
@@ -477,7 +489,6 @@ public class TodoService {
                 recurrence, targetDate, targetDate, cancelledDates
         );
 
-        // 해당 날짜에 반복으로 생성될 예정이면 MOVED 예외 생성
         if (!occurrenceDates.isEmpty() && occurrenceDates.contains(targetDate)) {
             RecurrenceException exception = RecurrenceException.builder()
                     .recurrenceId(recurrenceId)
