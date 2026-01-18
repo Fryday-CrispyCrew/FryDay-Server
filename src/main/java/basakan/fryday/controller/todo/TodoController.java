@@ -148,11 +148,11 @@ public class TodoController {
         return ApiResponse.success(response, "반복 투두가 생성되었습니다.");
     }
 
-    @DeleteMapping("/recurrence/{recurrenceId}")
-    public ApiResponse<Void> deleteRecurrence(@PathVariable Long recurrenceId,
+    @DeleteMapping("/{todoId}/recurrence")
+    public ApiResponse<Void> deleteRecurrence(@PathVariable Long todoId,
                                               @AuthenticationPrincipal Long userId) {
-        recurrenceService.deleteRecurrence(recurrenceId, userId);
-        return ApiResponse.success(null, "반복 투두가 모두 해제(삭제)되었습니다.");
+        recurrenceService.deleteRecurrence(todoId, userId);
+        return ApiResponse.success(null, "반복 해제되었습니다. 해당 투두만 남고 나머지 반복 투두가 삭제됩니다.");
     }
 
     // 현재 기획상은 미존재, 나중에 들어올 것 같음

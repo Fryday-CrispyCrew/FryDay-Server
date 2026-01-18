@@ -118,7 +118,7 @@ class TodoControllerTest extends RestDocsSupport {
                         requestFields(
                                 fieldWithPath("description").type(JsonFieldType.STRING).description("할 일 내용"),
                                 fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
-                                fieldWithPath("date").type(JsonFieldType.STRING).description("투두 날짜 (YYYY-MM-DD, optional, 미래 날짜 가능, null이면 오늘 날짜)").optional()
+                                fieldWithPath("date").type(JsonFieldType.STRING).description("투두 날짜 (YYYY-MM-DD, optional, 과거, 미래 날짜 모두 가능, null이면 오늘 날짜)").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -302,22 +302,21 @@ class TodoControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("반복 투두 전체 삭제 API")
+    @DisplayName("반복 해제 API")
     void deleteRecurrence() throws Exception {
         // given
-        Long recurrenceId = 1L;
+        Long todoId = 1L;
 
-        // Mocking: void 메서드이므로 willDoNothing 사용
         willDoNothing().given(recurrenceService).deleteRecurrence(anyLong(), anyLong());
 
         // when & then
-        mockMvc.perform(delete("/api/todos/recurrence/{recurrenceId}", recurrenceId)
+        mockMvc.perform(delete("/api/todos/{todoId}/recurrence", todoId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andDo(document("todo-recurrence-delete",
                         pathParameters(
-                                parameterWithName("recurrenceId").description("삭제할 반복 투두 규칙 ID (반복 규칙과 반복으로 생성된 모든 투두가 삭제됩니다)")
+                                parameterWithName("todoId").description("반복 해제를 실행하는 투두 ID. 이 투두만 남고, 원본 포함 나머지 반복 투두는 삭제됩니다.")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
