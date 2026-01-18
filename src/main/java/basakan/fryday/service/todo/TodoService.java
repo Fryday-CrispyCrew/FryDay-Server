@@ -354,15 +354,6 @@ public class TodoService {
 
     @Transactional(readOnly = true)
     public CharacterStatusResponse getDailyCharacterStatus(Long userId, LocalDate targetDate) {
-
-        if (targetDate.isAfter(LocalDate.now())) {
-            return CharacterStatusResponse.builder()
-                    .status(CharacterStatus.CASE_FUTURE)
-                    .imageCode(null) // 그래픽 생성 안 함
-                    .description(CharacterStatus.CASE_FUTURE.getDescription())
-                    .build();
-        }
-
         List<Todo> todos = todoRepository.findAllByUserIdAndDate(userId, targetDate);
 
         int totalCount = todos.size();
@@ -498,10 +489,6 @@ public class TodoService {
     }
 
     private String resolveImageCode(CharacterStatus status) {
-        if (status == CharacterStatus.CASE_D) {
-            // Case E일 때만 e1, e2 중 랜덤 반환
-            return Math.random() < 0.5 ? "e1_graphic" : "e2_graphic";
-        }
         return status.getImageCode();
     }
 

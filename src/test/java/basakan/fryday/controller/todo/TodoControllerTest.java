@@ -625,39 +625,134 @@ class TodoControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("일일 캐릭터 상태 조회 API")
-    void getDailyCharacterStatus() throws Exception {
-        // given
-        LocalDate date = LocalDate.of(2025, 12, 1);
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_A (투두 없음)")
+    void getDailyCharacterStatus_caseA() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_A,
+                "a_graphic",
+                "todo-character-status",
+                jsonPath("$.data.status").value("CASE_A"),
+                jsonPath("$.data.imageCode").value("a_graphic")
+        );
+    }
 
-        // Mocking: CASE_D (절반 이상) 상태이며, 랜덤 이미지가 'd1_graphic'으로 결정된 상황 가정
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_B (시작 전)")
+    void getDailyCharacterStatus_caseB() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_B,
+                "b_graphic",
+                "todo-character-status-case-b",
+                jsonPath("$.data.status").value("CASE_B"),
+                jsonPath("$.data.imageCode").value("b_graphic")
+        );
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_C (절반 미만)")
+    void getDailyCharacterStatus_caseC() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_C,
+                "c_graphic",
+                "todo-character-status-case-c",
+                jsonPath("$.data.status").value("CASE_C"),
+                jsonPath("$.data.imageCode").value("c_graphic")
+        );
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_D (절반 이상)")
+    void getDailyCharacterStatus_caseD() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_D,
+                "d_graphic",
+                "todo-character-status-case-d",
+                jsonPath("$.data.status").value("CASE_D"),
+                jsonPath("$.data.imageCode").value("d_graphic")
+        );
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_E1 (마감 임박)")
+    void getDailyCharacterStatus_caseE1() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_E1,
+                "e1_graphic",
+                "todo-character-status-case-e1",
+                jsonPath("$.data.status").value("CASE_E1"),
+                jsonPath("$.data.imageCode").value("e1_graphic")
+        );
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_E2 (마감 임박)")
+    void getDailyCharacterStatus_caseE2() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_E2,
+                "e2_graphic",
+                "todo-character-status-case-e2",
+                jsonPath("$.data.status").value("CASE_E2"),
+                jsonPath("$.data.imageCode").value("e2_graphic")
+        );
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_F (미완료 상태로 마감)")
+    void getDailyCharacterStatus_caseF() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_F,
+                "f_graphic",
+                "todo-character-status-case-f",
+                jsonPath("$.data.status").value("CASE_F"),
+                jsonPath("$.data.imageCode").value("f_graphic")
+        );
+    }
+
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_G (모든 투두 완료)")
+    void getDailyCharacterStatus_caseG() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_G,
+                "g_graphic",
+                "todo-character-status-case-g",
+                jsonPath("$.data.status").value("CASE_G"),
+                jsonPath("$.data.imageCode").value("g_graphic")
+        );
+    }
+
+
+    private void performCharacterStatusTest(CharacterStatus status, String imageCode, String documentId,
+                                            org.springframework.test.web.servlet.ResultMatcher statusMatcher,
+                                            org.springframework.test.web.servlet.ResultMatcher imageCodeMatcher) throws Exception {
+        LocalDate date = LocalDate.of(2025, 12, 1);
         CharacterStatusResponse response = CharacterStatusResponse.builder()
-                .status(CharacterStatus.CASE_D)
-                .imageCode("d1_graphic")
-                .description(CharacterStatus.CASE_D.getDescription())
+                .status(status)
+                .imageCode(imageCode)
+                .description(status.getDescription())
                 .build();
 
         given(todoService.getDailyCharacterStatus(anyLong(), any(LocalDate.class)))
                 .willReturn(response);
 
-        // when & then
         mockMvc.perform(get("/api/todos/character-status")
                         .param("date", date.toString())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andDo(document("todo-character-status",
+                .andExpect(statusMatcher)
+                .andExpect(imageCodeMatcher)
+                .andDo(document(documentId,
                         queryParameters(
                                 parameterWithName("date").description("조회할 날짜 (YYYY-MM-DD)")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
-
-                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("캐릭터 상태 Enum (CASE_A ~ CASE_G)"),
-                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING).description("프론트엔드 이미지 매핑 코드 (예: '1', 'd1_graphic' 등)"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description(
+                                        "캐릭터 상태 (CASE_A: 투두 없음, CASE_B: 시작 전, CASE_C: 절반 미만, CASE_D: 절반 이상, CASE_E1/CASE_E2: 마감 임박, CASE_F: 미완료 마감, CASE_G: 모든 투두 완료). 미래 날짜는 해당일 투두 개수로 판별"),
+                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING).description(
+                                        "이미지 매핑 코드"),
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("상태 설명"),
-
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
