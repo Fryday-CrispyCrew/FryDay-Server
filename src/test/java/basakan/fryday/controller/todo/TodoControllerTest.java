@@ -118,7 +118,7 @@ class TodoControllerTest extends RestDocsSupport {
                         requestFields(
                                 fieldWithPath("description").type(JsonFieldType.STRING).description("할 일 내용"),
                                 fieldWithPath("categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
-                                fieldWithPath("date").type(JsonFieldType.STRING).description("투두 날짜 (YYYY-MM-DD, optional, 미래 날짜 가능, null이면 오늘 날짜)").optional()
+                                fieldWithPath("date").type(JsonFieldType.STRING).description("투두 날짜 (YYYY-MM-DD, optional, 과거, 미래 날짜 모두 가능, null이면 오늘 날짜)").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),

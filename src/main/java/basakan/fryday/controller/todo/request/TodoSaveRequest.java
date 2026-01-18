@@ -22,7 +22,6 @@ public class TodoSaveRequest {
     @NotNull
     private Long categoryId;
 
-    @FutureOrPresent(message = "과거 날짜로는 투두를 생성할 수 없습니다.")
     private LocalDate date;
 
     public TodoSaveRequest(String description, Long categoryId, LocalDate date) {
