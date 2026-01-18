@@ -222,16 +222,10 @@ public class TodoService {
                 throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
             }
 
-            // DELETED나 MOVED 예외가 이미 존재하면 중복 키 오류를 방지하기 위해 예외 발생
-            // (같은 날짜에 이미 예외가 존재하는데 DETACHED 예외를 생성하려고 하면 unique constraint 위반)
-            if (existingException != null) {
-                throw new BusinessException(ErrorCode.DUPLICATE_TODO_DATE);
-            }
+            boolean shouldCreateDetached = (existingException == null);
 
-            // 날짜 변경 시 중복 체크
+            // 날짜 변경: 대상 날짜에 이미 반복 투두가 있어도 이동 허용.
             if (!occurrenceDate.equals(newDate)) {
-                preventDuplicateRecurrenceOccurrence(recurrenceId, newDate, userId);
-                
                 todo.updateDate(newDate);
                 // displayOrder 재계산
                 Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
@@ -241,15 +235,15 @@ public class TodoService {
 
             todo.setRecurrenceId(null);
 
-            // DETACHED 예외 생성
-            RecurrenceException exception = RecurrenceException.builder()
-                    .recurrenceId(recurrenceId)
-                    .occurrenceDate(occurrenceDate)
-                    .type(RecurrenceException.ExceptionType.DETACHED)
-                    .detachedTodoId(todo.getId())
-                    .build();
-
-            recurrenceExceptionRepository.save(exception);
+            if (shouldCreateDetached) {
+                RecurrenceException exception = RecurrenceException.builder()
+                        .recurrenceId(recurrenceId)
+                        .occurrenceDate(occurrenceDate)
+                        .type(RecurrenceException.ExceptionType.DETACHED)
+                        .detachedTodoId(todo.getId())
+                        .build();
+                recurrenceExceptionRepository.save(exception);
+            }
 
             return TodoResponse.from(todo);
         }
@@ -443,32 +437,6 @@ public class TodoService {
                 .type(RecurrenceException.ExceptionType.MOVED)
                 .build();
         recurrenceExceptionRepository.save(exception);
-    }
-
-    /**
-     * 반복 투두를 특정 날짜로 이동할 때, 해당 날짜에 이미 같은 반복 투두가 존재하거나
-     * 반복 주기와 겹치면 예외를 발생시키거나 MOVED 예외를 생성하여 중복 생성을 방지합니다.
-     */
-    private void preventDuplicateRecurrenceOccurrence(Long recurrenceId, LocalDate targetDate, Long userId) {
-        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        if (recurrence.getUserId() != userId) {
-            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-        }
-
-        // 해당 날짜에 이미 같은 recurrenceId를 가진 투두가 존재하는지 확인
-        List<Todo> existingTodos = todoRepository.findAllByUserIdAndDate(userId, targetDate);
-        boolean hasExistingRecurrenceTodo = existingTodos.stream()
-                .anyMatch(todo -> todo.getRecurrenceId() != null
-                        && todo.getRecurrenceId().equals(recurrenceId)
-                        && todo.getDeletedAt() == null);
-
-        if (hasExistingRecurrenceTodo) {
-            throw new BusinessException(ErrorCode.DUPLICATE_TODO_DATE);
-        }
-
-        ensureMovedExceptionIfInSchedule(recurrenceId, targetDate, recurrence);
     }
 
     private void ensureMovedExceptionIfInSchedule(Long recurrenceId, LocalDate targetDate, Recurrence recurrence) {
