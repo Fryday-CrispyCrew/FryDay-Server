@@ -24,7 +24,6 @@ public class RecurrenceCreateRequest {
     private List<String> frequencyValues;
 
     @NotNull(message = "시작일은 필수입니다.")
-    @FutureOrPresent(message = "과거 날짜로는 반복 설정을 할 수 없습니다.")
     private LocalDate startDate;
 
     private LocalDate endDate;
