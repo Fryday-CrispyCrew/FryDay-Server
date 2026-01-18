@@ -71,9 +71,24 @@ public class RecurrenceService {
         return TodoResponse.from(originalTodo);
     }
 
-    // 반복 해제
+    /**
+     * 반복 해제: 해당 투두만 남기고, 원본 투두를 포함한 나머지 반복 투두를 삭제
+     */
     @Transactional
-    public void deleteRecurrence(Long recurrenceId, Long userId) {
+    public void deleteRecurrence(Long todoId, Long userId) {
+        Todo keepTodo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!keepTodo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        Long recurrenceId = keepTodo.getRecurrenceId();
+        if (recurrenceId == null) {
+            throw new BusinessException(ErrorCode.NOT_RECURRING_TODO);
+        }
+
         Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
@@ -81,17 +96,18 @@ public class RecurrenceService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        // 반복으로 생성된 모든 Todo 삭제 (soft delete)
         List<Todo> todos = todoRepository.findAllByRecurrenceId(recurrenceId);
         for (Todo todo : todos) {
-            todo.delete();
+            if (todo.getId().equals(todoId)) {
+                todo.setRecurrenceId(null);
+            } else {
+                todo.delete();
+            }
         }
 
-        // 관련 예외 삭제
         List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
         recurrenceExceptionRepository.deleteAll(exceptions);
 
-        // 반복 규칙 삭제
         recurrenceRepository.delete(recurrence);
     }
 

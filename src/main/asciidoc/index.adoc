@@ -432,10 +432,10 @@ include::{snippets}/todo-recurrence-update/http-response.adoc[]
 
 
 
-=== 반복 설정 투두 삭제(반복 해제)
-`DELETE /api/todos/recurrence/{recurrenceId}`
+=== 반복 해제
+`DELETE /api/todos/{todoId}/recurrence`
 
-반복 설정이 된 투두를 전체 삭제합니다.
+해당 투두를 제외하고, 원본 투두를 포함한 나머지 반복 투두를 삭제합니다. 해당 투두는 반복에서 해제되어 단건 투두로 유지됩니다.
 
 ==== 경로 파라미터
 include::{snippets}/todo-recurrence-delete/path-parameters.adoc[]
