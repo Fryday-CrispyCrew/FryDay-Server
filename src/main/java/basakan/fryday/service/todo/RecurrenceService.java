@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -107,6 +106,25 @@ public class RecurrenceService {
         recurrenceRepository.delete(recurrence);
     }
 
+    @Transactional
+    public void deleteAllRecurringTodos(Long recurrenceId, Long userId) {
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        List<Todo> todos = todoRepository.findAllByRecurrenceId(recurrenceId);
+        for (Todo todo : todos) {
+            todo.delete();
+        }
+
+        List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
+        recurrenceExceptionRepository.deleteAll(exceptions);
+
+        recurrenceRepository.delete(recurrence);
+    }
 
     /**
      * 반복 투두의 특정 회차를 제외(CANCELLED)합니다.

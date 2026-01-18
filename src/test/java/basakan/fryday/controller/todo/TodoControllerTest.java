@@ -327,6 +327,31 @@ class TodoControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("반복 설정 투두 전체 삭제 API")
+    void deleteAllRecurringTodos() throws Exception {
+        // given
+        Long recurrenceId = 1L;
+
+        willDoNothing().given(recurrenceService).deleteAllRecurringTodos(anyLong(), anyLong());
+
+        // when & then
+        mockMvc.perform(delete("/api/todos/recurrence/{recurrenceId}", recurrenceId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("todo-recurrence-delete-all",
+                        pathParameters(
+                                parameterWithName("recurrenceId").description("삭제할 반복 규칙 ID. 해당 반복으로 생성된 모든 투두와 반복 규칙이 삭제됩니다.")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
     @DisplayName("투두 내일 하기 (날짜 미루기)")
     void postponeToTomorrow() throws Exception {
         // given

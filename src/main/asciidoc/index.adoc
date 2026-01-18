@@ -447,6 +447,21 @@ include::{snippets}/todo-recurrence-delete/http-response.adoc[]
 include::{snippets}/todo-recurrence-delete/response-fields.adoc[]
 
 
+=== 반복 설정 투두 전체 삭제
+`DELETE /api/todos/recurrence/{recurrenceId}`
+
+해당 반복 규칙으로 생성된 모든 투두를 삭제하고, 반복 규칙 자체를 제거합니다.
+
+==== 경로 파라미터
+include::{snippets}/todo-recurrence-delete-all/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/todo-recurrence-delete-all/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/todo-recurrence-delete-all/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/todo-recurrence-delete-all/response-fields.adoc[]
+
+
 === 투두 내일 하기
 `PATCH /api/todos/{todoId}/tomorrow`
 
