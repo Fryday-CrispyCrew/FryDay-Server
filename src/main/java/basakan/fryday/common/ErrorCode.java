@@ -40,6 +40,7 @@ public enum ErrorCode {
     DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
     INVALID_NICKNAME_LENGTH(HttpStatus.BAD_REQUEST, "닉네임은 2자 이상 10자 이하로 입력해주세요."),
     FCM_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "FCM 토큰이 유효하지 않은 형식입니다."),
+    AGREEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "동의 정보를 찾을 수 없습니다."),
 
     // Device
     DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND, "디바이스를 찾을 수 없습니다."),

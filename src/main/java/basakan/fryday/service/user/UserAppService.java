@@ -44,14 +44,24 @@ public class UserAppService {
     private final UserDeviceWriteService userDeviceWriteService;
     private final CategoryService categoryService;
 
-    public void agreeConsent(boolean privacyRequired, boolean pushNotificationOptional) {
+    public void agreeConsent(boolean privacyRequired) {
         Long userId = UserContext.getCurrentUserId();
         User user = userReadService.findById(userId);
 
         Agreement agreement = userReadService.findAgreementByUser(user)
-                .orElseGet(() -> Agreement.create(user, privacyRequired, pushNotificationOptional));
+                .orElseGet(() -> Agreement.create(user, privacyRequired, false, false));
 
-        userWriteService.agreeConsent(user, agreement, privacyRequired, pushNotificationOptional);
+        userWriteService.agreeConsent(user, agreement, privacyRequired);
+    }
+
+    public void agreeMarketing(boolean marketingOptional) {
+        Long userId = UserContext.getCurrentUserId();
+        User user = userReadService.findById(userId);
+
+        Agreement agreement = userReadService.findAgreementByUser(user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.AGREEMENT_NOT_FOUND));
+
+        userWriteService.agreeMarketing(user, agreement, marketingOptional);
     }
 
     public void completeOnboarding() {
@@ -86,7 +96,7 @@ public class UserAppService {
         User user = userReadService.findById(userId);
 
         Agreement agreement = userReadService.findAgreementByUser(user)
-                .orElseGet(() -> Agreement.create(user, false, pushNotificationEnabled));
+                .orElseGet(() -> Agreement.create(user, false, pushNotificationEnabled, false));
 
         userWriteService.updateNotificationSettings(agreement, pushNotificationEnabled);
     }
