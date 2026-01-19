@@ -8,6 +8,7 @@ import basakan.fryday.controller.user.response.NicknameCheckResponse;
 import basakan.fryday.controller.user.response.RefreshTokenResponse;
 import basakan.fryday.controller.user.request.RefreshTokenRequest;
 import basakan.fryday.controller.user.request.ConsentRequest;
+import basakan.fryday.controller.user.request.MarketingConsentRequest;
 import basakan.fryday.controller.user.request.SetNicknameRequest;
 import basakan.fryday.controller.user.request.UpdateNicknameRequest;
 import basakan.fryday.controller.user.request.UpdateFcmTokenRequest;
@@ -64,7 +65,7 @@ public class UserController {
 
     @PostMapping("/me/consent")
     public ResponseEntity<MessageResponse> agreeConsent(@Valid @RequestBody ConsentRequest request) {
-        userAppService.agreeConsent(request.privacyRequired(), request.pushNotificationOptional());
+        userAppService.agreeConsent(request.privacyRequired());
         return ResponseEntity.ok(new MessageResponse("개인정보 수집 및 이용에 동의하였습니다."));
     }
 
@@ -72,6 +73,12 @@ public class UserController {
     public ResponseEntity<MessageResponse> completeOnboarding() {
         userAppService.completeOnboarding();
         return ResponseEntity.ok(new MessageResponse("온보딩을 완료하였습니다."));
+    }
+
+    @PatchMapping("/me/marketing")
+    public ResponseEntity<MessageResponse> agreeMarketing(@Valid @RequestBody MarketingConsentRequest request) {
+        userAppService.agreeMarketing(request.marketingOptional());
+        return ResponseEntity.ok(new MessageResponse("마케팅 수신 동의가 완료되었습니다."));
     }
 
     @DeleteMapping("/me")

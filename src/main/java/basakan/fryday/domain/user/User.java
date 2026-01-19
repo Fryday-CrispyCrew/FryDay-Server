@@ -26,7 +26,7 @@ public class User extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private OnboardingStatus onboardingStatus = OnboardingStatus.NEEDS_NICKNAME;
+    private OnboardingStatus onboardingStatus = OnboardingStatus.NEEDS_AGREEMENT;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -44,7 +44,7 @@ public class User extends BaseEntity {
         this.provider = provider;
         this.providerUserId = providerUserId;
         this.nickname = nickname;
-        this.onboardingStatus = onboardingStatus != null ? onboardingStatus : OnboardingStatus.NEEDS_NICKNAME;
+        this.onboardingStatus = onboardingStatus != null ? onboardingStatus : OnboardingStatus.NEEDS_AGREEMENT;
         this.accountStatus = accountStatus != null ? accountStatus : AccountStatus.ACTIVE;
         this.role = role != null ? role : Role.USER;
     }
@@ -53,23 +53,27 @@ public class User extends BaseEntity {
         return User.builder()
                 .provider(provider)
                 .providerUserId(providerUserId)
-                .onboardingStatus(OnboardingStatus.NEEDS_NICKNAME)
+                .onboardingStatus(OnboardingStatus.NEEDS_AGREEMENT)
                 .accountStatus(AccountStatus.ACTIVE)
                 .role(Role.USER)
                 .build();
     }
 
     public void completeAgreementStep() {
-        this.onboardingStatus = OnboardingStatus.NEEDS_ONBOARDING;
-    }
-
-    public void completeOnboardingStep() {
-        this.onboardingStatus = OnboardingStatus.COMPLETED;
+        this.onboardingStatus = OnboardingStatus.NEEDS_NICKNAME;
     }
 
     public void setNickname(String nickname) {
         this.nickname = nickname;
-        this.onboardingStatus = OnboardingStatus.NEEDS_AGREEMENT;
+        this.onboardingStatus = OnboardingStatus.NEEDS_ONBOARDING;
+    }
+
+    public void completeOnboardingStep() {
+        this.onboardingStatus = OnboardingStatus.NEEDS_MARKETING;
+    }
+
+    public void completeMarketingStep() {
+        this.onboardingStatus = OnboardingStatus.COMPLETED;
     }
 
     public void updateNickname(String nickname) {

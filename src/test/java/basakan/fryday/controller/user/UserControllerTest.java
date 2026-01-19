@@ -95,7 +95,7 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 푸시 토큰").optional()
                         ),
                         responseFields(
-                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_NICKNAME, NEEDS_AGREEMENT, NEEDS_ONBOARDING, COMPLETED)"),
+                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_AGREEMENT, NEEDS_NICKNAME, NEEDS_ONBOARDING, NEEDS_MARKETING, COMPLETED)"),
                                 fieldWithPath("accessToken").type(JsonFieldType.STRING).description("JWT Access Token"),
                                 fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("JWT Refresh Token"),
                                 fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 ID"),
@@ -153,7 +153,7 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 푸시 토큰").optional()
                         ),
                         responseFields(
-                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_NICKNAME, NEEDS_AGREEMENT, NEEDS_ONBOARDING, COMPLETED)"),
+                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_AGREEMENT, NEEDS_NICKNAME, NEEDS_ONBOARDING, NEEDS_MARKETING, COMPLETED)"),
                                 fieldWithPath("accessToken").type(JsonFieldType.STRING).description("JWT Access Token"),
                                 fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("JWT Refresh Token"),
                                 fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 ID"),
@@ -170,9 +170,9 @@ class UserControllerTest extends RestDocsSupport {
     @WithMockUser
     void agreeConsent() throws Exception {
         // given
-        ConsentRequest request = new ConsentRequest(true, false);
+        ConsentRequest request = new ConsentRequest(true);
 
-        doNothing().when(userAppService).agreeConsent(anyBoolean(), anyBoolean());
+        doNothing().when(userAppService).agreeConsent(anyBoolean());
 
         // when & then
         mockMvc.perform(post("/api/users/me/consent")
@@ -183,8 +183,7 @@ class UserControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.message").value("개인정보 수집 및 이용에 동의하였습니다."))
                 .andDo(document("user-consent",
                         requestFields(
-                                fieldWithPath("privacyRequired").type(JsonFieldType.BOOLEAN).description("개인정보 수집 및 이용 동의 (필수)"),
-                                fieldWithPath("pushNotificationOptional").type(JsonFieldType.BOOLEAN).description("푸시 알림 수신 동의 (선택)")
+                                fieldWithPath("privacyRequired").type(JsonFieldType.BOOLEAN).description("개인정보 수집 및 이용 동의 (필수)")
                         ),
                         responseFields(
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
@@ -197,7 +196,7 @@ class UserControllerTest extends RestDocsSupport {
     @WithMockUser
     void agreeConsent_FailWhenPrivacyNotAgreed() throws Exception {
         // given
-        ConsentRequest request = new ConsentRequest(false, true);
+        ConsentRequest request = new ConsentRequest(false);
 
         // when & then
         mockMvc.perform(post("/api/users/me/consent")
@@ -368,6 +367,32 @@ class UserControllerTest extends RestDocsSupport {
                 .andDo(document("user-notification-settings-update",
                         requestFields(
                                 fieldWithPath("pushNotificationEnabled").type(JsonFieldType.BOOLEAN).description("푸시 알림 수신 여부 (true: 수신, false: 거부)")
+                        ),
+                        responseFields(
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("마케팅 수신 동의 API")
+    @WithMockUser
+    void agreeMarketing() throws Exception {
+        // given
+        MarketingConsentRequest request = new MarketingConsentRequest(true);
+
+        doNothing().when(userAppService).agreeMarketing(anyBoolean());
+
+        // when & then
+        mockMvc.perform(patch("/api/users/me/marketing")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("마케팅 수신 동의가 완료되었습니다."))
+                .andDo(document("user-marketing-consent",
+                        requestFields(
+                                fieldWithPath("marketingOptional").type(JsonFieldType.BOOLEAN).description("마케팅 정보 수신 동의 (선택)")
                         ),
                         responseFields(
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")

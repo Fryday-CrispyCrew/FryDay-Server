@@ -21,10 +21,17 @@ public class UserWriteService {
     private final AgreementJpaRepository agreementRepository;
     private final basakan.fryday.service.fcm.UserDeviceWriteService userDeviceWriteService;
 
-    public void agreeConsent(User user, Agreement agreement, boolean privacyAgreed, boolean pushNotificationAgreed) {
-        agreement.updateConsent(privacyAgreed, pushNotificationAgreed);
+    public void agreeConsent(User user, Agreement agreement, boolean privacyAgreed) {
+        agreement.updateConsent(privacyAgreed, false, false);
         agreementRepository.save(agreement);
         user.completeAgreementStep();
+        userJpaRepository.save(user);
+    }
+
+    public void agreeMarketing(User user, Agreement agreement, boolean marketingAgreed) {
+        agreement.updateMarketingAgreement(marketingAgreed);
+        agreementRepository.save(agreement);
+        user.completeMarketingStep();
         userJpaRepository.save(user);
     }
 

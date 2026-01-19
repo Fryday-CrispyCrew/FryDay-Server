@@ -24,24 +24,28 @@
 |===
 |상태 |설명 |다음 화면
 
-|`NEEDS_NICKNAME`
-|닉네임 설정이 필요한 상태 (최초 가입 첫 단계)
-|닉네임 설정 화면
-
 |`NEEDS_AGREEMENT`
-|개인정보 수집 및 이용 동의가 필요한 상태 (두 번째 단계)
+|개인정보 수집 및 이용 동의가 필요한 상태 (최초 가입 첫 단계)
 |개인정보 동의 화면
+
+|`NEEDS_NICKNAME`
+|닉네임 설정이 필요한 상태 (두 번째 단계)
+|닉네임 설정 화면
 
 |`NEEDS_ONBOARDING`
 |온보딩 화면 확인이 필요한 상태 (세 번째 단계)
 |온보딩 화면
+
+|`NEEDS_MARKETING`
+|마케팅 수신 동의가 필요한 상태 (네 번째 단계)
+|마케팅 수신 동의 화면
 
 |`COMPLETED`
 |모든 설정이 완료된 상태 (정상 로그인)
 |메인 화면
 |===
 
-NOTE: 온보딩은 NEEDS_NICKNAME → NEEDS_AGREEMENT → NEEDS_ONBOARDING → COMPLETED 순서로 진행됩니다.
+NOTE: 온보딩은 NEEDS_AGREEMENT → NEEDS_NICKNAME → NEEDS_ONBOARDING → NEEDS_MARKETING → COMPLETED 순서로 진행됩니다.
 
 ==== 요청 필드
 include::{snippets}/user-social-login/request-fields.adoc[]
@@ -68,17 +72,21 @@ include::{snippets}/user-social-login/response-fields.adoc[]
 |===
 |상태 |설명 |다음 화면
 
-|`NEEDS_NICKNAME`
-|닉네임 설정이 필요한 상태 (최초 가입 첫 단계)
-|닉네임 설정 화면
-
 |`NEEDS_AGREEMENT`
-|개인정보 수집 및 이용 동의가 필요한 상태 (두 번째 단계)
+|개인정보 수집 및 이용 동의가 필요한 상태 (최초 가입 첫 단계)
 |개인정보 동의 화면
+
+|`NEEDS_NICKNAME`
+|닉네임 설정이 필요한 상태 (두 번째 단계)
+|닉네임 설정 화면
 
 |`NEEDS_ONBOARDING`
 |온보딩 화면 확인이 필요한 상태 (세 번째 단계)
 |온보딩 화면
+
+|`NEEDS_MARKETING`
+|마케팅 수신 동의가 필요한 상태 (네 번째 단계)
+|마케팅 수신 동의 화면
 
 |`COMPLETED`
 |모든 설정이 완료된 상태 (정상 로그인)
@@ -126,24 +134,7 @@ include::{snippets}/user-nickname-check-unavailable/http-response.adoc[]
 ===== 응답 필드
 include::{snippets}/user-nickname-check-unavailable/response-fields.adoc[]
 
-=== 닉네임 설정 (온보딩 1단계)
-`POST /api/users/me/nickname`
-
-닉네임을 최초로 설정합니다. (인증 필요)
-
-==== 요청 필드
-include::{snippets}/user-nickname-set/request-fields.adoc[]
-
-==== HTTP 요청 예시
-include::{snippets}/user-nickname-set/http-request.adoc[]
-
-==== HTTP 응답 예시
-include::{snippets}/user-nickname-set/http-response.adoc[]
-
-==== 응답 필드
-include::{snippets}/user-nickname-set/response-fields.adoc[]
-
-=== 개인정보 동의 (온보딩 2단계)
+=== 개인정보 동의 (온보딩 1단계)
 `POST /api/users/me/consent`
 
 개인정보 수집 및 이용에 동의합니다. (인증 필요)
@@ -160,6 +151,23 @@ include::{snippets}/user-consent/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/user-consent/response-fields.adoc[]
 
+=== 닉네임 설정 (온보딩 2단계)
+`POST /api/users/me/nickname`
+
+닉네임을 최초로 설정합니다. (인증 필요)
+
+==== 요청 필드
+include::{snippets}/user-nickname-set/request-fields.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/user-nickname-set/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/user-nickname-set/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/user-nickname-set/response-fields.adoc[]
+
 === 온보딩 완료 (온보딩 3단계)
 `POST /api/users/me/onboarding`
 
@@ -173,6 +181,23 @@ include::{snippets}/user-onboarding/http-response.adoc[]
 
 ==== 응답 필드
 include::{snippets}/user-onboarding/response-fields.adoc[]
+
+=== 마케팅 수신 동의 (온보딩 4단계)
+`PATCH /api/users/me/marketing`
+
+마케팅 정보 수신 동의를 설정합니다. (인증 필요)
+
+==== 요청 필드
+include::{snippets}/user-marketing-consent/request-fields.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/user-marketing-consent/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/user-marketing-consent/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/user-marketing-consent/response-fields.adoc[]
 
 === 닉네임 수정
 `PATCH /api/users/me/nickname`
