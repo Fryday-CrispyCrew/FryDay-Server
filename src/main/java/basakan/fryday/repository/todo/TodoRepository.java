@@ -42,6 +42,22 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             "WHERE t.date = :date AND t.isBurnt = true AND t.deletedAt IS NULL")
     List<Long> findUserIdsWithBurntTodosByDate(@Param("date") LocalDate date);
 
+    /**
+     * 해당 날짜에 미완료(IN_PROGRESS) 투두가 있는 사용자 ID 조회
+     * DeadlineAlarmScheduler에서 N+1 문제 해결을 위해 사용
+     */
+    @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
+            "WHERE t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
+    List<Long> findUserIdsWithTodosByDateAndStatus(@Param("date") LocalDate date, @Param("status") Todo.Status status);
+
+    /**
+     * 해당 날짜에 투두가 있는 사용자 ID 조회
+     * EncourageAlarmScheduler에서 N+1 문제 해결을 위해 사용
+     */
+    @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
+            "WHERE t.date = :date AND t.deletedAt IS NULL")
+    List<Long> findUserIdsWithTodosByDate(@Param("date") LocalDate date);
+
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.deletedAt IS NULL")
     List<Todo> findAllByRecurrenceId(@Param("recurrenceId") Long recurrenceId);
 

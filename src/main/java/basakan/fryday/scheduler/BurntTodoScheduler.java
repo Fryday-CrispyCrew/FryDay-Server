@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 /**
  * 투두 일일 정책 스케줄러
@@ -20,6 +21,8 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class BurntTodoScheduler {
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
     private final TodoRepository todoRepository;
 
     /**
@@ -30,10 +33,9 @@ public class BurntTodoScheduler {
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     @Transactional
     public void processBurntTodos() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
         log.info("Burnt Todo Processing start: {}", yesterday);
 
-        // 어제 날짜의 미완료 투두를 탄 튀김 상태로 일괄 업데이트 (벌크 UPDATE)
         int burntCount = todoRepository.updateBurntStatusByDate(yesterday, Todo.Status.IN_PROGRESS);
 
         log.info("Burnt Todo Processing end: totalBurnt={}", burntCount);

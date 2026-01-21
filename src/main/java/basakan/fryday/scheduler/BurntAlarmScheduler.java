@@ -11,9 +11,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * 실패 확정 알림 스케줄러 (Alarm-002)
@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class BurntAlarmScheduler {
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
     private final AgreementJpaRepository agreementJpaRepository;
     private final TodoRepository todoRepository;
     private final PushService pushService;
@@ -33,7 +35,7 @@ public class BurntAlarmScheduler {
     @Scheduled(cron = "0 5 0 * * *", zone = "Asia/Seoul")
     @Transactional(readOnly = true)
     public void sendBurntAlarm() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
         log.info("Burnt Alarm start: {}", yesterday);
 
         List<User> usersWithPushEnabled = agreementJpaRepository.findAllUsersWithPushNotificationEnabled();
@@ -50,7 +52,7 @@ public class BurntAlarmScheduler {
             return;
         }
 
-        Set<Long> burntUserIds = userIdsWithBurntTodos.stream().collect(Collectors.toSet());
+        Set<Long> burntUserIds = Set.copyOf(userIdsWithBurntTodos);
         List<User> targetUsers = usersWithPushEnabled.stream()
                 .filter(user -> burntUserIds.contains(user.getId()))
                 .toList();
