@@ -27,6 +27,9 @@ public enum ErrorCode {
     DUPLICATE_TODO_DATE(HttpStatus.BAD_REQUEST, "해당 날짜에 이미 같은 반복 투두가 존재합니다."),
     NOT_RECURRING_TODO(HttpStatus.BAD_REQUEST, "반복 설정된 투두가 아닙니다."),
 
+    // Alarm
+    ALARM_TIME_IN_PAST(HttpStatus.BAD_REQUEST, "알림 시간은 현재 시간 이후로 설정해야 합니다."),
+
     // Auth
     PROVIDER_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "소셜 토큰이 유효하지 않거나 만료되었습니다."),
     UNSUPPORTED_PROVIDER(HttpStatus.BAD_REQUEST, "지원하지 않는 소셜 Provider입니다."),

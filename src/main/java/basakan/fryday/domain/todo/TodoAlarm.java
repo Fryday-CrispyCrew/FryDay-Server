@@ -31,9 +31,18 @@ public class TodoAlarm extends BaseEntity {
     @Column(nullable = false)
     private AlarmStatus status;
 
+    @Column(nullable = false)
+    private int failCount = 0;
+
+    @Version
+    private Long version;
+
+    private static final int MAX_RETRY_COUNT = 3;
+
     public enum AlarmStatus {
         PENDING,  // 발송 대기
-        SENT      // 발송 완료
+        SENT,     // 발송 완료
+        FAILED    // 발송 실패 (최대 재시도 초과)
     }
 
     @Builder
@@ -55,9 +64,23 @@ public class TodoAlarm extends BaseEntity {
     public void changeTime(LocalDateTime notifyAt) {
         this.notifyAt = notifyAt;
         this.status = AlarmStatus.PENDING;
+        this.failCount = 0;
     }
 
     public void markAsSent() {
         this.status = AlarmStatus.SENT;
+    }
+
+    public boolean incrementFailCount() {
+        this.failCount++;
+        if (this.failCount >= MAX_RETRY_COUNT) {
+            this.status = AlarmStatus.FAILED;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean canRetry() {
+        return this.status == AlarmStatus.PENDING && this.failCount < MAX_RETRY_COUNT;
     }
 }
