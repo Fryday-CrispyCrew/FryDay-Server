@@ -13,11 +13,22 @@ public interface TodoAlarmRepository extends JpaRepository<TodoAlarm, Long> {
 
     Optional<TodoAlarm> findByTodoId(Long todoId);
 
+    /**
+     * 발송 대기 중인 알림 조회
+     * - 푸시 알림 동의한 사용자만 조회
+     * - ACTIVE 상태 계정만 조회 (BLOCKED, WITHDRAWN 제외)
+     * - 삭제되지 않은 Todo만 조회
+     */
     @Query("SELECT ta FROM TodoAlarm ta " +
-            "JOIN FETCH ta.user " +
-            "JOIN FETCH ta.todo " +
-            "WHERE ta.status = :status AND ta.notifyAt < :notifyAt")
-    List<TodoAlarm> findAllByStatusAndNotifyAtBefore(
+            "JOIN FETCH ta.user u " +
+            "JOIN FETCH ta.todo t " +
+            "JOIN Agreement a ON a.user = u " +
+            "WHERE ta.status = :status " +
+            "AND ta.notifyAt <= :notifyAt " +
+            "AND a.pushNotificationAgreed = true " +
+            "AND u.accountStatus = 'ACTIVE' " +
+            "AND t.deletedAt IS NULL")
+    List<TodoAlarm> findAllByStatusAndNotifyAtBeforeOrEqual(
             @Param("status") TodoAlarm.AlarmStatus status,
             @Param("notifyAt") LocalDateTime notifyAt
     );

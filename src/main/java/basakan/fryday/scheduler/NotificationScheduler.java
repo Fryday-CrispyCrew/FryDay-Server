@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -25,12 +26,14 @@ public class NotificationScheduler {
     private final TodoAlarmRepository todoAlarmRepository;
     private final PushService pushService;
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
     @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
     @Transactional
     public void sendDueNotifications() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(KOREA_ZONE);
 
-        List<TodoAlarm> dueAlarms = todoAlarmRepository.findAllByStatusAndNotifyAtBefore(
+        List<TodoAlarm> dueAlarms = todoAlarmRepository.findAllByStatusAndNotifyAtBeforeOrEqual(
                 TodoAlarm.AlarmStatus.PENDING,
                 now
         );
@@ -43,11 +46,24 @@ public class NotificationScheduler {
 
         for (TodoAlarm alarm : dueAlarms) {
             try {
+                if (alarm.getTodo() == null || alarm.getTodo().isDeleted()) {
+                    log.warn("Todo is deleted, skipping alarm: alarmId={}", alarm.getId());
+                    alarm.markAsSent();
+                    continue;
+                }
+
                 pushService.sendToUser(alarm.getUser(), "FryDay 알림", alarm.getTodo().getDescription());
                 alarm.markAsSent();
                 log.info("Notification sent: todoId={}, userId={}", alarm.getTodo().getId(), alarm.getUser().getId());
             } catch (Exception e) {
-                log.error("Failed to send notification for alarmId: {}", alarm.getId(), e);
+                boolean maxRetryExceeded = alarm.incrementFailCount();
+                if (maxRetryExceeded) {
+                    log.error("Notification failed permanently after max retries: alarmId={}, todoId={}",
+                            alarm.getId(), alarm.getTodo().getId(), e);
+                } else {
+                    log.warn("Notification failed, will retry: alarmId={}, failCount={}",
+                            alarm.getId(), alarm.getFailCount(), e);
+                }
             }
         }
     }
