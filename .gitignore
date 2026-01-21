@@ -51,5 +51,4 @@ src/main/resources/google-services.json
 src/main/r
 
 ### for local test ###
-application-dev.yml
 DevTokenController.java
