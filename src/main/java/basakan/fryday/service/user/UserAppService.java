@@ -175,12 +175,8 @@ public class UserAppService {
     public void updateDeviceFcmToken(String deviceId, String fcmToken) {
         Long userId = UserContext.getCurrentUserId();
 
-        UserDevice device = userDeviceReadService.findByDeviceId(deviceId);
-
-        // 디바이스 소유자 검증
-        if (!device.getUserId().equals(userId)) {
-            throw new BusinessException(ErrorCode.HANDLE_ACCESS_DENIED);
-        }
+        UserDevice device = userDeviceReadService.findByUserIdAndDeviceId(userId, deviceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
 
         userDeviceWriteService.updateFcmToken(device, fcmToken);
     }
@@ -190,10 +186,8 @@ public class UserAppService {
 
         refreshTokenRepository.delete(refreshToken);
 
-        UserDevice device = userDeviceReadService.findByDeviceId(deviceId);
-        if (device.getUserId().equals(userId)) {
-            userDeviceWriteService.deactivateDevice(device);
-        }
+        userDeviceReadService.findByUserIdAndDeviceId(userId, deviceId)
+                .ifPresent(userDeviceWriteService::deactivateDevice);
     }
 
     public RefreshTokenResponse refreshAccessToken(String oldRefreshToken) {

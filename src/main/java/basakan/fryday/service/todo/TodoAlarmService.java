@@ -13,17 +13,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class TodoAlarmService {
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
     private final TodoAlarmRepository todoAlarmRepository;
     private final TodoRepository todoRepository;
     private final UserReadService userReadService;
 
     public void setTodoAlarm(Long todoId, Long userId, LocalDateTime notifyAt) {
+        LocalDateTime now = LocalDateTime.now(KOREA_ZONE);
+        if (notifyAt.isBefore(now)) {
+            throw new BusinessException(ErrorCode.ALARM_TIME_IN_PAST);
+        }
+
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 

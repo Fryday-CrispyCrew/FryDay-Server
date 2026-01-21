@@ -1,7 +1,7 @@
 package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
-import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.domain.todo.Todo.Status;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.AgreementJpaRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -12,7 +12,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 마감 임박 알림 스케줄러 (Alarm-001)
@@ -25,6 +27,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DeadlineAlarmScheduler {
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
     private final AgreementJpaRepository agreementJpaRepository;
     private final TodoRepository todoRepository;
     private final PushService pushService;
@@ -32,29 +36,37 @@ public class DeadlineAlarmScheduler {
     @Scheduled(cron = "0 0 22 * * *", zone = "Asia/Seoul")
     @Transactional(readOnly = true)
     public void sendDeadlineAlarm() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KOREA_ZONE);
         log.info("Deadline Alarm start: {}", today);
 
-        List<User> users = agreementJpaRepository.findAllUsersWithPushNotificationEnabled();
+        List<User> usersWithPushEnabled = agreementJpaRepository.findAllUsersWithPushNotificationEnabled();
 
-        if (users.isEmpty()) {
+        if (usersWithPushEnabled.isEmpty()) {
             log.info("No users with push notification enabled");
             return;
         }
 
+        List<Long> userIdsWithIncompleteTodos = todoRepository.findUserIdsWithTodosByDateAndStatus(
+                today, Status.IN_PROGRESS
+        );
+
+        if (userIdsWithIncompleteTodos.isEmpty()) {
+            log.info("No users with incomplete todos for {}", today);
+            return;
+        }
+
+        Set<Long> incompleteUserIds = Set.copyOf(userIdsWithIncompleteTodos);
+        List<User> targetUsers = usersWithPushEnabled.stream()
+                .filter(user -> incompleteUserIds.contains(user.getId()))
+                .toList();
+
         int notificationCount = 0;
 
-        for (User user : users) {
+        for (User user : targetUsers) {
             try {
-                long incompleteCount = todoRepository.countByUserIdAndDateAndStatus(
-                        user.getId(), today, Todo.Status.IN_PROGRESS
-                );
-
-                if (incompleteCount > 0) {
-                    pushService.sendToUser(user, "FryDay", "튀김이 타기전에 완료하세요!");
-                    notificationCount++;
-                    log.info("Deadline alarm sent: userId={}, incompleteCount={}", user.getId(), incompleteCount);
-                }
+                pushService.sendToUser(user, "FryDay", "튀김이 타기전에 완료하세요!");
+                notificationCount++;
+                log.info("Deadline alarm sent: userId={}", user.getId());
             } catch (Exception e) {
                 log.error("Deadline alarm failed for userId={}", user.getId(), e);
             }
