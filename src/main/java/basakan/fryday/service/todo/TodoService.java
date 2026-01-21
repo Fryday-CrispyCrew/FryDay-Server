@@ -121,6 +121,9 @@ public class TodoService {
             // 이미 DELETED 예외가 있으면 추가 생성 불필요
         }
 
+        // TodoAlarm이 있으면 삭제 (soft delete 전에 처리)
+        todoAlarmRepository.deleteByTodoId(todoId);
+
         // Todo 삭제 (soft delete)
         todo.delete();
     }
