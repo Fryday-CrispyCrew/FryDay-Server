@@ -6,11 +6,14 @@ import basakan.fryday.repository.auth.UserDeviceRepository;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.Notification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,15 +22,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FcmPushService implements PushService {
 
-    private static final int MAX_RETRIES = 1;
-    private static final long RETRY_DELAY_MS = 500L;
-
     private final UserDeviceRepository userDeviceRepository;
 
     @Value("${fcm.enabled:false}")
     private boolean fcmEnabled;
 
     @Override
+    @Transactional(readOnly = true)
     public void sendToUser(User user, String title, String body) {
         if (!fcmEnabled) {
             log.warn("FCM is disabled. Skipping push notification for userId={}", user.getId());
@@ -43,7 +44,7 @@ public class FcmPushService implements PushService {
 
         for (UserDevice device : devices) {
             if (device.getFcmToken() != null && !device.getFcmToken().isEmpty()) {
-                sendToToken(device.getFcmToken(), title, body);
+                sendToTokenInternal(device.getId(), device.getFcmToken(), device.getDeviceId(), title, body);
             }
         }
     }
@@ -60,39 +61,93 @@ public class FcmPushService implements PushService {
             return;
         }
 
-        int attempt = 0;
+        try {
+            Message message = Message.builder()
+                    .setToken(fcmToken)
+                    .setNotification(Notification.builder()
+                            .setTitle(title)
+                            .setBody(body)
+                            .build())
+                    .build();
 
-        while (true) {
-            try {
-                Message message = Message.builder()
-                        .setToken(fcmToken)
-                        .setNotification(Notification.builder()
-                                .setTitle(title)
-                                .setBody(body)
-                                .build())
-                        .build();
+            String response = FirebaseMessaging.getInstance().send(message);
+            log.info("Push notification sent successfully: response={}", response);
 
-                String response = FirebaseMessaging.getInstance().send(message);
-                log.info("Push notification sent successfully: response={}", response);
-                return;
-
-            } catch (FirebaseMessagingException e) {
-                attempt++;
-
-                if (attempt > MAX_RETRIES) {
-                    log.error("Push notification failed after {} retries: error={}", MAX_RETRIES, e.getMessage(), e);
-                    return;
-                }
-
-                log.warn("Push notification failed (attempt {}/{}), retrying...", attempt, MAX_RETRIES);
-
-                try {
-                    Thread.sleep(RETRY_DELAY_MS);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-            }
+        } catch (FirebaseMessagingException e) {
+            handleFcmException(e, fcmToken, null);
         }
+    }
+
+    private void sendToTokenInternal(Long deviceId, String fcmToken, String deviceIdStr, String title, String body) {
+        try {
+            Message message = Message.builder()
+                    .setToken(fcmToken)
+                    .setNotification(Notification.builder()
+                            .setTitle(title)
+                            .setBody(body)
+                            .build())
+                    .build();
+
+            String response = FirebaseMessaging.getInstance().send(message);
+            log.info("Push notification sent successfully: response={}, deviceId={}", response, deviceIdStr);
+
+        } catch (FirebaseMessagingException e) {
+            handleFcmException(e, fcmToken, deviceId);
+        }
+    }
+
+    private void handleFcmException(FirebaseMessagingException e, String fcmToken, Long deviceId) {
+        MessagingErrorCode errorCode = e.getMessagingErrorCode();
+
+        if (errorCode == null) {
+            log.error("FCM error without error code: token={}, message={}", fcmToken, e.getMessage(), e);
+            throw new RuntimeException("FCM push failed: " + e.getMessage(), e);
+        }
+
+        switch (errorCode) {
+            case UNREGISTERED:
+                log.warn("FCM token unregistered, deactivating device: token={}", fcmToken);
+                if (deviceId != null) {
+                    deactivateDevice(deviceId);
+                }
+                break;
+
+            case INVALID_ARGUMENT:
+                log.warn("FCM invalid token format, deactivating device: token={}", fcmToken);
+                if (deviceId != null) {
+                    deactivateDevice(deviceId);
+                }
+                break;
+
+            case SENDER_ID_MISMATCH:
+                log.error("FCM sender ID mismatch - check Firebase configuration: token={}", fcmToken);
+                break;
+
+            case QUOTA_EXCEEDED:
+                log.warn("FCM quota exceeded, will retry later: token={}", fcmToken);
+                throw new RuntimeException("FCM quota exceeded", e);
+
+            case UNAVAILABLE:
+            case INTERNAL:
+                log.warn("FCM temporary error ({}), will retry later: token={}", errorCode, fcmToken);
+                throw new RuntimeException("FCM temporary error: " + errorCode, e);
+
+            case THIRD_PARTY_AUTH_ERROR:
+                log.error("FCM third party auth error (APNs): token={}", fcmToken);
+                break;
+
+            default:
+                log.error("FCM unknown error: code={}, token={}, message={}", errorCode, fcmToken, e.getMessage(), e);
+                throw new RuntimeException("FCM push failed: " + errorCode, e);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void deactivateDevice(Long deviceId) {
+        userDeviceRepository.findById(deviceId)
+                .ifPresent(device -> {
+                    device.deactivate();
+                    log.info("Device deactivated: deviceId={}", deviceId);
+                });
     }
 }
