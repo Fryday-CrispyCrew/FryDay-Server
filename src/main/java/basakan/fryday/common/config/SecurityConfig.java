@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/token/refresh").permitAll()
                         .requestMatchers("/api/users/nickname/check").permitAll()
                         .requestMatchers("/docs/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
