@@ -14,3 +14,12 @@ spring:
       hibernate:
         format_sql: true
         show_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info
+  metrics:
+    tags:
+      application: fryday-dev
