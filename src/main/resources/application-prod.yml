@@ -28,3 +28,10 @@ management:
   metrics:
     tags:
       application: fryday-prod
+
+logging:
+  file:
+    name: /home/ubuntu/logs/prod/application.log
+  logback:
+    rollingpolicy:
+      max-history: 7
