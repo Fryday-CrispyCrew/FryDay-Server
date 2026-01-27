@@ -230,6 +230,37 @@ include::{snippets}/user-withdraw/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/user-withdraw/response-fields.adoc[]
 
+=== 알림 설정 조회
+`GET /api/users/me/notification-settings`
+
+현재 디바이스의 푸시 알림 수신 여부와 마케팅 수신 동의 여부를 조회합니다. (인증 필요)
+
+==== HTTP 요청 예시
+include::{snippets}/user-notification-settings-get/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/user-notification-settings-get/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/user-notification-settings-get/response-fields.adoc[]
+
+=== 알림 설정 변경
+`PATCH /api/users/me/notification-settings`
+
+현재 디바이스의 푸시 알림 수신 여부를 변경합니다. (인증 필요)
+
+==== 요청 필드
+include::{snippets}/user-notification-settings-update/request-fields.adoc[]
+
+==== HTTP 요청 예시
+include::{snippets}/user-notification-settings-update/http-request.adoc[]
+
+==== HTTP 응답 예시
+include::{snippets}/user-notification-settings-update/http-response.adoc[]
+
+==== 응답 필드
+include::{snippets}/user-notification-settings-update/response-fields.adoc[]
+
 == 월간 리포트(Monthly Report)
 
 === 월간 리포트 조회

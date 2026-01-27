@@ -14,6 +14,7 @@ import basakan.fryday.controller.user.request.UpdateNicknameRequest;
 import basakan.fryday.controller.user.request.UpdateFcmTokenRequest;
 import basakan.fryday.controller.user.request.LogoutRequest;
 import basakan.fryday.controller.user.request.NotificationSettingsRequest;
+import basakan.fryday.controller.user.response.NotificationSettingsResponse;
 import basakan.fryday.service.auth.dto.SocialLoginDto;
 import basakan.fryday.service.user.UserAppService;
 import jakarta.validation.Valid;
@@ -78,7 +79,7 @@ public class UserController {
     @PatchMapping("/me/marketing")
     public ResponseEntity<MessageResponse> agreeMarketing(@Valid @RequestBody MarketingConsentRequest request) {
         userAppService.agreeMarketing(request.marketingOptional());
-        return ResponseEntity.ok(new MessageResponse("마케팅 수신 동의가 완료되었습니다."));
+        return ResponseEntity.ok(new MessageResponse("마케팅 수신 정보가 성공적으로 변경되었습니다."));
     }
 
     @DeleteMapping("/me")
@@ -103,6 +104,12 @@ public class UserController {
     public ResponseEntity<MessageResponse> logout(@Valid @RequestBody LogoutRequest request) {
         userAppService.logout(request.deviceId(), request.refreshToken());
         return ResponseEntity.ok(new MessageResponse("로그아웃이 완료되었습니다."));
+    }
+
+    @GetMapping("/me/notification-settings")
+    public ResponseEntity<NotificationSettingsResponse> getNotificationSettings() {
+        NotificationSettingsResponse response = userAppService.getNotificationSettings();
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/me/notification-settings")
