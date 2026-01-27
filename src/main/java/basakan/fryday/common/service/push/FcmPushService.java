@@ -35,7 +35,7 @@ public class FcmPushService implements PushService {
             return;
         }
 
-        List<UserDevice> devices = userDeviceRepository.findAllByUserIdAndIsActiveTrue(user.getId());
+        List<UserDevice> devices = userDeviceRepository.findAllByUserIdAndIsActiveTrueAndPushNotificationAgreedTrue(user.getId());
 
         if (devices.isEmpty()) {
             log.warn("No active devices found for userId={}", user.getId());

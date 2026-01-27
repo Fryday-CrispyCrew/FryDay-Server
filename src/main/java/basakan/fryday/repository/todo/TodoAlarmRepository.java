@@ -22,10 +22,8 @@ public interface TodoAlarmRepository extends JpaRepository<TodoAlarm, Long> {
     @Query("SELECT ta FROM TodoAlarm ta " +
             "JOIN FETCH ta.user u " +
             "JOIN FETCH ta.todo t " +
-            "JOIN Agreement a ON a.user = u " +
             "WHERE ta.status = :status " +
             "AND ta.notifyAt <= :notifyAt " +
-            "AND a.pushNotificationAgreed = true " +
             "AND u.accountStatus = 'ACTIVE' " +
             "AND t.deletedAt IS NULL")
     List<TodoAlarm> findAllByStatusAndNotifyAtBeforeOrEqual(

@@ -26,4 +26,6 @@ public interface UserDeviceRepository extends JpaRepository<UserDevice, Long> {
     List<UserDevice> findByIsActiveFalseAndLastUsedAtBefore(LocalDateTime dateTime);
 
     void deleteByUserIdAndIsActiveFalse(Long userId);
+
+    List<UserDevice> findAllByUserIdAndIsActiveTrueAndPushNotificationAgreedTrue(Long userId);
 }

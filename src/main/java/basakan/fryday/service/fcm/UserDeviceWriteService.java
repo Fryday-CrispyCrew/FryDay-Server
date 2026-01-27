@@ -1,5 +1,7 @@
 package basakan.fryday.service.fcm;
 
+import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.domain.user.UserDevice;
 import basakan.fryday.repository.auth.UserDeviceRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,12 @@ public class UserDeviceWriteService {
 
     public void updateFcmToken(UserDevice userDevice, String fcmToken) {
         userDevice.updateFcmToken(fcmToken);
+    }
+
+    public void updatePushNotificationAgreement(Long userId, String deviceId, boolean agreed) {
+        UserDevice device = userDeviceRepository.findByUserIdAndDeviceId(userId, deviceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        device.updatePushNotificationAgreement(agreed);
     }
 
     public void deactivateDevice(UserDevice userDevice) {

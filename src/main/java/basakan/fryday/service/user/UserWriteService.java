@@ -22,7 +22,7 @@ public class UserWriteService {
     private final basakan.fryday.service.fcm.UserDeviceWriteService userDeviceWriteService;
 
     public void agreeConsent(User user, Agreement agreement, boolean privacyAgreed) {
-        agreement.updateConsent(privacyAgreed, false, false);
+        agreement.updateConsent(privacyAgreed, false);
         agreementRepository.save(agreement);
         user.completeAgreementStep();
         userJpaRepository.save(user);
@@ -68,10 +68,6 @@ public class UserWriteService {
         userJpaRepository.save(user);
     }
 
-    public void updateNotificationSettings(Agreement agreement, boolean pushNotificationEnabled) {
-        agreement.updatePushNotificationAgreement(pushNotificationEnabled);
-        agreementRepository.save(agreement);
-    }
 
     private void validateNicknameLength(String nickname) {
         if (nickname == null || nickname.length() < 2 || nickname.length() > 10) {

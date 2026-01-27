@@ -2,7 +2,7 @@ package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
 import basakan.fryday.domain.user.User;
-import basakan.fryday.repository.auth.AgreementJpaRepository;
+import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Set;
 
 /**
  * 실패 확정 알림 스케줄러 (Alarm-002)
@@ -28,7 +27,7 @@ public class BurntAlarmScheduler {
 
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
-    private final AgreementJpaRepository agreementJpaRepository;
+    private final UserJpaRepository userJpaRepository;
     private final TodoRepository todoRepository;
     private final PushService pushService;
 
@@ -38,13 +37,6 @@ public class BurntAlarmScheduler {
         LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
         log.info("Burnt Alarm start: {}", yesterday);
 
-        List<User> usersWithPushEnabled = agreementJpaRepository.findAllUsersWithPushNotificationEnabled();
-
-        if (usersWithPushEnabled.isEmpty()) {
-            log.info("No users with push notification enabled");
-            return;
-        }
-
         List<Long> userIdsWithBurntTodos = todoRepository.findUserIdsWithBurntTodosByDate(yesterday);
 
         if (userIdsWithBurntTodos.isEmpty()) {
@@ -52,10 +44,7 @@ public class BurntAlarmScheduler {
             return;
         }
 
-        Set<Long> burntUserIds = Set.copyOf(userIdsWithBurntTodos);
-        List<User> targetUsers = usersWithPushEnabled.stream()
-                .filter(user -> burntUserIds.contains(user.getId()))
-                .toList();
+        List<User> targetUsers = userJpaRepository.findAllById(userIdsWithBurntTodos);
 
         int notificationCount = 0;
 
