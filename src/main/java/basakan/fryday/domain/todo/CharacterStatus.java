@@ -40,7 +40,8 @@ public enum CharacterStatus {
             return CASE_F;
         }
 
-        if (now.getHour() >= 22) {
+        // CASE_E1/E2는 오늘 날짜의 투두가 22시 이후에 아직 완료되지 않았을 때만 적용
+        if (targetDate.equals(today) && now.getHour() >= 22) {
             return Math.random() < 0.5 ? CASE_E1 : CASE_E2;
         }
 
