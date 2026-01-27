@@ -40,11 +40,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = Long.parseLong(claims.getSubject());
                 String role = claims.get("role", String.class);
                 String accountStatus = claims.get("accountStatus", String.class);
+                String deviceId = claims.get("deviceId", String.class);
 
                 // JWT에서 accountStatus 검증 (DB 조회 없이!)
                 if (accountStatus != null && "ACTIVE".equals(accountStatus)) {
+                    UserPrincipal principal = new UserPrincipal(userId, deviceId);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userId,
+                            principal,
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))
                     );
