@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -26,7 +27,7 @@ public class WithdrawnAccountCleanupScheduler {
     @Scheduled(cron = "0 30 0 * * *", zone = "Asia/Seoul")
     @Transactional
     public void cleanupWithdrawnAccounts() {
-        LocalDateTime threshold = LocalDateTime.now().minusDays(7);
+        LocalDateTime threshold = LocalDateTime.now(ZoneId.of("Asia/Seoul")).minusDays(7);
         log.info("Withdrawn account cleanup start: threshold={}", threshold);
 
         List<User> expiredUsers = userJpaRepository.findAllByAccountStatusAndWithdrawnAtBefore(

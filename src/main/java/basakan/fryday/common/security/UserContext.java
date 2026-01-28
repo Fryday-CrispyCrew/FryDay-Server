@@ -15,7 +15,11 @@ public class UserContext {
 
     public static String getCurrentDeviceId() {
         Authentication authentication = getAuthentication();
-        return (String) authentication.getDetails();
+        Object details = authentication.getDetails();
+        if (details == null) {
+            throw new IllegalStateException("디바이스 정보가 없습니다. 재로그인이 필요합니다.");
+        }
+        return (String) details;
     }
 
     private static Authentication getAuthentication() {
