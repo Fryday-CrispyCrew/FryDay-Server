@@ -9,18 +9,20 @@ public class UserContext {
     }
 
     public static Long getCurrentUserId() {
-        return getCurrentPrincipal().userId();
+        Authentication authentication = getAuthentication();
+        return (Long) authentication.getPrincipal();
     }
 
     public static String getCurrentDeviceId() {
-        return getCurrentPrincipal().deviceId();
+        Authentication authentication = getAuthentication();
+        return (String) authentication.getDetails();
     }
 
-    private static UserPrincipal getCurrentPrincipal() {
+    private static Authentication getAuthentication() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new IllegalStateException("인증되지 않은 사용자입니다.");
         }
-        return (UserPrincipal) authentication.getPrincipal();
+        return authentication;
     }
 }

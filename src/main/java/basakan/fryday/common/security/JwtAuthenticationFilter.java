@@ -44,13 +44,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // JWT에서 accountStatus 검증 (DB 조회 없이!)
                 if (accountStatus != null && "ACTIVE".equals(accountStatus)) {
-                    UserPrincipal principal = new UserPrincipal(userId, deviceId);
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            principal,
+                            userId,
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))
                     );
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authentication.setDetails(deviceId);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
                     log.debug("User is not active. accountStatus: {}", accountStatus);
