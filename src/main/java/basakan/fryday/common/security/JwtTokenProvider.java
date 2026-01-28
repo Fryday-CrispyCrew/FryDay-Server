@@ -27,7 +27,7 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateAccessToken(Long userId, User.Role role, User.AccountStatus accountStatus) {
+    public String generateAccessToken(Long userId, User.Role role, User.AccountStatus accountStatus, String deviceId) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessTokenExpiration);
 
@@ -35,6 +35,7 @@ public class JwtTokenProvider {
                 .subject(String.valueOf(userId))
                 .claim("role", role.name())
                 .claim("accountStatus", accountStatus.name())
+                .claim("deviceId", deviceId)
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(getSigningKey())

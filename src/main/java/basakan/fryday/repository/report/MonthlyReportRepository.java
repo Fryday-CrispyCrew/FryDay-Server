@@ -19,4 +19,6 @@ public interface MonthlyReportRepository extends JpaRepository<MonthlyReport, Lo
     );
 
     boolean existsByUserIdAndYearAndMonth(Long userId, int year, int month);
+
+    void deleteAllByUserId(Long userId);
 }

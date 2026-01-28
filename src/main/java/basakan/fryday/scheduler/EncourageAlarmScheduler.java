@@ -2,7 +2,7 @@ package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
 import basakan.fryday.domain.user.User;
-import basakan.fryday.repository.auth.AgreementJpaRepository;
+import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ public class EncourageAlarmScheduler {
 
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
-    private final AgreementJpaRepository agreementJpaRepository;
+    private final UserJpaRepository userJpaRepository;
     private final TodoRepository todoRepository;
     private final PushService pushService;
 
@@ -38,24 +38,26 @@ public class EncourageAlarmScheduler {
         LocalDate today = LocalDate.now(KOREA_ZONE);
         log.info("Encourage Alarm start: {}", today);
 
-        List<User> usersWithPushEnabled = agreementJpaRepository.findAllUsersWithPushNotificationEnabled();
+        List<Long> activeUserIds = userJpaRepository.findAllActiveUserIds();
 
-        if (usersWithPushEnabled.isEmpty()) {
-            log.info("No users with push notification enabled");
+        if (activeUserIds.isEmpty()) {
+            log.info("No active users found");
             return;
         }
 
         List<Long> userIdsWithTodos = todoRepository.findUserIdsWithTodosByDate(today);
         Set<Long> hasToDoUserIds = Set.copyOf(userIdsWithTodos);
 
-        List<User> targetUsers = usersWithPushEnabled.stream()
-                .filter(user -> !hasToDoUserIds.contains(user.getId()))
+        List<Long> targetUserIds = activeUserIds.stream()
+                .filter(id -> !hasToDoUserIds.contains(id))
                 .toList();
 
-        if (targetUsers.isEmpty()) {
+        if (targetUserIds.isEmpty()) {
             log.info("All users already have todos for {}", today);
             return;
         }
+
+        List<User> targetUsers = userJpaRepository.findAllById(targetUserIds);
 
         int notificationCount = 0;
 

@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -40,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = Long.parseLong(claims.getSubject());
                 String role = claims.get("role", String.class);
                 String accountStatus = claims.get("accountStatus", String.class);
+                String deviceId = claims.get("deviceId", String.class);
 
                 // JWT에서 accountStatus 검증 (DB 조회 없이!)
                 if (accountStatus != null && "ACTIVE".equals(accountStatus)) {
@@ -48,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             null,
                             List.of(new SimpleGrantedAuthority("ROLE_" + role))
                     );
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authentication.setDetails(deviceId);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
                     log.debug("User is not active. accountStatus: {}", accountStatus);

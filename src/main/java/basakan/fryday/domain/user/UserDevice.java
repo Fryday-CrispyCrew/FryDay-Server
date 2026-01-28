@@ -33,6 +33,9 @@ public class UserDevice extends BaseEntity {
     @Column(length = 100)
     private String deviceName;  // "iPhone 14 Pro", "Galaxy S23" 등
 
+    @Column(name = "push_notification_agreed", nullable = false)
+    private boolean pushNotificationAgreed = false;
+
     @Column(nullable = false)
     private Boolean isActive = true;
 
@@ -48,6 +51,10 @@ public class UserDevice extends BaseEntity {
         this.deviceName = deviceName;
         this.isActive = true;
         this.lastUsedAt = LocalDateTime.now();
+    }
+
+    public void updatePushNotificationAgreement(boolean agreed) {
+        this.pushNotificationAgreed = agreed;
     }
 
     public void updateFcmToken(String fcmToken) {

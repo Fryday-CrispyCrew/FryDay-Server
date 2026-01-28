@@ -17,4 +17,6 @@ public interface RecurrenceRepository extends JpaRepository<Recurrence, Long> {
            "AND (r.endDate IS NULL OR r.endDate >= :date) " +
            "AND r.startDate <= :date")
     List<Recurrence> findByUserIdAndDateRange(@Param("userId") Long userId, @Param("date") LocalDate date);
+
+    void deleteAllByUserId(Long userId);
 }

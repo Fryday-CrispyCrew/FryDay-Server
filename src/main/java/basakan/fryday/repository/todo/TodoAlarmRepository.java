@@ -2,6 +2,7 @@ package basakan.fryday.repository.todo;
 
 import basakan.fryday.domain.todo.TodoAlarm;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -22,10 +23,8 @@ public interface TodoAlarmRepository extends JpaRepository<TodoAlarm, Long> {
     @Query("SELECT ta FROM TodoAlarm ta " +
             "JOIN FETCH ta.user u " +
             "JOIN FETCH ta.todo t " +
-            "JOIN Agreement a ON a.user = u " +
             "WHERE ta.status = :status " +
             "AND ta.notifyAt <= :notifyAt " +
-            "AND a.pushNotificationAgreed = true " +
             "AND u.accountStatus = 'ACTIVE' " +
             "AND t.deletedAt IS NULL")
     List<TodoAlarm> findAllByStatusAndNotifyAtBeforeOrEqual(
@@ -34,4 +33,8 @@ public interface TodoAlarmRepository extends JpaRepository<TodoAlarm, Long> {
     );
 
     void deleteByTodoId(Long todoId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM TodoAlarm ta WHERE ta.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

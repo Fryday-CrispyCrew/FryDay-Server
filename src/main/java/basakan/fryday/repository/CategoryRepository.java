@@ -17,5 +17,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Long findMaxDisplayOrder(@Param("userId") Long userId);
 
     List<Category> findAllByUserIdAndDeletedAtIsNullOrderByDisplayOrderAsc(Long userId);
+
+    void deleteAllByUserId(Long userId);
 }
 

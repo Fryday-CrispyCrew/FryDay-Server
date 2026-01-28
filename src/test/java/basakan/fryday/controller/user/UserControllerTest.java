@@ -6,6 +6,7 @@ import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.user.request.*;
 import basakan.fryday.controller.user.response.NicknameCheckResponse;
+import basakan.fryday.controller.user.response.NotificationSettingsResponse;
 import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.domain.user.OnboardingStatus;
 import basakan.fryday.domain.user.User;
@@ -349,6 +350,30 @@ class UserControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("알림 설정 조회 API")
+    @WithMockUser
+    void getNotificationSettings() throws Exception {
+        // given
+        NotificationSettingsResponse mockResponse = NotificationSettingsResponse.of(true, false);
+
+        given(userAppService.getNotificationSettings())
+                .willReturn(mockResponse);
+
+        // when & then
+        mockMvc.perform(get("/api/users/me/notification-settings"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pushNotificationEnabled").value(true))
+                .andExpect(jsonPath("$.marketingAgreed").value(false))
+                .andDo(document("user-notification-settings-get",
+                        responseFields(
+                                fieldWithPath("pushNotificationEnabled").type(JsonFieldType.BOOLEAN).description("현재 디바이스의 푸시 알림 수신 여부"),
+                                fieldWithPath("marketingAgreed").type(JsonFieldType.BOOLEAN).description("마케팅 정보 수신 동의 여부")
+                        )
+                ));
+    }
+
+    @Test
     @DisplayName("알림 설정 변경 API")
     @WithMockUser
     void updateNotificationSettings() throws Exception {
@@ -366,7 +391,7 @@ class UserControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.message").value("알림 설정이 성공적으로 변경되었습니다."))
                 .andDo(document("user-notification-settings-update",
                         requestFields(
-                                fieldWithPath("pushNotificationEnabled").type(JsonFieldType.BOOLEAN).description("푸시 알림 수신 여부 (true: 수신, false: 거부)")
+                                fieldWithPath("pushNotificationEnabled").type(JsonFieldType.BOOLEAN).description("현재 디바이스의 푸시 알림 수신 여부 (true: 수신, false: 거부)")
                         ),
                         responseFields(
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
@@ -389,7 +414,7 @@ class UserControllerTest extends RestDocsSupport {
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("마케팅 수신 동의가 완료되었습니다."))
+                .andExpect(jsonPath("$.message").value("마케팅 수신 정보가 성공적으로 변경되었습니다."))
                 .andDo(document("user-marketing-consent",
                         requestFields(
                                 fieldWithPath("marketingOptional").type(JsonFieldType.BOOLEAN).description("마케팅 정보 수신 동의 (선택)")

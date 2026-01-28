@@ -9,6 +9,7 @@ import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.common.security.RefreshTokenRepository;
 import basakan.fryday.common.security.UserContext;
 import basakan.fryday.controller.user.response.NicknameCheckResponse;
+import basakan.fryday.controller.user.response.NotificationSettingsResponse;
 import basakan.fryday.controller.user.response.RefreshTokenResponse;
 import basakan.fryday.domain.user.Agreement;
 import basakan.fryday.domain.user.User;
@@ -49,7 +50,7 @@ public class UserAppService {
         User user = userReadService.findById(userId);
 
         Agreement agreement = userReadService.findAgreementByUser(user)
-                .orElseGet(() -> Agreement.create(user, privacyRequired, false, false));
+                .orElseGet(() -> Agreement.create(user, privacyRequired, false));
 
         userWriteService.agreeConsent(user, agreement, privacyRequired);
     }
@@ -69,7 +70,6 @@ public class UserAppService {
         User user = userReadService.findById(userId);
         userWriteService.completeOnboarding(user);
 
-        // 온보딩 완료 시 기본 카테고리 생성
         categoryService.initDefaultCategories(userId);
     }
 
@@ -91,14 +91,27 @@ public class UserAppService {
         userWriteService.updateNickname(user, nickname);
     }
 
-    public void updateNotificationSettings(boolean pushNotificationEnabled) {
+    @Transactional(readOnly = true)
+    public NotificationSettingsResponse getNotificationSettings() {
         Long userId = UserContext.getCurrentUserId();
+        String deviceId = UserContext.getCurrentDeviceId();
         User user = userReadService.findById(userId);
 
-        Agreement agreement = userReadService.findAgreementByUser(user)
-                .orElseGet(() -> Agreement.create(user, false, pushNotificationEnabled, false));
+        UserDevice device = userDeviceReadService.findByUserIdAndDeviceId(userId, deviceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
 
-        userWriteService.updateNotificationSettings(agreement, pushNotificationEnabled);
+        boolean marketingAgreed = userReadService.findAgreementByUser(user)
+                .map(Agreement::isMarketingAgreed)
+                .orElse(false);
+
+        return NotificationSettingsResponse.of(device.isPushNotificationAgreed(), marketingAgreed);
+    }
+
+    public void updateNotificationSettings(boolean pushNotificationEnabled) {
+        Long userId = UserContext.getCurrentUserId();
+        String deviceId = UserContext.getCurrentDeviceId();
+
+        userDeviceWriteService.updatePushNotificationAgreement(userId, deviceId, pushNotificationEnabled);
     }
 
     public NicknameCheckResponse checkNicknameAvailability(String nickname) {
@@ -166,7 +179,7 @@ public class UserAppService {
                         )
                 );
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole(), user.getAccountStatus());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole(), user.getAccountStatus(), serviceDto.deviceId());
         String refreshToken = refreshTokenRepository.generateAndSave(user.getId(), serviceDto.deviceId());
 
         return SocialLoginDto.from(user, socialUserInfo.provider(), accessToken, refreshToken, serviceDto.deviceId());
@@ -201,7 +214,7 @@ public class UserAppService {
 
         refreshTokenRepository.delete(oldRefreshToken);
 
-        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole(), user.getAccountStatus());
+        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole(), user.getAccountStatus(), deviceId);
         String newRefreshToken = refreshTokenRepository.generateAndSave(user.getId(), deviceId);
 
         return RefreshTokenResponse.of(newAccessToken, newRefreshToken);
