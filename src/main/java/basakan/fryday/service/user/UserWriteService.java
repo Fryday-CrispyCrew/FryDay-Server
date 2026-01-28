@@ -5,9 +5,18 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.common.exception.auth.UserReregisterNotAllowedException;
 import basakan.fryday.domain.user.Agreement;
 import basakan.fryday.domain.user.User;
+import basakan.fryday.repository.CategoryRepository;
+import basakan.fryday.repository.DailyResultRepository;
 import basakan.fryday.repository.auth.AgreementJpaRepository;
+import basakan.fryday.repository.auth.UserDeviceRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
+import basakan.fryday.common.security.RefreshTokenRepository;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
+import basakan.fryday.repository.report.MonthlyReportRepository;
+import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
+import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.repository.todo.TodoAlarmRepository;
+import basakan.fryday.repository.todo.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +28,15 @@ public class UserWriteService {
 
     private final UserJpaRepository userJpaRepository;
     private final AgreementJpaRepository agreementRepository;
-    private final basakan.fryday.service.fcm.UserDeviceWriteService userDeviceWriteService;
+    private final UserDeviceRepository userDeviceRepository;
+    private final TodoAlarmRepository todoAlarmRepository;
+    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
+    private final TodoRepository todoRepository;
+    private final RecurrenceRepository recurrenceRepository;
+    private final CategoryRepository categoryRepository;
+    private final MonthlyReportRepository monthlyReportRepository;
+    private final DailyResultRepository dailyResultRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public void agreeConsent(User user, Agreement agreement, boolean privacyAgreed) {
         agreement.updateConsent(privacyAgreed, false);
@@ -60,11 +77,24 @@ public class UserWriteService {
     }
 
     public void withdraw(User user) {
+        Long userId = user.getId();
+
+        // Redis refresh token 삭제
+        refreshTokenRepository.deleteAllByUserId(userId);
+
+        // 연관 데이터 삭제 (FK 순서 고려)
+        todoAlarmRepository.deleteAllByUserId(userId);
+        recurrenceExceptionRepository.deleteAllByUserId(userId);
+        todoRepository.deleteAllByUserId(userId);
+        recurrenceRepository.deleteAllByUserId(userId);
+        categoryRepository.deleteAllByUserId(userId);
+        monthlyReportRepository.deleteAllByUserId(userId);
+        dailyResultRepository.deleteAllByUserId(userId);
+        userDeviceRepository.deleteAllByUserId(userId);
+        agreementRepository.deleteByUser(user);
+
+        // 계정 상태 변경 (7일 후 스케줄러가 User 삭제)
         user.withdraw();
-
-        // 모든 디바이스 비활성화 (삭제하지 않음)
-        userDeviceWriteService.deactivateAllByUserId(user.getId());
-
         userJpaRepository.save(user);
     }
 

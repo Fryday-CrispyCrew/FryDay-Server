@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -58,5 +59,19 @@ public class RefreshTokenRepository {
     public void delete(String refreshToken) {
         String key = KEY_PREFIX + refreshToken;
         redisTemplate.delete(key);
+    }
+
+    public void deleteAllByUserId(Long userId) {
+        String prefix = userId + ":";
+        Set<String> keys = redisTemplate.keys(KEY_PREFIX + "*");
+        if (keys == null || keys.isEmpty()) {
+            return;
+        }
+        for (String key : keys) {
+            String value = redisTemplate.opsForValue().get(key);
+            if (value != null && value.startsWith(prefix)) {
+                redisTemplate.delete(key);
+            }
+        }
     }
 }

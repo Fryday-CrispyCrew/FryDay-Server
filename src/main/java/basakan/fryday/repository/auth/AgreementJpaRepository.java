@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface AgreementJpaRepository extends JpaRepository<Agreement, Long> {
 
     Optional<Agreement> findByUser(User user);
+
+    void deleteByUser(User user);
 }

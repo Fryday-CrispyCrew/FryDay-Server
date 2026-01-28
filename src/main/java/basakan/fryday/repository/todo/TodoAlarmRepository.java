@@ -2,6 +2,7 @@ package basakan.fryday.repository.todo;
 
 import basakan.fryday.domain.todo.TodoAlarm;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -32,4 +33,8 @@ public interface TodoAlarmRepository extends JpaRepository<TodoAlarm, Long> {
     );
 
     void deleteByTodoId(Long todoId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM TodoAlarm ta WHERE ta.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

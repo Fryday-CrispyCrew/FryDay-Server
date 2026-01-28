@@ -81,6 +81,11 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
         @Param("month") int month
     );
 
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Todo t WHERE t.category.id IN " +
+            "(SELECT c.id FROM Category c WHERE c.userId = :userId)")
+    void deleteAllByUserId(@Param("userId") Long userId);
+
     @Query("SELECT CAST(COUNT(DISTINCT DATE(t.date)) AS int) " +
            "FROM Todo t " +
            "JOIN t.category c " +

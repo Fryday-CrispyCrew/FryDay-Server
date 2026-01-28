@@ -11,4 +11,6 @@ public interface DailyResultRepository extends JpaRepository<DailyResult, Long> 
     Optional<DailyResult> findByUserIdAndDate(Long userId, LocalDate date);
 
     List<DailyResult> findAllByUserIdAndDateBetween(Long userId, LocalDate startDate, LocalDate endDate);
+
+    void deleteAllByUserId(Long userId);
 }
