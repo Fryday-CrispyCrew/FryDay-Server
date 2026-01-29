@@ -82,6 +82,26 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     );
 
     @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.description = :description WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
+    int updateDescriptionByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("description") String description);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.memo = :memo WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
+    int updateMemoByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("memo") String memo);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.date = :date WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.recurrenceId IS NULL AND t.category.userId = :userId")
+    int updateDateByIdAndUserIdForNonRecurring(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("date") LocalDate date);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.category = (SELECT c FROM Category c WHERE c.id = :categoryId AND c.userId = :userId) WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
+    int updateCategoryByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("categoryId") Long categoryId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.recurrenceId = :recurrenceId WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
+    int updateRecurrenceIdByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("recurrenceId") Long recurrenceId);
+
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Todo t WHERE t.category.id IN " +
             "(SELECT c.id FROM Category c WHERE c.userId = :userId)")
     void deleteAllByUserId(@Param("userId") Long userId);

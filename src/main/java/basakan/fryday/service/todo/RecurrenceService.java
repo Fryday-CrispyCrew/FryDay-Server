@@ -30,7 +30,12 @@ public class RecurrenceService {
     @Transactional
     public TodoResponse createRecurrence(Long userId, RecurrenceCreateRequest request) {
         Todo originalTodo = todoRepository.findById(request.getTodoId())
+                .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!originalTodo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
 
         Recurrence recurrence = Recurrence.builder()
                 .userId(userId)
@@ -49,10 +54,13 @@ public class RecurrenceService {
 
         Recurrence savedRecurrence = recurrenceRepository.save(recurrence);
 
-        // 원본 투두에 recurrenceId 연결
-        originalTodo.setRecurrenceId(savedRecurrence.getId());
+        // 원본 투두에 recurrenceId만 갱신 (Lost Update 방지용 필드 단위 UPDATE)
+        int updated = todoRepository.updateRecurrenceIdByIdAndUserId(
+                request.getTodoId(), userId, savedRecurrence.getId());
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
 
-        // Todo 의미 확인 필요
         RecurrenceException exception = RecurrenceException.builder()
                 .recurrenceId(savedRecurrence.getId())
                 .occurrenceDate(originalTodo.getDate())
@@ -60,10 +68,9 @@ public class RecurrenceService {
                 .build();
         recurrenceExceptionRepository.save(exception);
 
-        // 반복 규칙만 저장하고, 투두는 대량 생성하지 않음
-        // 가상 회차는 조회 시 동적으로 생성됨
-
-        return TodoResponse.from(originalTodo);
+        Todo todo = todoRepository.findById(request.getTodoId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+        return TodoResponse.from(todo);
     }
 
     /**
