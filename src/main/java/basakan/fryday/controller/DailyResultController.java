@@ -4,6 +4,7 @@ import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.todo.response.DailyResultResponse;
 import basakan.fryday.service.DailyResultService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,11 +23,10 @@ public class DailyResultController {
     @GetMapping
     public ApiResponse<List<DailyResultResponse>> getDailyResults(
             @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate
+            @RequestParam LocalDate endDate,
+            @AuthenticationPrincipal Long userId
     ) {
-        Long currentUserId = 1L;
-
-        List<DailyResultResponse> response = dailyResultService.getDailyResults(currentUserId, startDate, endDate);
+        List<DailyResultResponse> response = dailyResultService.getDailyResults(userId, startDate, endDate);
         return ApiResponse.success(response);
     }
 
