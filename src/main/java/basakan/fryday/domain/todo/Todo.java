@@ -40,9 +40,6 @@ public class Todo extends BaseEntity {
     @Column(name = "recurrence_id")
     private Long recurrenceId;
 
-    @Column(nullable = false)
-    private Boolean isBurnt = false;
-
     @OneToOne(mappedBy = "todo", cascade = CascadeType.ALL, orphanRemoval = true)
     private TodoAlarm todoAlarm;
 
@@ -61,7 +58,6 @@ public class Todo extends BaseEntity {
         // recurrenceId가 0이면 null로 변환 (반복 없는 투두는 null)
         this.recurrenceId = (recurrenceId != null && recurrenceId == 0) ? null : recurrenceId;
         this.memo = memo;
-        this.isBurnt = false;
     }
 
     public void toggleCompletion() {

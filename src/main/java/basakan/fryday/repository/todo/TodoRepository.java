@@ -26,34 +26,10 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             "ORDER BY t.displayOrder ASC")
     List<Todo> findAllByCategoryIdAndDate(@Param("categoryId") Long categoryId, @Param("date") LocalDate date);
 
-    @Modifying
-    @Query("UPDATE Todo t SET t.isBurnt = true WHERE t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
-    int updateBurntStatusByDate(@Param("date") LocalDate date, @Param("status") Todo.Status status);
-
-    @Query("SELECT COUNT(t) FROM Todo t JOIN t.category c " +
-            "WHERE c.userId = :userId AND t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
-    long countByUserIdAndDateAndStatus(@Param("userId") Long userId, @Param("date") LocalDate date, @Param("status") Todo.Status status);
-
-    @Query("SELECT COUNT(t) FROM Todo t JOIN t.category c " +
-            "WHERE c.userId = :userId AND t.date = :date AND t.deletedAt IS NULL")
-    long countByUserIdAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
-
-    @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
-            "WHERE t.date = :date AND t.isBurnt = true AND t.deletedAt IS NULL")
-    List<Long> findUserIdsWithBurntTodosByDate(@Param("date") LocalDate date);
-
-    /**
-     * 해당 날짜에 미완료(IN_PROGRESS) 투두가 있는 사용자 ID 조회
-     * DeadlineAlarmScheduler에서 N+1 문제 해결을 위해 사용
-     */
     @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
             "WHERE t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
     List<Long> findUserIdsWithTodosByDateAndStatus(@Param("date") LocalDate date, @Param("status") Todo.Status status);
 
-    /**
-     * 해당 날짜에 투두가 있는 사용자 ID 조회
-     * EncourageAlarmScheduler에서 N+1 문제 해결을 위해 사용
-     */
     @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
             "WHERE t.date = :date AND t.deletedAt IS NULL")
     List<Long> findUserIdsWithTodosByDate(@Param("date") LocalDate date);
@@ -67,7 +43,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
            "c.color, " +
            "CAST(COUNT(t.id) AS int), " +
            "CAST(SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS int), " +
-           "CAST(SUM(CASE WHEN t.status = 'IN_PROGRESS' OR t.isBurnt = true THEN 1 ELSE 0 END) AS int)) " +
+           "CAST(SUM(CASE WHEN t.status != 'COMPLETED' THEN 1 ELSE 0 END) AS int)) " +
            "FROM Todo t " +
            "JOIN t.category c " +
            "WHERE c.userId = :userId " +
@@ -79,6 +55,28 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
         @Param("userId") Long userId,
         @Param("year") int year,
         @Param("month") int month
+    );
+
+    @Query("SELECT new basakan.fryday.service.report.dto.CategoryReportDto(" +
+           "c.id, " +
+           "c.name, " +
+           "c.color, " +
+           "CAST(COUNT(t.id) AS int), " +
+           "CAST(SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS int), " +
+           "CAST(SUM(CASE WHEN t.status != 'COMPLETED' THEN 1 ELSE 0 END) AS int)) " +
+           "FROM Todo t " +
+           "JOIN t.category c " +
+           "WHERE c.userId = :userId " +
+           "  AND YEAR(t.date) = :year " +
+           "  AND MONTH(t.date) = :month " +
+           "  AND t.date <= :endDate " +
+           "  AND t.deletedAt IS NULL " +
+           "GROUP BY c.id, c.name, c.color")
+    List<CategoryReportDto> findMonthlyReportByCategoryUntilDate(
+        @Param("userId") Long userId,
+        @Param("year") int year,
+        @Param("month") int month,
+        @Param("endDate") LocalDate endDate
     );
 
     @Modifying(clearAutomatically = true)
@@ -117,5 +115,20 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
         @Param("userId") Long userId,
         @Param("year") int year,
         @Param("month") int month
+    );
+
+    @Query("SELECT CAST(COUNT(DISTINCT DATE(t.date)) AS int) " +
+           "FROM Todo t " +
+           "JOIN t.category c " +
+           "WHERE c.userId = :userId " +
+           "  AND YEAR(t.date) = :year " +
+           "  AND MONTH(t.date) = :month " +
+           "  AND t.date <= :endDate " +
+           "  AND t.deletedAt IS NULL")
+    int countAttendanceDaysUntilDate(
+        @Param("userId") Long userId,
+        @Param("year") int year,
+        @Param("month") int month,
+        @Param("endDate") LocalDate endDate
     );
 }
