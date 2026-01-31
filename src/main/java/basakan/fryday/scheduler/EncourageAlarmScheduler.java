@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 투두 추가 독려 알림 스케줄러 (Alarm-003)
@@ -27,6 +28,13 @@ import java.util.Set;
 public class EncourageAlarmScheduler {
 
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
+    private static final List<String> MESSAGES = List.of(
+            "FryDay 오픈! 오늘의 튀김을 준비해볼 시간이에요.",
+            "바삭한 튀김을 위해, 투두 튀기러 가볼까요?",
+            "오늘의 기름 온도 정상 🔥🔥 이제 투두만 추가하면 끝!",
+            "오늘 할 일, 지금 정리해두면 편해요!"
+    );
 
     private final UserJpaRepository userJpaRepository;
     private final TodoRepository todoRepository;
@@ -63,7 +71,8 @@ public class EncourageAlarmScheduler {
 
         for (User user : targetUsers) {
             try {
-                pushService.sendToUser(user, "FryDay", "튀김기에 새로운 튀김을 넣어주세요!");
+                String message = pickRandomMessage();
+                pushService.sendToUser(user, "튀김기에 새로운 튀김을 넣어주세요!", message);
                 notificationCount++;
                 log.info("Encourage alarm sent: userId={}", user.getId());
             } catch (Exception e) {
@@ -72,5 +81,9 @@ public class EncourageAlarmScheduler {
         }
 
         log.info("Encourage Alarm end: sent={}", notificationCount);
+    }
+
+    private String pickRandomMessage() {
+        return MESSAGES.get(ThreadLocalRandom.current().nextInt(MESSAGES.size()));
     }
 }

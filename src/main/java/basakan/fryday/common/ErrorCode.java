@@ -51,7 +51,8 @@ public enum ErrorCode {
 
     // Report
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 월의 리포트가 존재하지 않습니다."),
-    INVALID_REPORT_PERIOD(HttpStatus.BAD_REQUEST, "현재 월의 리포트는 조회할 수 없습니다.");
+    INVALID_REPORT_PERIOD(HttpStatus.BAD_REQUEST, "조회할 수 없는 기간입니다."),
+    REPORT_GENERATING(HttpStatus.SERVICE_UNAVAILABLE, "리포트를 반영 중입니다. 잠시 후 다시 시도해주세요.");
 
     private final HttpStatus status;
     private final String message;

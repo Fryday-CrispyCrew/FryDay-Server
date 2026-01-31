@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 마감 임박 알림 스케줄러 (Alarm-001)
@@ -27,6 +28,14 @@ import java.util.List;
 public class DeadlineAlarmScheduler {
 
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
+    private static final List<String> MESSAGES = List.of(
+            "지금 안 하면 튀김이 다 타버릴거에요…!",
+            "튀김이 타기 직전이에요🔥🔥",
+            "지금 꺼내면 바삭한 투두 확인하러가볼까요?",
+            "프라이팬 불 끄기 전, 투두 체크!",
+            "오늘 FryDay 영업 마감 임박"
+    );
 
     private final UserJpaRepository userJpaRepository;
     private final TodoRepository todoRepository;
@@ -53,7 +62,8 @@ public class DeadlineAlarmScheduler {
 
         for (User user : targetUsers) {
             try {
-                pushService.sendToUser(user, "FryDay", "튀김이 타기전에 완료하세요!");
+                String message = pickRandomMessage();
+                pushService.sendToUser(user, "튀김이 타기전에 완료하세요!", message);
                 notificationCount++;
                 log.info("Deadline alarm sent: userId={}", user.getId());
             } catch (Exception e) {
@@ -62,5 +72,9 @@ public class DeadlineAlarmScheduler {
         }
 
         log.info("Deadline Alarm end: sent={}", notificationCount);
+    }
+
+    private String pickRandomMessage() {
+        return MESSAGES.get(ThreadLocalRandom.current().nextInt(MESSAGES.size()));
     }
 }

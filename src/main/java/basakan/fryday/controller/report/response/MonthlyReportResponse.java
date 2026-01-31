@@ -35,4 +35,24 @@ public class MonthlyReportResponse {
             .categories(filteredCategories)
             .build();
     }
+
+    public static MonthlyReportResponse ofRealtime(
+            int year, int month,
+            int totalTodos, int completedTodos, int incompleteTodos,
+            int attendanceDays, double achievementRate,
+            AttendanceIcon attendanceIcon,
+            List<CategoryReportResponse> categories) {
+        return MonthlyReportResponse.builder()
+            .year(year)
+            .month(month)
+            .totalTodos(totalTodos)
+            .completedTodos(completedTodos)
+            .incompleteTodos(incompleteTodos)
+            .attendanceDays(attendanceDays)
+            .achievementRate(achievementRate)
+            .attendanceIcon(attendanceIcon)
+            .attendanceMessage(attendanceIcon.getMessage())
+            .categories(categories)
+            .build();
+    }
 }

@@ -1,6 +1,7 @@
 package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -37,7 +38,7 @@ public class BurntAlarmScheduler {
         LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
         log.info("Burnt Alarm start: {}", yesterday);
 
-        List<Long> userIdsWithBurntTodos = todoRepository.findUserIdsWithBurntTodosByDate(yesterday);
+        List<Long> userIdsWithBurntTodos = todoRepository.findUserIdsWithTodosByDateAndStatus(yesterday, Todo.Status.IN_PROGRESS);
 
         if (userIdsWithBurntTodos.isEmpty()) {
             log.info("No burnt todos found for {}", yesterday);
@@ -50,7 +51,7 @@ public class BurntAlarmScheduler {
 
         for (User user : targetUsers) {
             try {
-                pushService.sendToUser(user, "FryDay", "튀김이 타버렸어요. 새로운 계획을 세워요!");
+                pushService.sendToUser(user, "튀김이 타버렸어요...", "새로운 계획을 세워요!");
                 notificationCount++;
                 log.info("Burnt alarm sent: userId={}", user.getId());
             } catch (Exception e) {
