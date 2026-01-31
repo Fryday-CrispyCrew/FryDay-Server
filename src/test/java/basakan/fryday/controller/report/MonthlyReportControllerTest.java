@@ -151,20 +151,37 @@ class MonthlyReportControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("월간 리포트 조회 API - 현재 월 조회 시 400 에러")
-    void getMonthlyReportCurrentMonth() throws Exception {
+    @DisplayName("월간 리포트 조회 API - 미래 월 조회 시 400 에러")
+    void getMonthlyReportFutureMonth() throws Exception {
         // given
         given(monthlyReportReadService.getMonthlyReportResponse(anyLong(), anyInt(), anyInt()))
                 .willThrow(new BusinessException(ErrorCode.INVALID_REPORT_PERIOD));
 
         // when & then
         mockMvc.perform(get("/api/reports/monthly")
-                        .param("year", "2025")
+                        .param("year", "2099")
                         .param("month", "12"))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("현재 월의 리포트는 조회할 수 없습니다."));
+                .andExpect(jsonPath("$.message").value("조회할 수 없는 기간입니다."));
+    }
+
+    @Test
+    @DisplayName("월간 리포트 조회 API - 리포트 반영 중 503 에러")
+    void getMonthlyReportGenerating() throws Exception {
+        // given
+        given(monthlyReportReadService.getMonthlyReportResponse(anyLong(), anyInt(), anyInt()))
+                .willThrow(new BusinessException(ErrorCode.REPORT_GENERATING));
+
+        // when & then
+        mockMvc.perform(get("/api/reports/monthly")
+                        .param("year", "2025")
+                        .param("month", "3"))
+                .andDo(print())
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("리포트를 반영 중입니다. 잠시 후 다시 시도해주세요."));
     }
 
     @Test
