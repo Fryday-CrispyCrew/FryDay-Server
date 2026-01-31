@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 개별 투두 알림 스케줄러 (Ad-005)
@@ -23,10 +24,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationScheduler {
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
+    private static final List<String[]> MESSAGE_TEMPLATES = List.of(
+            new String[]{"지금 안 하면 튀김이 타요!", "%s 할 시간이에요!"},
+            new String[]{"튀김이 가장 맛있을 시간이에요!", "%s 튀겨볼까요?"},
+            new String[]{"%s 튀김이 노릇해지는 중...", "지금 꺼낼 타이밍이에요!"}
+    );
+
     private final TodoAlarmRepository todoAlarmRepository;
     private final PushService pushService;
-
-    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
     @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
     @Transactional
@@ -52,7 +59,11 @@ public class NotificationScheduler {
                     continue;
                 }
 
-                pushService.sendToUser(alarm.getUser(), "FryDay 알림", alarm.getTodo().getDescription());
+                String todoName = alarm.getTodo().getDescription();
+                String[] template = pickRandomTemplate();
+                String title = String.format(template[0], todoName);
+                String message = String.format(template[1], todoName);
+                pushService.sendToUser(alarm.getUser(), title, message);
                 alarm.markAsSent();
                 log.info("Notification sent: todoId={}, userId={}", alarm.getTodo().getId(), alarm.getUser().getId());
             } catch (Exception e) {
@@ -66,5 +77,9 @@ public class NotificationScheduler {
                 }
             }
         }
+    }
+
+    private String[] pickRandomTemplate() {
+        return MESSAGE_TEMPLATES.get(ThreadLocalRandom.current().nextInt(MESSAGE_TEMPLATES.size()));
     }
 }
