@@ -42,7 +42,8 @@ public class KakaoOAuthClient implements SocialProviderClient {
                 throw new InvalidProviderTokenException();
             }
 
-            return new SocialUserInfo(AuthProvider.KAKAO, socialId);
+            String email = userResponse.getEmail();
+            return new SocialUserInfo(AuthProvider.KAKAO, socialId, email);
         } catch (InvalidProviderTokenException e) {
             throw e;
         } catch (Exception e) {

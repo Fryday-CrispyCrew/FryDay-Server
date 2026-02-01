@@ -42,7 +42,8 @@ public class NaverOAuthClient implements SocialProviderClient {
                 throw new InvalidProviderTokenException();
             }
 
-            return new SocialUserInfo(AuthProvider.NAVER, socialId);
+            String email = userResponse.getEmail();
+            return new SocialUserInfo(AuthProvider.NAVER, socialId, email);
         } catch (InvalidProviderTokenException e) {
             throw e;
         } catch (Exception e) {
