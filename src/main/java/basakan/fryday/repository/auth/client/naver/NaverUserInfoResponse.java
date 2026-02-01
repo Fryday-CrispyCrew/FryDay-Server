@@ -22,9 +22,16 @@ class NaverUserInfoResponse {
     static class ResponseData {
         @JsonProperty("id")
         private String id;
+
+        @JsonProperty("email")
+        private String email;
     }
 
     public String getSocialId() {
         return response != null ? response.getId() : null;
+    }
+
+    public String getEmail() {
+        return response != null ? response.getEmail() : null;
     }
 }

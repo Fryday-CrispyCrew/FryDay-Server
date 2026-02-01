@@ -4,6 +4,7 @@ import basakan.fryday.domain.user.AuthProvider;
 
 public record SocialUserInfo(
         AuthProvider provider,
-        String providerUserId
+        String providerUserId,
+        String email
 ) {
 }

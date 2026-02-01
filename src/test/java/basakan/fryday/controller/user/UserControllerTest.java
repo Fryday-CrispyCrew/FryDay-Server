@@ -69,6 +69,7 @@ class UserControllerTest extends RestDocsSupport {
                 .onboardingStatus(OnboardingStatus.NEEDS_AGREEMENT)
                 .role(User.Role.USER)
                 .nickname(null)
+                .email("user@kakao.com")
                 .accessToken("jwt-access-token")
                 .refreshToken("jwt-refresh-token")
                 .deviceId("device-id-123")
@@ -103,7 +104,8 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("user.id").type(JsonFieldType.NUMBER).description("사용자 ID"),
                                 fieldWithPath("user.provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자"),
                                 fieldWithPath("user.role").type(JsonFieldType.STRING).description("사용자 권한 (USER, ADMIN)"),
-                                fieldWithPath("user.nickname").type(JsonFieldType.STRING).description("사용자 닉네임").optional()
+                                fieldWithPath("user.nickname").type(JsonFieldType.STRING).description("사용자 닉네임").optional(),
+                                fieldWithPath("user.email").type(JsonFieldType.STRING).description("사용자 이메일 (소셜 제공자로부터 수집, 미동의 시 null)").optional()
                         )
                 ));
     }
@@ -127,6 +129,7 @@ class UserControllerTest extends RestDocsSupport {
                 .onboardingStatus(OnboardingStatus.NEEDS_AGREEMENT)
                 .role(User.Role.USER)
                 .nickname(null)
+                .email("user@privaterelay.appleid.com")
                 .accessToken("jwt-access-token")
                 .refreshToken("jwt-refresh-token")
                 .deviceId("device-id-123")
@@ -161,7 +164,8 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("user.id").type(JsonFieldType.NUMBER).description("사용자 ID"),
                                 fieldWithPath("user.provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자"),
                                 fieldWithPath("user.role").type(JsonFieldType.STRING).description("사용자 권한 (USER, ADMIN)"),
-                                fieldWithPath("user.nickname").type(JsonFieldType.STRING).description("사용자 닉네임").optional()
+                                fieldWithPath("user.nickname").type(JsonFieldType.STRING).description("사용자 닉네임").optional(),
+                                fieldWithPath("user.email").type(JsonFieldType.STRING).description("사용자 이메일 (소셜 제공자로부터 수집, 미동의 시 null)").optional()
                         )
                 ));
     }

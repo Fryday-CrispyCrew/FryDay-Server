@@ -22,6 +22,8 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private String providerUserId;
 
+    private String email;
+
     private String nickname;
 
     @Enumerated(EnumType.STRING)
@@ -39,24 +41,32 @@ public class User extends BaseEntity {
     private LocalDateTime withdrawnAt;
 
     @Builder
-    private User(AuthProvider provider, String providerUserId, String nickname,
+    private User(AuthProvider provider, String providerUserId, String email, String nickname,
                  OnboardingStatus onboardingStatus, AccountStatus accountStatus, Role role) {
         this.provider = provider;
         this.providerUserId = providerUserId;
+        this.email = email;
         this.nickname = nickname;
         this.onboardingStatus = onboardingStatus != null ? onboardingStatus : OnboardingStatus.NEEDS_AGREEMENT;
         this.accountStatus = accountStatus != null ? accountStatus : AccountStatus.ACTIVE;
         this.role = role != null ? role : Role.USER;
     }
 
-    public static User createNewUser(AuthProvider provider, String providerUserId) {
+    public static User createNewUser(AuthProvider provider, String providerUserId, String email) {
         return User.builder()
                 .provider(provider)
                 .providerUserId(providerUserId)
+                .email(email)
                 .onboardingStatus(OnboardingStatus.NEEDS_AGREEMENT)
                 .accountStatus(AccountStatus.ACTIVE)
                 .role(Role.USER)
                 .build();
+    }
+
+    public void updateEmail(String email) {
+        if (email != null) {
+            this.email = email;
+        }
     }
 
     public void completeAgreementStep() {

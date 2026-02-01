@@ -58,7 +58,10 @@ public class AppleOAuthClient implements SocialProviderClient {
                 throw new InvalidProviderTokenException();
             }
 
-            return new SocialUserInfo(AuthProvider.APPLE, subject);
+            // 7. email 추출 (최초 로그인 시에만 존재할 수 있음)
+            String email = claims.get("email", String.class);
+
+            return new SocialUserInfo(AuthProvider.APPLE, subject, email);
         } catch (InvalidProviderTokenException e) {
             throw e;
         } catch (Exception e) {
