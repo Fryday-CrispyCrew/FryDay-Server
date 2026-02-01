@@ -5,6 +5,8 @@ import basakan.fryday.domain.user.OnboardingStatus;
 import basakan.fryday.domain.user.User;
 import lombok.Builder;
 
+import java.time.LocalDateTime;
+
 @Builder
 public record SocialLoginDto(
         Long userId,
@@ -12,6 +14,7 @@ public record SocialLoginDto(
         User.Role role,
         String nickname,
         String email,
+        LocalDateTime createdAt,
         OnboardingStatus onboardingStatus,
         String accessToken,
         String refreshToken,
@@ -24,6 +27,7 @@ public record SocialLoginDto(
                 .role(user.getRole())
                 .nickname(user.getNickname())
                 .email(user.getEmail())
+                .createdAt(user.getCreatedAt())
                 .onboardingStatus(user.getOnboardingStatus())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)

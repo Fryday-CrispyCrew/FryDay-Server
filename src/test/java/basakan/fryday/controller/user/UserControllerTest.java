@@ -14,6 +14,8 @@ import basakan.fryday.service.auth.dto.SocialLoginDto;
 import basakan.fryday.service.user.UserAppService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
@@ -70,6 +72,7 @@ class UserControllerTest extends RestDocsSupport {
                 .role(User.Role.USER)
                 .nickname(null)
                 .email("user@kakao.com")
+                .createdAt(LocalDateTime.of(2025, 1, 15, 10, 30, 0))
                 .accessToken("jwt-access-token")
                 .refreshToken("jwt-refresh-token")
                 .deviceId("device-id-123")
@@ -105,7 +108,8 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("user.provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자"),
                                 fieldWithPath("user.role").type(JsonFieldType.STRING).description("사용자 권한 (USER, ADMIN)"),
                                 fieldWithPath("user.nickname").type(JsonFieldType.STRING).description("사용자 닉네임").optional(),
-                                fieldWithPath("user.email").type(JsonFieldType.STRING).description("사용자 이메일 (소셜 제공자로부터 수집, 미동의 시 null)").optional()
+                                fieldWithPath("user.email").type(JsonFieldType.STRING).description("사용자 이메일 (소셜 제공자로부터 수집, 미동의 시 null)").optional(),
+                                fieldWithPath("user.createdAt").type(JsonFieldType.STRING).description("계정 생성일시")
                         )
                 ));
     }
@@ -130,6 +134,7 @@ class UserControllerTest extends RestDocsSupport {
                 .role(User.Role.USER)
                 .nickname(null)
                 .email("user@privaterelay.appleid.com")
+                .createdAt(LocalDateTime.of(2025, 1, 15, 10, 30, 0))
                 .accessToken("jwt-access-token")
                 .refreshToken("jwt-refresh-token")
                 .deviceId("device-id-123")
@@ -165,7 +170,8 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("user.provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자"),
                                 fieldWithPath("user.role").type(JsonFieldType.STRING).description("사용자 권한 (USER, ADMIN)"),
                                 fieldWithPath("user.nickname").type(JsonFieldType.STRING).description("사용자 닉네임").optional(),
-                                fieldWithPath("user.email").type(JsonFieldType.STRING).description("사용자 이메일 (소셜 제공자로부터 수집, 미동의 시 null)").optional()
+                                fieldWithPath("user.email").type(JsonFieldType.STRING).description("사용자 이메일 (소셜 제공자로부터 수집, 미동의 시 null)").optional(),
+                                fieldWithPath("user.createdAt").type(JsonFieldType.STRING).description("계정 생성일시")
                         )
                 ));
     }
