@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,6 +30,7 @@ public class SocialLoginResponse {
                 .role(dto.role())
                 .nickname(dto.nickname())
                 .email(dto.email())
+                .createdAt(dto.createdAt())
                 .build();
 
         return SocialLoginResponse.builder()
@@ -49,5 +52,6 @@ public class SocialLoginResponse {
         private User.Role role;
         private String nickname;
         private String email;
+        private LocalDateTime createdAt;
     }
 }
