@@ -5,6 +5,7 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.report.response.CategoryReportResponse;
 import basakan.fryday.controller.report.response.MonthlyReportResponse;
 import basakan.fryday.domain.report.AttendanceIcon;
+import basakan.fryday.domain.category.Category;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.service.report.dto.CategoryReportDto;
@@ -15,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -76,14 +80,21 @@ public class MonthlyReportReadService {
 
         AttendanceIcon icon = AttendanceIcon.fromAttendanceDays(attendanceDays);
 
-        List<CategoryReportResponse> categories = categoryStats.stream()
-            .filter(dto -> categoryRepository.findById(dto.getCategoryId())
-                .map(c -> c.getDeletedAt() == null)
-                .orElse(false))
-            .map(dto -> {
-                double successRate = calculateRate(dto.getCompletedTodos(), dto.getTotalTodos());
-                double failureRate = calculateRate(dto.getIncompleteTodos(), dto.getTotalTodos());
-                return CategoryReportResponse.from(dto, successRate, failureRate);
+        Map<Long, CategoryReportDto> statsMap = categoryStats.stream()
+            .collect(Collectors.toMap(CategoryReportDto::getCategoryId, Function.identity()));
+
+        List<Category> activeCategories =
+            categoryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDisplayOrderAsc(userId);
+
+        List<CategoryReportResponse> categories = activeCategories.stream()
+            .map(category -> {
+                CategoryReportDto dto = statsMap.get(category.getId());
+                if (dto != null) {
+                    double successRate = calculateRate(dto.getCompletedTodos(), dto.getTotalTodos());
+                    double failureRate = calculateRate(dto.getIncompleteTodos(), dto.getTotalTodos());
+                    return CategoryReportResponse.from(dto, successRate, failureRate);
+                }
+                return CategoryReportResponse.empty(category);
             })
             .toList();
 

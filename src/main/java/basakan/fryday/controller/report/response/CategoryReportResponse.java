@@ -1,5 +1,6 @@
 package basakan.fryday.controller.report.response;
 
+import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.service.report.dto.CategoryReportDto;
 import lombok.Builder;
@@ -27,6 +28,19 @@ public class CategoryReportResponse {
             .incompleteTodos(dto.getIncompleteTodos())
             .successRate(successRate)
             .failureRate(failureRate)
+            .build();
+    }
+
+    public static CategoryReportResponse empty(Category category) {
+        return CategoryReportResponse.builder()
+            .categoryId(category.getId())
+            .categoryName(category.getName())
+            .categoryColor(category.getColor())
+            .totalTodos(0)
+            .completedTodos(0)
+            .incompleteTodos(0)
+            .successRate(0.0)
+            .failureRate(0.0)
             .build();
     }
 }
