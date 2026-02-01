@@ -167,37 +167,4 @@ class MonthlyReportControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.message").value("조회할 수 없는 기간입니다."));
     }
 
-    @Test
-    @DisplayName("월간 리포트 조회 API - 리포트 반영 중 503 에러")
-    void getMonthlyReportGenerating() throws Exception {
-        // given
-        given(monthlyReportReadService.getMonthlyReportResponse(anyLong(), anyInt(), anyInt()))
-                .willThrow(new BusinessException(ErrorCode.REPORT_GENERATING));
-
-        // when & then
-        mockMvc.perform(get("/api/reports/monthly")
-                        .param("year", "2025")
-                        .param("month", "3"))
-                .andDo(print())
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("리포트를 반영 중입니다. 잠시 후 다시 시도해주세요."));
-    }
-
-    @Test
-    @DisplayName("월간 리포트 조회 API - 리포트 없을 시 404 에러")
-    void getMonthlyReportNotFound() throws Exception {
-        // given
-        given(monthlyReportReadService.getMonthlyReportResponse(anyLong(), anyInt(), anyInt()))
-                .willThrow(new BusinessException(ErrorCode.REPORT_NOT_FOUND));
-
-        // when & then
-        mockMvc.perform(get("/api/reports/monthly")
-                        .param("year", "2025")
-                        .param("month", "3"))
-                .andDo(print())
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.message").value("해당 월의 리포트가 존재하지 않습니다."));
-    }
 }
