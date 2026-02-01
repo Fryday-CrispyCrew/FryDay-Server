@@ -63,7 +63,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
            "c.color, " +
            "CAST(COUNT(t.id) AS int), " +
            "CAST(SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS int), " +
-           "CAST(SUM(CASE WHEN t.status != 'COMPLETED' THEN 1 ELSE 0 END) AS int)) " +
+           "CAST(SUM(CASE WHEN t.status != 'COMPLETED' AND t.date < :endDate THEN 1 ELSE 0 END) AS int)) " +
            "FROM Todo t " +
            "JOIN t.category c " +
            "WHERE c.userId = :userId " +

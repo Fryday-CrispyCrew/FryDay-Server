@@ -70,7 +70,8 @@ public class MonthlyReportReadService {
             .mapToInt(CategoryReportDto::getTotalTodos).sum();
         int completedTodos = categoryStats.stream()
             .mapToInt(CategoryReportDto::getCompletedTodos).sum();
-        int incompleteTodos = totalTodos - completedTodos;
+        int incompleteTodos = categoryStats.stream()
+            .mapToInt(CategoryReportDto::getIncompleteTodos).sum();
         int attendanceDays = todoRepository.countAttendanceDaysUntilDate(userId, year, month, today);
         double achievementRate = calculateRate(completedTodos, totalTodos);
 
