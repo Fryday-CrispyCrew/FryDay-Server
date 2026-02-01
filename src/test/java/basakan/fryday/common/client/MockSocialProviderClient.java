@@ -21,7 +21,8 @@ public class MockSocialProviderClient implements SocialProviderClient {
     public SocialUserInfo getUserInfo(String accessToken, String idToken) {
         return new SocialUserInfo(
                 provider,
-                "mock-provider-user-id-" + accessToken
+                "mock-provider-user-id-" + accessToken,
+                "mock-email-" + accessToken + "@test.com"
         );
     }
 }

@@ -27,6 +27,7 @@ public class SocialLoginResponse {
                 .provider(dto.provider())
                 .role(dto.role())
                 .nickname(dto.nickname())
+                .email(dto.email())
                 .build();
 
         return SocialLoginResponse.builder()
@@ -47,5 +48,6 @@ public class SocialLoginResponse {
         private AuthProvider provider;
         private User.Role role;
         private String nickname;
+        private String email;
     }
 }

@@ -11,6 +11,7 @@ public record SocialLoginDto(
         AuthProvider provider,
         User.Role role,
         String nickname,
+        String email,
         OnboardingStatus onboardingStatus,
         String accessToken,
         String refreshToken,
@@ -22,6 +23,7 @@ public record SocialLoginDto(
                 .provider(provider)
                 .role(user.getRole())
                 .nickname(user.getNickname())
+                .email(user.getEmail())
                 .onboardingStatus(user.getOnboardingStatus())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
