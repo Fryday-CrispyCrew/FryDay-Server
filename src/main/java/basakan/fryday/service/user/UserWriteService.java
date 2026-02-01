@@ -114,9 +114,17 @@ public class UserWriteService {
     public User createUser(SocialUserInfo socialUserInfo) {
         User newUser = User.createNewUser(
                 socialUserInfo.provider(),
-                socialUserInfo.providerUserId()
+                socialUserInfo.providerUserId(),
+                socialUserInfo.email()
         );
         return userJpaRepository.save(newUser);
+    }
+
+    public void updateEmailIfAbsent(User user, String email) {
+        if (user.getEmail() == null && email != null) {
+            user.updateEmail(email);
+            userJpaRepository.save(user);
+        }
     }
 
     public User handleWithdrawnUserReregister(User withdrawnUser, SocialUserInfo socialUserInfo) {

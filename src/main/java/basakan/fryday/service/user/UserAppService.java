@@ -160,6 +160,9 @@ public class UserAppService {
                     ).orElseGet(() -> userWriteService.createUser(socialUserInfo));
 
             validateUserStatus(user);
+
+            // 기존 유저의 이메일이 없고 새로 받아온 이메일이 있으면 업데이트
+            userWriteService.updateEmailIfAbsent(user, socialUserInfo.email());
         }
 
         userDeviceReadService.findByUserIdAndDeviceId(user.getId(), serviceDto.deviceId())
