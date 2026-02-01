@@ -12,7 +12,6 @@ import basakan.fryday.repository.auth.UserDeviceRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.common.security.RefreshTokenRepository;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
-import basakan.fryday.repository.report.MonthlyReportRepository;
 import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
@@ -34,7 +33,6 @@ public class UserWriteService {
     private final TodoRepository todoRepository;
     private final RecurrenceRepository recurrenceRepository;
     private final CategoryRepository categoryRepository;
-    private final MonthlyReportRepository monthlyReportRepository;
     private final DailyResultRepository dailyResultRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
@@ -88,7 +86,6 @@ public class UserWriteService {
         todoRepository.deleteAllByUserId(userId);
         recurrenceRepository.deleteAllByUserId(userId);
         categoryRepository.deleteAllByUserId(userId);
-        monthlyReportRepository.deleteAllByUserId(userId);
         dailyResultRepository.deleteAllByUserId(userId);
         userDeviceRepository.deleteAllByUserId(userId);
         agreementRepository.deleteByUser(user);

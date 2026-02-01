@@ -1,7 +1,7 @@
 package basakan.fryday.controller.report.response;
 
+import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
-import basakan.fryday.domain.report.MonthlyReportCategory;
 import basakan.fryday.service.report.dto.CategoryReportDto;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,19 +18,6 @@ public class CategoryReportResponse {
     private double successRate;
     private double failureRate;
 
-    public static CategoryReportResponse from(MonthlyReportCategory category) {
-        return CategoryReportResponse.builder()
-            .categoryId(category.getCategoryId())
-            .categoryName(category.getCategoryName())
-            .categoryColor(category.getCategoryColor())
-            .totalTodos(category.getTotalTodos())
-            .completedTodos(category.getCompletedTodos())
-            .incompleteTodos(category.getIncompleteTodos())
-            .successRate(category.getSuccessRate())
-            .failureRate(category.getFailureRate())
-            .build();
-    }
-
     public static CategoryReportResponse from(CategoryReportDto dto, double successRate, double failureRate) {
         return CategoryReportResponse.builder()
             .categoryId(dto.getCategoryId())
@@ -41,6 +28,19 @@ public class CategoryReportResponse {
             .incompleteTodos(dto.getIncompleteTodos())
             .successRate(successRate)
             .failureRate(failureRate)
+            .build();
+    }
+
+    public static CategoryReportResponse empty(Category category) {
+        return CategoryReportResponse.builder()
+            .categoryId(category.getId())
+            .categoryName(category.getName())
+            .categoryColor(category.getColor())
+            .totalTodos(0)
+            .completedTodos(0)
+            .incompleteTodos(0)
+            .successRate(0.0)
+            .failureRate(0.0)
             .build();
     }
 }
