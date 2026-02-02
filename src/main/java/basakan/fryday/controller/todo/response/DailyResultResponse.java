@@ -13,10 +13,19 @@ public class DailyResultResponse {
 
     public DailyResultResponse(DailyResult dailyResult) {
         this.date = dailyResult.getDate();
-        this.bowlType = dailyResult.getBowlType().getCode();
+        this.bowlType = dailyResult.getBowlType() != null ? dailyResult.getBowlType().getCode() : null;
+    }
+
+    public DailyResultResponse(LocalDate date, String bowlType) {
+        this.date = date;
+        this.bowlType = bowlType;
     }
 
     public static DailyResultResponse from(DailyResult dailyResult) {
         return new DailyResultResponse(dailyResult);
+    }
+
+    public static DailyResultResponse of(LocalDate date, String bowlType) {
+        return new DailyResultResponse(date, bowlType);
     }
 }
