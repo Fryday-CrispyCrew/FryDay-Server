@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class MemoRequest {
 
-    @Size(max = 300, message = "메모는 최대 300자까지 가능합니다.")
+    @Size(max = 100, message = "메모는 최대 100자까지 가능합니다.")
     private String memo;
 
     public MemoRequest(String memo) {
