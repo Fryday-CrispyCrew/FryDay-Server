@@ -142,23 +142,7 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_TODAY);
         }
 
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
-        LocalDate originalDate = todo.getDate();
-
-        // 반복 투두인 경우: 원래 날짜에 재생성 방지, 기존 투두 삭제 없이 옮기기만
-        if (todo.getRecurrenceId() != null) {
-            preventRecurrenceOccurrenceRecreation(todo.getRecurrenceId(), originalDate, userId);
-            Recurrence recurrence = recurrenceRepository.findById(todo.getRecurrenceId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-            if (recurrence.getUserId() != userId) {
-                throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-            }
-            ensureMovedExceptionIfInSchedule(todo.getRecurrenceId(), tomorrow, recurrence);
-        }
-
-        todo.updateDate(tomorrow);
-
-        return TodoResponse.from(todo);
+        return moveOrCopyTodoToDate(todo, LocalDate.now().plusDays(1), userId);
     }
 
     @Transactional
@@ -170,10 +154,17 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        LocalDate today = LocalDate.now();
+        return moveOrCopyTodoToDate(todo, LocalDate.now(), userId);
+    }
+
+    private TodoResponse moveOrCopyTodoToDate(Todo todo, LocalDate targetDate, Long userId) {
+        if (todo.isCompleted()) {
+            Todo copiedTodo = copyTodoToDate(todo, targetDate);
+            return TodoResponse.from(copiedTodo);
+        }
+
         LocalDate originalDate = todo.getDate();
 
-        // 반복 투두인 경우: 원래 날짜에 재생성 방지, 기존 투두 삭제 없이 옮기기만
         if (todo.getRecurrenceId() != null) {
             preventRecurrenceOccurrenceRecreation(todo.getRecurrenceId(), originalDate, userId);
             Recurrence recurrence = recurrenceRepository.findById(todo.getRecurrenceId())
@@ -181,12 +172,28 @@ public class TodoService {
             if (recurrence.getUserId() != userId) {
                 throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
             }
-            ensureMovedExceptionIfInSchedule(todo.getRecurrenceId(), today, recurrence);
+            ensureMovedExceptionIfInSchedule(todo.getRecurrenceId(), targetDate, recurrence);
         }
 
-        todo.updateDate(today);
-
+        todo.updateDate(targetDate);
         return TodoResponse.from(todo);
+    }
+
+    private Todo copyTodoToDate(Todo source, LocalDate targetDate) {
+        Long userId = source.getCategory().getUserId();
+        Long maxOrder = todoRepository.findMaxDisplayOrder(userId, targetDate);
+        long nextOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+
+        Todo copiedTodo = Todo.builder()
+                .description(source.getDescription())
+                .category(source.getCategory())
+                .date(targetDate)
+                .displayOrder(nextOrder)
+                .recurrenceId(null)
+                .memo(source.getMemo())
+                .build();
+
+        return todoRepository.save(copiedTodo);
     }
 
     @Transactional
