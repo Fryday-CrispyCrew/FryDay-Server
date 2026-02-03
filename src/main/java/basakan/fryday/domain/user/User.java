@@ -79,10 +79,6 @@ public class User extends BaseEntity {
     }
 
     public void completeOnboardingStep() {
-        this.onboardingStatus = OnboardingStatus.NEEDS_MARKETING;
-    }
-
-    public void completeMarketingStep() {
         this.onboardingStatus = OnboardingStatus.COMPLETED;
     }
 

@@ -36,18 +36,16 @@ public class UserWriteService {
     private final DailyResultRepository dailyResultRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    public void agreeConsent(User user, Agreement agreement, boolean privacyAgreed) {
-        agreement.updateConsent(privacyAgreed, false);
+    public void agreeConsent(User user, Agreement agreement, boolean termsAgreed, boolean privacyAgreed, boolean marketingAgreed) {
+        agreement.updateConsent(termsAgreed, privacyAgreed, marketingAgreed);
         agreementRepository.save(agreement);
         user.completeAgreementStep();
         userJpaRepository.save(user);
     }
 
-    public void agreeMarketing(User user, Agreement agreement, boolean marketingAgreed) {
+    public void updateMarketingAgreement(Agreement agreement, boolean marketingAgreed) {
         agreement.updateMarketingAgreement(marketingAgreed);
         agreementRepository.save(agreement);
-        user.completeMarketingStep();
-        userJpaRepository.save(user);
     }
 
     public void completeOnboarding(User user) {

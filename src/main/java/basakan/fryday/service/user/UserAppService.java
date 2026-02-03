@@ -45,14 +45,14 @@ public class UserAppService {
     private final UserDeviceWriteService userDeviceWriteService;
     private final CategoryService categoryService;
 
-    public void agreeConsent(boolean privacyRequired) {
+    public void agreeConsent(boolean termsRequired, boolean privacyRequired, boolean marketingOptional) {
         Long userId = UserContext.getCurrentUserId();
         User user = userReadService.findById(userId);
 
         Agreement agreement = userReadService.findAgreementByUser(user)
-                .orElseGet(() -> Agreement.create(user, privacyRequired, false));
+                .orElseGet(() -> Agreement.create(user, termsRequired, privacyRequired, marketingOptional));
 
-        userWriteService.agreeConsent(user, agreement, privacyRequired);
+        userWriteService.agreeConsent(user, agreement, termsRequired, privacyRequired, marketingOptional);
     }
 
     public void agreeMarketing(boolean marketingOptional) {
@@ -62,7 +62,7 @@ public class UserAppService {
         Agreement agreement = userReadService.findAgreementByUser(user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AGREEMENT_NOT_FOUND));
 
-        userWriteService.agreeMarketing(user, agreement, marketingOptional);
+        userWriteService.updateMarketingAgreement(agreement, marketingOptional);
     }
 
     public void completeOnboarding() {
