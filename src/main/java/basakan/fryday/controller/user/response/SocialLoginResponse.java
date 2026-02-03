@@ -4,6 +4,7 @@ import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.domain.user.OnboardingStatus;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.service.auth.dto.SocialLoginDto;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,6 +22,8 @@ public class SocialLoginResponse {
     private String accessToken;
     private String refreshToken;
     private String deviceId;
+    @JsonProperty("isNewDevice")
+    private boolean newDevice;
     private UserInfo user;
 
     public static SocialLoginResponse from(SocialLoginDto dto) {
@@ -38,6 +41,7 @@ public class SocialLoginResponse {
                 .accessToken(dto.accessToken())
                 .refreshToken(dto.refreshToken())
                 .deviceId(dto.deviceId())
+                .newDevice(dto.isNewDevice())
                 .user(userInfo)
                 .build();
     }

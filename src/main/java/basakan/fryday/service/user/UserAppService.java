@@ -165,27 +165,30 @@ public class UserAppService {
             userWriteService.updateEmailIfAbsent(user, socialUserInfo.email());
         }
 
-        userDeviceReadService.findByUserIdAndDeviceId(user.getId(), serviceDto.deviceId())
-                .ifPresentOrElse(
-                        existingDevice -> {
-                            userDeviceWriteService.activateDevice(existingDevice);
-                            if (serviceDto.fcmToken() != null) {
-                                userDeviceWriteService.updateFcmToken(existingDevice, serviceDto.fcmToken());
-                            }
-                        },
-                        () -> userDeviceWriteService.createOrActivateDevice(
-                                user.getId(),
-                                serviceDto.deviceId(),
-                                serviceDto.deviceType(),
-                                serviceDto.deviceName(),
-                                serviceDto.fcmToken()
-                        )
-                );
+        boolean isNewDevice = userDeviceReadService
+                .findByUserIdAndDeviceId(user.getId(), serviceDto.deviceId())
+                .map(existingDevice -> {
+                    userDeviceWriteService.activateDevice(existingDevice);
+                    if (serviceDto.fcmToken() != null) {
+                        userDeviceWriteService.updateFcmToken(existingDevice, serviceDto.fcmToken());
+                    }
+                    return false;
+                })
+                .orElseGet(() -> {
+                    userDeviceWriteService.createOrActivateDevice(
+                            user.getId(),
+                            serviceDto.deviceId(),
+                            serviceDto.deviceType(),
+                            serviceDto.deviceName(),
+                            serviceDto.fcmToken()
+                    );
+                    return true;
+                });
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole(), user.getAccountStatus(), serviceDto.deviceId());
         String refreshToken = refreshTokenRepository.generateAndSave(user.getId(), serviceDto.deviceId());
 
-        return SocialLoginDto.from(user, socialUserInfo.provider(), accessToken, refreshToken, serviceDto.deviceId());
+        return SocialLoginDto.from(user, socialUserInfo.provider(), accessToken, refreshToken, serviceDto.deviceId(), isNewDevice);
     }
 
     public void updateDeviceFcmToken(String deviceId, String fcmToken) {
