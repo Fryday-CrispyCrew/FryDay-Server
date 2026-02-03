@@ -642,6 +642,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data[].date").type(JsonFieldType.STRING).description("날짜"),
                                 fieldWithPath("data[].recurrenceId").type(JsonFieldType.NUMBER).description("반복 투두 규칙 ID (일반 투두는 null)").optional(),
                                 fieldWithPath("data[].occurrenceDate").type(JsonFieldType.STRING).description("가상 회차의 발생일 (일반 투두는 null)").optional(),
+                                fieldWithPath("data[].memo").type(JsonFieldType.STRING).description("메모").optional(),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
