@@ -513,30 +513,45 @@ include::{snippets}/todo-recurrence-delete-all/response-fields.adoc[]
 === 투두 내일 하기
 `PATCH /api/todos/{todoId}/tomorrow`
 
-투두 일자를 내일로 변경합니다.
+투두 일자를 내일로 변경합니다. 미완료 투두는 **이동**되며, 완료된 투두는 **복사**됩니다 (원본 유지, 새 미완료 투두 생성).
 
 ==== 경로 파라미터
-include::{snippets}/todo-postpone-tomorrow/path-parameters.adoc[]
+include::{snippets}/todo-postpone-tomorrow-move/path-parameters.adoc[]
 ==== HTTP 요청 예시
-include::{snippets}/todo-postpone-tomorrow/http-request.adoc[]
-==== HTTP 응답 예시
-include::{snippets}/todo-postpone-tomorrow/http-response.adoc[]
-==== 응답 필드
-include::{snippets}/todo-postpone-tomorrow/response-fields.adoc[]
+include::{snippets}/todo-postpone-tomorrow-move/http-request.adoc[]
+==== HTTP 응답 예시 (미완료 - 이동)
+include::{snippets}/todo-postpone-tomorrow-move/http-response.adoc[]
+==== 응답 필드 (미완료 - 이동)
+include::{snippets}/todo-postpone-tomorrow-move/response-fields.adoc[]
+
+==== HTTP 응답 예시 (완료 - 복사)
+include::{snippets}/todo-postpone-tomorrow-copy/http-response.adoc[]
+==== 응답 필드 (완료 - 복사)
+include::{snippets}/todo-postpone-tomorrow-copy/response-fields.adoc[]
+
+==== HTTP 응답 예시 (실패 - 오늘 날짜가 아님)
+include::{snippets}/todo-postpone-tomorrow-fail/http-response.adoc[]
+==== 응답 필드 (실패)
+include::{snippets}/todo-postpone-tomorrow-fail/response-fields.adoc[]
 
 === 투두 오늘 하기
 `PATCH /api/todos/{todoId}/today`
 
-투두를 오늘 날짜로 변경합니다.
+투두를 오늘 날짜로 변경합니다. 미완료 투두는 **이동**되며, 완료된 투두는 **복사**됩니다 (원본 유지, 새 미완료 투두 생성).
 
 ==== 경로 파라미터
-include::{snippets}/todo-move-today/path-parameters.adoc[]
+include::{snippets}/todo-move-today-move/path-parameters.adoc[]
 ==== HTTP 요청 예시
-include::{snippets}/todo-move-today/http-request.adoc[]
-==== HTTP 응답 예시
-include::{snippets}/todo-move-today/http-response.adoc[]
-==== 응답 필드
-include::{snippets}/todo-move-today/response-fields.adoc[]
+include::{snippets}/todo-move-today-move/http-request.adoc[]
+==== HTTP 응답 예시 (미완료 - 이동)
+include::{snippets}/todo-move-today-move/http-response.adoc[]
+==== 응답 필드 (미완료 - 이동)
+include::{snippets}/todo-move-today-move/response-fields.adoc[]
+
+==== HTTP 응답 예시 (완료 - 복사)
+include::{snippets}/todo-move-today-copy/http-response.adoc[]
+==== 응답 필드 (완료 - 복사)
+include::{snippets}/todo-move-today-copy/response-fields.adoc[]
 
 === 투두 날짜 변경
 `PATCH /api/todos/{todoId}/date`

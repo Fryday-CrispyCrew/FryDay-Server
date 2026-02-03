@@ -352,9 +352,9 @@ class TodoControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("투두 내일 하기 (날짜 미루기)")
-    void postponeToTomorrow() throws Exception {
-        // given
+    @DisplayName("투두 내일 하기 - 미완료 시 이동 (날짜만 변경)")
+    void postponeToTomorrow_미완료_이동() throws Exception {
+        // given - 미완료 투두: 이동으로 처리 (기존 ID 유지)
         Long todoId = 1L;
         LocalDate tomorrow = LocalDate.now().plusDays(1);
 
@@ -376,7 +376,9 @@ class TodoControllerTest extends RestDocsSupport {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andDo(document("todo-postpone-tomorrow",
+                .andExpect(jsonPath("$.data.id").value(todoId))
+                .andExpect(jsonPath("$.data.date").value(tomorrow.toString()))
+                .andDo(document("todo-postpone-tomorrow-move",
                         pathParameters(
                                 parameterWithName("todoId").description("미룰 투두 ID")
                         ),
@@ -384,13 +386,64 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
 
-                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID (이동 시 기존 ID 유지)"),
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
-                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
 
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경 후 날짜 (내일)"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 내일 하기 - 완료 시 복사 (새 투두 생성)")
+    void postponeToTomorrow_완료_복사() throws Exception {
+        // given - 완료 투두: 복사로 처리 (새 ID 반환)
+        Long originalTodoId = 1L;
+        Long copiedTodoId = 2L;
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo copiedTodo = Todo.builder()
+                .description("양파 썰기")
+                .category(mockCategory)
+                .date(tomorrow)
+                .memo("메모")
+                .build();
+        ReflectionTestUtils.setField(copiedTodo, "id", copiedTodoId);
+
+        given(todoService.postponeToTomorrow(anyLong(), anyLong()))
+                .willReturn(TodoResponse.from(copiedTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/tomorrow", originalTodoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(copiedTodoId))
+                .andExpect(jsonPath("$.data.date").value(tomorrow.toString()))
+                .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"))
+                .andDo(document("todo-postpone-tomorrow-copy",
+                        pathParameters(
+                                parameterWithName("todoId").description("미룰 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("복사된 새 투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (복사 시 항상 IN_PROGRESS)"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("복사된 날짜 (내일)"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
@@ -403,7 +456,6 @@ class TodoControllerTest extends RestDocsSupport {
         // given
         Long todoId = 1L;
 
-        // Mocking: Service가 예외를 던지도록 설정
         given(todoService.postponeToTomorrow(anyLong(), anyLong()))
                 .willThrow(new BusinessException(ErrorCode.TODO_NOT_TODAY));
 
@@ -412,17 +464,26 @@ class TodoControllerTest extends RestDocsSupport {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("오늘 날짜의 투두만 내일로 미룰 수 있습니다."));
+                .andExpect(jsonPath("$.message").value("오늘 날짜의 투두만 내일로 미룰 수 있습니다."))
+                .andDo(document("todo-postpone-tomorrow-fail",
+                        pathParameters(
+                                parameterWithName("todoId").description("미룰 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부 (false)"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("에러 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
     }
 
     @Test
-    @DisplayName("투두 오늘 하기 (날짜 당기기)")
-    void moveToToday() throws Exception {
-        // given
+    @DisplayName("투두 오늘 하기 - 미완료 시 이동")
+    void moveToToday_미완료_이동() throws Exception {
+        // given - 미완료 투두: 이동 (기존 ID 유지)
         Long todoId = 1L;
         LocalDate today = LocalDate.now();
 
-        // Mocking: 날짜가 오늘로 변경된 투두 응답
         Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
         ReflectionTestUtils.setField(mockCategory, "id", 1L);
 
@@ -441,7 +502,9 @@ class TodoControllerTest extends RestDocsSupport {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andDo(document("todo-move-today",
+                .andExpect(jsonPath("$.data.id").value(todoId))
+                .andExpect(jsonPath("$.data.date").value(today.toString()))
+                .andDo(document("todo-move-today-move",
                         pathParameters(
                                 parameterWithName("todoId").description("가져올 투두 ID")
                         ),
@@ -449,13 +512,63 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
 
-                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID (이동 시 기존 ID 유지)"),
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
 
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("변경 후 날짜 (오늘)"),
+
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("투두 오늘 하기 - 완료 시 복사 (새 투두 생성)")
+    void moveToToday_완료_복사() throws Exception {
+        // given - 완료 투두: 복사 (새 ID 반환)
+        Long originalTodoId = 1L;
+        Long copiedTodoId = 3L;
+        LocalDate today = LocalDate.now();
+
+        Category mockCategory = Category.builder().name("요리").color(CategoryColor.BR).userId(1L).build();
+        ReflectionTestUtils.setField(mockCategory, "id", 1L);
+
+        Todo copiedTodo = Todo.builder()
+                .description("양파 썰기")
+                .category(mockCategory)
+                .date(today)
+                .build();
+        ReflectionTestUtils.setField(copiedTodo, "id", copiedTodoId);
+
+        given(todoService.moveToToday(anyLong(), anyLong()))
+                .willReturn(TodoResponse.from(copiedTodo));
+
+        // when & then
+        mockMvc.perform(patch("/api/todos/{todoId}/today", originalTodoId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(copiedTodoId))
+                .andExpect(jsonPath("$.data.date").value(today.toString()))
+                .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"))
+                .andDo(document("todo-move-today-copy",
+                        pathParameters(
+                                parameterWithName("todoId").description("가져올 투두 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+
+                                fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("복사된 새 투두 ID"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (복사 시 항상 IN_PROGRESS)"),
+                                fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+
+                                fieldWithPath("data.date").type(JsonFieldType.STRING).description("복사된 날짜 (오늘)"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
