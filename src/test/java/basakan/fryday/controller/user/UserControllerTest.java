@@ -76,6 +76,7 @@ class UserControllerTest extends RestDocsSupport {
                 .accessToken("jwt-access-token")
                 .refreshToken("jwt-refresh-token")
                 .deviceId("device-id-123")
+                .isNewDevice(true)
                 .build();
 
         given(userAppService.socialLogin(any()))
@@ -90,6 +91,7 @@ class UserControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.onboardingStatus").value("NEEDS_AGREEMENT"))
                 .andExpect(jsonPath("$.accessToken").exists())
                 .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.isNewDevice").value(true))
                 .andDo(document("user-social-login",
                         requestFields(
                                 fieldWithPath("provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자 (KAKAO, NAVER)"),
@@ -100,10 +102,11 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 푸시 토큰").optional()
                         ),
                         responseFields(
-                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_AGREEMENT, NEEDS_NICKNAME, NEEDS_ONBOARDING, NEEDS_MARKETING, COMPLETED)"),
+                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_AGREEMENT, NEEDS_NICKNAME, NEEDS_ONBOARDING, COMPLETED)"),
                                 fieldWithPath("accessToken").type(JsonFieldType.STRING).description("JWT Access Token"),
                                 fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("JWT Refresh Token"),
                                 fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 ID"),
+                                fieldWithPath("isNewDevice").type(JsonFieldType.BOOLEAN).description("새 디바이스 여부 (true: 푸시 알림 권한 요청 필요)"),
                                 fieldWithPath("user.id").type(JsonFieldType.NUMBER).description("사용자 ID"),
                                 fieldWithPath("user.provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자"),
                                 fieldWithPath("user.role").type(JsonFieldType.STRING).description("사용자 권한 (USER, ADMIN)"),
@@ -138,6 +141,7 @@ class UserControllerTest extends RestDocsSupport {
                 .accessToken("jwt-access-token")
                 .refreshToken("jwt-refresh-token")
                 .deviceId("device-id-123")
+                .isNewDevice(true)
                 .build();
 
         given(userAppService.socialLogin(any()))
@@ -152,6 +156,7 @@ class UserControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.onboardingStatus").value("NEEDS_AGREEMENT"))
                 .andExpect(jsonPath("$.accessToken").exists())
                 .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.isNewDevice").value(true))
                 .andDo(document("user-apple-login",
                         requestFields(
                                 fieldWithPath("idToken").type(JsonFieldType.STRING).description("Apple ID Token (JWT)"),
@@ -162,10 +167,11 @@ class UserControllerTest extends RestDocsSupport {
                                 fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 푸시 토큰").optional()
                         ),
                         responseFields(
-                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_AGREEMENT, NEEDS_NICKNAME, NEEDS_ONBOARDING, NEEDS_MARKETING, COMPLETED)"),
+                                fieldWithPath("onboardingStatus").type(JsonFieldType.STRING).description("온보딩 상태 (NEEDS_AGREEMENT, NEEDS_NICKNAME, NEEDS_ONBOARDING, COMPLETED)"),
                                 fieldWithPath("accessToken").type(JsonFieldType.STRING).description("JWT Access Token"),
                                 fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("JWT Refresh Token"),
                                 fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 ID"),
+                                fieldWithPath("isNewDevice").type(JsonFieldType.BOOLEAN).description("새 디바이스 여부 (true: 푸시 알림 권한 요청 필요)"),
                                 fieldWithPath("user.id").type(JsonFieldType.NUMBER).description("사용자 ID"),
                                 fieldWithPath("user.provider").type(JsonFieldType.STRING).description("소셜 로그인 제공자"),
                                 fieldWithPath("user.role").type(JsonFieldType.STRING).description("사용자 권한 (USER, ADMIN)"),
@@ -177,13 +183,13 @@ class UserControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("개인정보 동의 완료 API")
+    @DisplayName("약관 동의 완료 API")
     @WithMockUser
     void agreeConsent() throws Exception {
         // given
-        ConsentRequest request = new ConsentRequest(true);
+        ConsentRequest request = new ConsentRequest(true, true, false);
 
-        doNothing().when(userAppService).agreeConsent(anyBoolean());
+        doNothing().when(userAppService).agreeConsent(anyBoolean(), anyBoolean(), anyBoolean());
 
         // when & then
         mockMvc.perform(post("/api/users/me/consent")
@@ -191,10 +197,12 @@ class UserControllerTest extends RestDocsSupport {
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("개인정보 수집 및 이용에 동의하였습니다."))
+                .andExpect(jsonPath("$.message").value("약관 동의가 완료되었습니다."))
                 .andDo(document("user-consent",
                         requestFields(
-                                fieldWithPath("privacyRequired").type(JsonFieldType.BOOLEAN).description("개인정보 수집 및 이용 동의 (필수)")
+                                fieldWithPath("termsRequired").type(JsonFieldType.BOOLEAN).description("이용약관 동의 (필수)"),
+                                fieldWithPath("privacyRequired").type(JsonFieldType.BOOLEAN).description("개인정보 수집 및 이용 동의 (필수)"),
+                                fieldWithPath("marketingOptional").type(JsonFieldType.BOOLEAN).description("마케팅 정보 수신 동의 (선택)")
                         ),
                         responseFields(
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
@@ -203,11 +211,26 @@ class UserControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("개인정보 동의 API - 필수 동의 미체크 시 실패")
+    @DisplayName("약관 동의 API - 개인정보 동의 미체크 시 실패")
     @WithMockUser
     void agreeConsent_FailWhenPrivacyNotAgreed() throws Exception {
         // given
-        ConsentRequest request = new ConsentRequest(false);
+        ConsentRequest request = new ConsentRequest(true, false, false);
+
+        // when & then
+        mockMvc.perform(post("/api/users/me/consent")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("약관 동의 API - 이용약관 미동의 시 실패")
+    @WithMockUser
+    void agreeConsent_FailWhenTermsNotAgreed() throws Exception {
+        // given
+        ConsentRequest request = new ConsentRequest(false, true, false);
 
         // when & then
         mockMvc.perform(post("/api/users/me/consent")
@@ -410,7 +433,7 @@ class UserControllerTest extends RestDocsSupport {
     }
 
     @Test
-    @DisplayName("마케팅 수신 동의 API")
+    @DisplayName("마케팅 수신 설정 변경 API")
     @WithMockUser
     void agreeMarketing() throws Exception {
         // given
