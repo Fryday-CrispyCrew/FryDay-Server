@@ -18,9 +18,10 @@ public record SocialLoginDto(
         OnboardingStatus onboardingStatus,
         String accessToken,
         String refreshToken,
-        String deviceId
+        String deviceId,
+        boolean isNewDevice
 ) {
-    public static SocialLoginDto from(User user, AuthProvider provider, String accessToken, String refreshToken, String deviceId) {
+    public static SocialLoginDto from(User user, AuthProvider provider, String accessToken, String refreshToken, String deviceId, boolean isNewDevice) {
         return SocialLoginDto.builder()
                 .userId(user.getId())
                 .provider(provider)
@@ -32,6 +33,7 @@ public record SocialLoginDto(
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .deviceId(deviceId)
+                .isNewDevice(isNewDevice)
                 .build();
     }
 }

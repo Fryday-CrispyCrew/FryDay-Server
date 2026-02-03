@@ -45,14 +45,14 @@ public class UserAppService {
     private final UserDeviceWriteService userDeviceWriteService;
     private final CategoryService categoryService;
 
-    public void agreeConsent(boolean privacyRequired) {
+    public void agreeConsent(boolean termsRequired, boolean privacyRequired, boolean marketingOptional) {
         Long userId = UserContext.getCurrentUserId();
         User user = userReadService.findById(userId);
 
         Agreement agreement = userReadService.findAgreementByUser(user)
-                .orElseGet(() -> Agreement.create(user, privacyRequired, false));
+                .orElseGet(() -> Agreement.create(user, termsRequired, privacyRequired, marketingOptional));
 
-        userWriteService.agreeConsent(user, agreement, privacyRequired);
+        userWriteService.agreeConsent(user, agreement, termsRequired, privacyRequired, marketingOptional);
     }
 
     public void agreeMarketing(boolean marketingOptional) {
@@ -62,7 +62,7 @@ public class UserAppService {
         Agreement agreement = userReadService.findAgreementByUser(user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AGREEMENT_NOT_FOUND));
 
-        userWriteService.agreeMarketing(user, agreement, marketingOptional);
+        userWriteService.updateMarketingAgreement(agreement, marketingOptional);
     }
 
     public void completeOnboarding() {
@@ -165,27 +165,30 @@ public class UserAppService {
             userWriteService.updateEmailIfAbsent(user, socialUserInfo.email());
         }
 
-        userDeviceReadService.findByUserIdAndDeviceId(user.getId(), serviceDto.deviceId())
-                .ifPresentOrElse(
-                        existingDevice -> {
-                            userDeviceWriteService.activateDevice(existingDevice);
-                            if (serviceDto.fcmToken() != null) {
-                                userDeviceWriteService.updateFcmToken(existingDevice, serviceDto.fcmToken());
-                            }
-                        },
-                        () -> userDeviceWriteService.createOrActivateDevice(
-                                user.getId(),
-                                serviceDto.deviceId(),
-                                serviceDto.deviceType(),
-                                serviceDto.deviceName(),
-                                serviceDto.fcmToken()
-                        )
-                );
+        boolean isNewDevice = userDeviceReadService
+                .findByUserIdAndDeviceId(user.getId(), serviceDto.deviceId())
+                .map(existingDevice -> {
+                    userDeviceWriteService.activateDevice(existingDevice);
+                    if (serviceDto.fcmToken() != null) {
+                        userDeviceWriteService.updateFcmToken(existingDevice, serviceDto.fcmToken());
+                    }
+                    return false;
+                })
+                .orElseGet(() -> {
+                    userDeviceWriteService.createOrActivateDevice(
+                            user.getId(),
+                            serviceDto.deviceId(),
+                            serviceDto.deviceType(),
+                            serviceDto.deviceName(),
+                            serviceDto.fcmToken()
+                    );
+                    return true;
+                });
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole(), user.getAccountStatus(), serviceDto.deviceId());
         String refreshToken = refreshTokenRepository.generateAndSave(user.getId(), serviceDto.deviceId());
 
-        return SocialLoginDto.from(user, socialUserInfo.provider(), accessToken, refreshToken, serviceDto.deviceId());
+        return SocialLoginDto.from(user, socialUserInfo.provider(), accessToken, refreshToken, serviceDto.deviceId(), isNewDevice);
     }
 
     public void updateDeviceFcmToken(String deviceId, String fcmToken) {

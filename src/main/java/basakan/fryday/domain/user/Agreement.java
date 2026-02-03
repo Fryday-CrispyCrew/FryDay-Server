@@ -17,6 +17,9 @@ public class Agreement extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
+    @Column(name = "terms_agreed", nullable = false)
+    private boolean termsAgreed = false;
+
     @Column(nullable = false)
     private boolean privacyAgreed = false;
 
@@ -24,21 +27,24 @@ public class Agreement extends BaseEntity {
     private boolean marketingAgreed = false;
 
     @Builder
-    private Agreement(User user, boolean privacyAgreed, boolean marketingAgreed) {
+    private Agreement(User user, boolean termsAgreed, boolean privacyAgreed, boolean marketingAgreed) {
         this.user = user;
+        this.termsAgreed = termsAgreed;
         this.privacyAgreed = privacyAgreed;
         this.marketingAgreed = marketingAgreed;
     }
 
-    public static Agreement create(User user, boolean privacyAgreed, boolean marketingAgreed) {
+    public static Agreement create(User user, boolean termsAgreed, boolean privacyAgreed, boolean marketingAgreed) {
         return Agreement.builder()
                 .user(user)
+                .termsAgreed(termsAgreed)
                 .privacyAgreed(privacyAgreed)
                 .marketingAgreed(marketingAgreed)
                 .build();
     }
 
-    public void updateConsent(boolean privacyAgreed, boolean marketingAgreed) {
+    public void updateConsent(boolean termsAgreed, boolean privacyAgreed, boolean marketingAgreed) {
+        this.termsAgreed = termsAgreed;
         this.privacyAgreed = privacyAgreed;
         this.marketingAgreed = marketingAgreed;
     }

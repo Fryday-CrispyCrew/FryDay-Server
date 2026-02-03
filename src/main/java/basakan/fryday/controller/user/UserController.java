@@ -66,8 +66,8 @@ public class UserController {
 
     @PostMapping("/me/consent")
     public ResponseEntity<MessageResponse> agreeConsent(@Valid @RequestBody ConsentRequest request) {
-        userAppService.agreeConsent(request.privacyRequired());
-        return ResponseEntity.ok(new MessageResponse("개인정보 수집 및 이용에 동의하였습니다."));
+        userAppService.agreeConsent(request.termsRequired(), request.privacyRequired(), request.marketingOptional());
+        return ResponseEntity.ok(new MessageResponse("약관 동의가 완료되었습니다."));
     }
 
     @PostMapping("/me/onboarding")
