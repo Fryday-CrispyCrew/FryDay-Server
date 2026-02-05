@@ -3,6 +3,10 @@ package basakan.fryday.common.service.push;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.domain.user.UserDevice;
 import basakan.fryday.repository.auth.UserDeviceRepository;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -62,13 +66,7 @@ public class FcmPushService implements PushService {
         }
 
         try {
-            Message message = Message.builder()
-                    .setToken(fcmToken)
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
-                    .build();
+            Message message = buildMessage(fcmToken, title, body);
 
             String response = FirebaseMessaging.getInstance().send(message);
             log.info("Push notification sent successfully: response={}", response);
@@ -80,13 +78,7 @@ public class FcmPushService implements PushService {
 
     private void sendToTokenInternal(Long deviceId, String fcmToken, String deviceIdStr, String title, String body) {
         try {
-            Message message = Message.builder()
-                    .setToken(fcmToken)
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
-                    .build();
+            Message message = buildMessage(fcmToken, title, body);
 
             String response = FirebaseMessaging.getInstance().send(message);
             log.info("Push notification sent successfully: response={}, deviceId={}", response, deviceIdStr);
@@ -94,6 +86,27 @@ public class FcmPushService implements PushService {
         } catch (FirebaseMessagingException e) {
             handleFcmException(e, fcmToken, deviceId);
         }
+    }
+
+    private Message buildMessage(String fcmToken, String title, String body) {
+        return Message.builder()
+                .setToken(fcmToken)
+                .setNotification(Notification.builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                        .setNotification(AndroidNotification.builder()
+                                .setSound("default")
+                                .setDefaultVibrateTimings(true)
+                                .build())
+                        .build())
+                .setApnsConfig(ApnsConfig.builder()
+                        .setAps(Aps.builder()
+                                .setSound("default")
+                                .build())
+                        .build())
+                .build();
     }
 
     private void handleFcmException(FirebaseMessagingException e, String fcmToken, Long deviceId) {
