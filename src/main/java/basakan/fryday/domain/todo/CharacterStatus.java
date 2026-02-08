@@ -20,7 +20,9 @@ public enum CharacterStatus {
     CASE_E2("마감 임박", "e2_graphic"),
     CASE_F("미완료 상태로 마감", "f_graphic"),
 
-    CASE_G("모든 투두 완료", "g_graphic");
+    CASE_G("모든 투두 완료", "g_graphic"),
+
+    CASE_H("과거 날짜 투두 없음", "h_graphic");
 
     private final String description;
     private final String imageCode;
@@ -29,7 +31,7 @@ public enum CharacterStatus {
         LocalDate today = now.toLocalDate();
 
         if (totalCount == 0) {
-            return CASE_A;
+            return targetDate.isBefore(today) ? CASE_H : CASE_A;
         }
 
         if (totalCount == completedCount) {

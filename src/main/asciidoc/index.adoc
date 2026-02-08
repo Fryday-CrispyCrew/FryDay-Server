@@ -343,7 +343,7 @@ include::{snippets}/todo-update-description/response-fields.adoc[]
 === 투두 캐릭터 상태 조회
 `GET /api/todos/character-status`
 
-투두 캐릭터의 상태를 조회합니다. 날짜·투두 수·완료 수·현재 시각에 따라 CASE_A ~ CASE_G(마감 임박은 CASE_E1 또는 CASE_E2) 중 하나를 반환합니다. 미래 날짜는 해당일의 투두 개수에 따라 판별합니다.
+투두 캐릭터의 상태를 조회합니다. 날짜·투두 수·완료 수·현재 시각에 따라 CASE_A ~ CASE_H(마감 임박은 CASE_E1 또는 CASE_E2) 중 하나를 반환합니다. 미래 날짜는 해당일의 투두 개수에 따라 판별합니다.
 
 ==== 쿼리 파라미터
 include::{snippets}/todo-character-status/query-parameters.adoc[]
@@ -384,6 +384,9 @@ include::{snippets}/todo-character-status-case-f/http-response.adoc[]
 당일 투두를 전부 완료했을 때
 include::{snippets}/todo-character-status-case-g/http-response.adoc[]
 
+==== HTTP 응답 예시 (CASE_H - 과거 날짜(투두 없음))
+과거 날짜 조회 시, 그날 투두가 하나도 없었을 때
+include::{snippets}/todo-character-status-case-h/http-response.adoc[]
 
 
 === 투두 상태 수정
