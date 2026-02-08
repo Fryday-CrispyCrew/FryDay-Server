@@ -858,6 +858,17 @@ class TodoControllerTest extends RestDocsSupport {
         );
     }
 
+    @Test
+    @DisplayName("일일 캐릭터 상태 조회 API - CASE_H (과거 날짜 투두 없음)")
+    void getDailyCharacterStatus_caseH() throws Exception {
+        performCharacterStatusTest(
+                CharacterStatus.CASE_H,
+                "h_graphic",
+                "todo-character-status-case-h",
+                jsonPath("$.data.status").value("CASE_H"),
+                jsonPath("$.data.imageCode").value("h_graphic")
+        );
+    }
 
     private void performCharacterStatusTest(CharacterStatus status, String imageCode, String documentId,
                                             org.springframework.test.web.servlet.ResultMatcher statusMatcher,
@@ -887,7 +898,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description(
-                                        "캐릭터 상태 (CASE_A: 투두 없음, CASE_B: 시작 전, CASE_C: 절반 미만, CASE_D: 절반 이상, CASE_E1/CASE_E2: 마감 임박, CASE_F: 미완료 마감, CASE_G: 모든 투두 완료). 미래 날짜는 해당일 투두 개수로 판별"),
+                                        "캐릭터 상태 (CASE_A: 투두 없음(오늘, 미래), CASE_B: 시작 전, CASE_C: 절반 미만, CASE_D: 절반 이상, CASE_E1/CASE_E2: 마감 임박, CASE_F: 미완료 마감, CASE_G: 모든 투두 완료, CASE_H: 투두 없음(과거)). 미래 날짜는 해당일 투두 개수로 판별"),
                                 fieldWithPath("data.imageCode").type(JsonFieldType.STRING).description(
                                         "이미지 매핑 코드"),
                                 fieldWithPath("data.description").type(JsonFieldType.STRING).description("상태 설명"),

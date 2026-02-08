@@ -20,7 +20,7 @@ class CharacterStatusTest {
     private static final LocalDate TOMORROW = TODAY.plusDays(1);
 
     @Test
-    @DisplayName("CASE_A: 투두가 없을 때")
+    @DisplayName("CASE_A: 오늘 또는 미래 날짜에 투두가 없을 때")
     void determine_caseA() {
         // given
         int totalCount = 0;
@@ -28,10 +28,27 @@ class CharacterStatusTest {
         LocalDateTime now = LocalDateTime.of(TODAY, java.time.LocalTime.of(15, 0));
 
         // when
-        CharacterStatus result = CharacterStatus.determine(totalCount, completedCount, TODAY, now);
+        CharacterStatus resultToday = CharacterStatus.determine(totalCount, completedCount, TODAY, now);
+        CharacterStatus resultTomorrow = CharacterStatus.determine(totalCount, completedCount, TOMORROW, now);
 
         // then
-        assertThat(result).isEqualTo(CharacterStatus.CASE_A);
+        assertThat(resultToday).isEqualTo(CharacterStatus.CASE_A);
+        assertThat(resultTomorrow).isEqualTo(CharacterStatus.CASE_A);
+    }
+
+    @Test
+    @DisplayName("CASE_H: 과거 날짜에 투두가 없을 때")
+    void determine_caseH() {
+        // given
+        int totalCount = 0;
+        int completedCount = 0;
+        LocalDateTime now = LocalDateTime.of(TODAY, java.time.LocalTime.of(15, 0));
+
+        // when
+        CharacterStatus result = CharacterStatus.determine(totalCount, completedCount, YESTERDAY, now);
+
+        // then
+        assertThat(result).isEqualTo(CharacterStatus.CASE_H);
     }
 
     @Test
@@ -186,16 +203,18 @@ class CharacterStatusTest {
     }
 
     @Test
-    @DisplayName("우선순위: CASE_A가 가장 높음")
-    void determine_priority_caseA() {
-        // given - totalCount가 0이면 다른 조건과 무관하게 CASE_A
+    @DisplayName("우선순위: 투두 없을 때 오늘/미래는 CASE_A, 과거는 CASE_H")
+    void determine_priority_caseAAndCaseH() {
+        // given
         LocalDateTime now = LocalDateTime.of(TODAY, java.time.LocalTime.of(22, 30));
 
         // when
-        CharacterStatus result = CharacterStatus.determine(0, 0, TODAY, now);
+        CharacterStatus resultToday = CharacterStatus.determine(0, 0, TODAY, now);
+        CharacterStatus resultYesterday = CharacterStatus.determine(0, 0, YESTERDAY, now);
 
         // then
-        assertThat(result).isEqualTo(CharacterStatus.CASE_A);
+        assertThat(resultToday).isEqualTo(CharacterStatus.CASE_A);
+        assertThat(resultYesterday).isEqualTo(CharacterStatus.CASE_H);
     }
 
     @Test
