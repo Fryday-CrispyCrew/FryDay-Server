@@ -32,6 +32,8 @@ public interface TodoAlarmRepository extends JpaRepository<TodoAlarm, Long> {
             @Param("notifyAt") LocalDateTime notifyAt
     );
 
+    @Modifying
+    @Query("DELETE FROM TodoAlarm ta WHERE ta.todo.id = :todoId")
     void deleteByTodoId(Long todoId);
 
     @Modifying(clearAutomatically = true)
