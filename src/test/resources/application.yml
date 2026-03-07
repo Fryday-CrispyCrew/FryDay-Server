@@ -11,7 +11,24 @@ spring:
         show_sql: false
     open-in-view: false
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      username: ""
+      password: ""
+
 jwt:
   secret-key: test-secret-key-for-testing-purposes-at-least-32-characters-long-enough
   access-token-expiration: 3600000
   refresh-token-expiration: 1209600000
+
+oauth:
+  apple:
+    client-id: com.test.app
+    jwks-url: https://appleid.apple.com/auth/keys
+
+fcm:
+  enabled: false
+  credentials:
+    json: ""
