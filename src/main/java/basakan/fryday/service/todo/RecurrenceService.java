@@ -182,6 +182,7 @@ public class RecurrenceService {
         List<Todo> todos = todoRepository.findAllByRecurrenceId(recurrenceId);
         for (Todo todo : todos) {
             if (!detachedTodoIds.contains(todo.getId())) {
+                recurrenceExceptionRepository.deleteByRecurrenceIdAndOccurrenceDateAndType(recurrenceId, todo.getDate(), RecurrenceException.ExceptionType.DELETED);
                 todo.delete();
             }
         }
