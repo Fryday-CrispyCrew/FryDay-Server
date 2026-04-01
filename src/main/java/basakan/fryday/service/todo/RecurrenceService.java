@@ -61,13 +61,6 @@ public class RecurrenceService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        RecurrenceException exception = RecurrenceException.builder()
-                .recurrenceId(savedRecurrence.getId())
-                .occurrenceDate(originalTodo.getDate())
-                .type(RecurrenceException.ExceptionType.DELETED)
-                .build();
-        recurrenceExceptionRepository.save(exception);
-
         Todo todo = todoRepository.findById(request.getTodoId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
         return TodoResponse.from(todo);
