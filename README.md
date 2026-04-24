@@ -4,8 +4,11 @@
 
 **[🔗 iOS 앱스토어 링크](https://apps.apple.com/kr/app/fryday-%EB%B0%94%EC%82%AD%ED%95%9C-%ED%88%AC%EB%91%90-%EB%A6%AC%EC%8A%A4%ED%8A%B8/id6759564063)**
 
-<img width="300" height="2688" alt="f1" src="https://github.com/user-attachments/assets/dca19e1a-297b-473e-b180-550a36a19eab" />
-<img width="300" height="2688" alt="f2" src="https://github.com/user-attachments/assets/57ad6835-1ac0-4480-8e85-d5055cc3c388" />
+**[🔗 구글 플레이스토어 링크](https://play.google.com/store/apps/details?id=com.crispycrew.fryday)**
+
+
+<img src="https://github.com/user-attachments/assets/dca19e1a-297b-473e-b180-550a36a19eab" width="250" alt="f1"> <img src="https://github.com/user-attachments/assets/57ad6835-1ac0-4480-8e85-d5055cc3c388" width="250" alt="f2">
+
 
 
 ## 프로젝트 소개
