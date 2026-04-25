@@ -29,3 +29,8 @@ fcm:
   enabled: ${FCM_ENABLED:false}
   credentials:
     json: ${FCM_CREDENTIALS_JSON:#{null}}
+
+docs:
+  security:
+    username: ${DOCS_USER:}
+    password: ${DOCS_PASSWORD:}
