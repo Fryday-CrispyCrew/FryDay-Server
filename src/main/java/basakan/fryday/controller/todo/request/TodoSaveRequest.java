@@ -16,7 +16,7 @@ import java.time.LocalDate;
 public class TodoSaveRequest {
 
     @NotBlank(message = "내용은 필수로 입력해야 합니다.")
-    @Size(max = 20, message = "내용은 최대 20자까지 입력할 수 있습니다.")
+    @Size(max = 40, message = "내용은 최대 40자까지 입력할 수 있습니다.")
     private String description;
 
     @NotNull
