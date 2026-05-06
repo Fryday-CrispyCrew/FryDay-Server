@@ -116,6 +116,13 @@ public class RecurrenceInstanceService {
                 payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : master.isAlarmEnabled()
         );
 
+        // 이미 materialized된 비override 인스턴스에도 변경 내용 반영
+        if (payload.getTitle() != null) {
+            todoRepository.bulkUpdateDescriptionByRecurrenceId(master.getId(), payload.getTitle());
+        }
+        if (payload.getMemo() != null) {
+            todoRepository.bulkUpdateMemoByRecurrenceId(master.getId(), payload.getMemo());
+        }
     }
 
     // ── Delete ─────────────────────────────────────────────────────────────────

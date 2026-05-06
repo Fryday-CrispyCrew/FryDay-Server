@@ -114,6 +114,14 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     int updateRecurrenceIdByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("recurrenceId") Long recurrenceId);
 
     @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.description = :description WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
+    int bulkUpdateDescriptionByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("description") String description);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.memo = :memo WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
+    int bulkUpdateMemoByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("memo") String memo);
+
+    @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Todo t WHERE t.category.id IN " +
             "(SELECT c.id FROM Category c WHERE c.userId = :userId)")
     void deleteAllByUserId(@Param("userId") Long userId);
