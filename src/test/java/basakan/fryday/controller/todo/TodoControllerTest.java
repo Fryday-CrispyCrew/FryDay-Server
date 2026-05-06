@@ -756,6 +756,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data[].recurrenceId").type(JsonFieldType.NUMBER).description("반복 투두 규칙 ID (일반 투두는 null)").optional(),
                                 fieldWithPath("data[].occurrenceDate").type(JsonFieldType.STRING).description("가상 회차의 발생일 (일반 투두는 null)").optional(),
                                 fieldWithPath("data[].memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data[].overridden").type(JsonFieldType.BOOLEAN).description("이번 인스턴스만 개별 수정된 경우 true"),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
@@ -1191,11 +1192,14 @@ class TodoControllerTest extends RestDocsSupport {
 
                                 // 기본 정보
                                 fieldWithPath("data.id").type(JsonFieldType.NUMBER).description("투두 ID"),
-                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용"),
+                                fieldWithPath("data.description").type(JsonFieldType.STRING).description("할 일 내용 (override 적용 값)"),
                                 fieldWithPath("data.status").type(JsonFieldType.STRING).description("상태 (IN_PROGRESS, COMPLETED)"),
                                 fieldWithPath("data.categoryId").type(JsonFieldType.NUMBER).description("카테고리 ID"),
-                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모").optional(),
+                                fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모 (override 적용 값)").optional(),
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("날짜"),
+                                fieldWithPath("data.overridden").type(JsonFieldType.BOOLEAN).description("이번 인스턴스만 개별 수정된 경우 true"),
+                                fieldWithPath("data.overrideIsAlarm").type(JsonFieldType.BOOLEAN).description("인스턴스 알람 활성화 override 값 (isOverridden=false이면 null)").optional(),
+                                fieldWithPath("data.overrideAlarmTime").type(JsonFieldType.STRING).description("인스턴스 알람 시간 override 값 (isOverridden=false이면 null)").optional(),
 
                                 // 알림 정보 (Optional)
                                 fieldWithPath("data.alarm").type(JsonFieldType.OBJECT).description("알림 설정 정보").optional(),
@@ -1211,6 +1215,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.recurrence.startDate").type(JsonFieldType.STRING).description("반복 시작일").optional(),
                                 fieldWithPath("data.recurrence.endDate").type(JsonFieldType.STRING).description("반복 종료일").optional(),
                                 fieldWithPath("data.recurrence.notificationTime").type(JsonFieldType.STRING).description("반복 알림 시간").optional(),
+                                fieldWithPath("data.recurrence.alarmEnabled").type(JsonFieldType.BOOLEAN).description("반복 규칙의 알람 활성화 여부").optional(),
 
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
@@ -1275,6 +1280,7 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.startDate").type(JsonFieldType.STRING).description("반복 시작일"),
                                 fieldWithPath("data.endDate").type(JsonFieldType.STRING).description("반복 종료일").optional(),
                                 fieldWithPath("data.notificationTime").type(JsonFieldType.STRING).description("반복 알림 시간").optional(),
+                                fieldWithPath("data.alarmEnabled").type(JsonFieldType.BOOLEAN).description("알람 활성화 여부"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
