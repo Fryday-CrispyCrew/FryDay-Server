@@ -49,7 +49,10 @@ public class RecurrenceOccurrenceMaterializeService {
         // 이미 존재하는지 확인 (삭제된 인스턴스도 포함 — 재생성 방지)
         boolean alreadyExists = todoRepository.existsByRecurrenceIdAndDate(recurrenceId, occurrenceDate);
         if (alreadyExists) {
-            return todoRepository.findByRecurrenceIdAndDate(recurrenceId, occurrenceDate).orElse(null);
+            // 살아있는 인스턴스만 반환, 삭제된 경우 null (재생성 방지이지만 반환값은 null)
+            return todoRepository.findByRecurrenceIdAndDate(recurrenceId, occurrenceDate)
+                    .filter(t -> !t.isDeleted())
+                    .orElse(null);
         }
 
         // 발생일 계산으로 실제로 발생하는 날짜인지 확인

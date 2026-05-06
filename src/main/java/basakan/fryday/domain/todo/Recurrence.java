@@ -49,10 +49,10 @@ public class Recurrence extends BaseEntity {
 
     private LocalTime notificationTime;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean isAlarmEnabled;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean isDeleted;
 
     @Column(nullable = false)

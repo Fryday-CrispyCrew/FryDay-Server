@@ -54,7 +54,7 @@ public class Todo extends BaseEntity {
 
     private LocalTime overrideAlarmTime;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean isOverridden;
 
     public enum Status {

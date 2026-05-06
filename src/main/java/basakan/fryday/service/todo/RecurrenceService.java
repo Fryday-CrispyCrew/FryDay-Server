@@ -127,11 +127,9 @@ public class RecurrenceService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        // 기존 반복 인스턴스 삭제
+        // 규칙 변경 시 기존 인스턴스 물리 삭제 → 새 규칙으로 재생성 가능하도록
         List<Todo> todos = todoRepository.findAllByRecurrenceId(recurrenceId);
-        for (Todo todo : todos) {
-            todo.delete();
-        }
+        todoRepository.deleteAll(todos);
 
         String frequencyValuesStr = (request.getFrequencyValues() != null && !request.getFrequencyValues().isEmpty())
                 ? String.join(",", request.getFrequencyValues())
