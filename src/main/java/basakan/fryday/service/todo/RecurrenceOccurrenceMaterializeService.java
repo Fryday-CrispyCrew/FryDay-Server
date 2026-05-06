@@ -4,12 +4,10 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.Recurrence;
-import basakan.fryday.domain.todo.RecurrenceException;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.todo.TodoAlarm;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
-import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -23,19 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
-/**
- * 반복 투두의 가상 회차를 실제 DB에 기록하는 서비스
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecurrenceOccurrenceMaterializeService {
 
     private final RecurrenceRepository recurrenceRepository;
-    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final TodoRepository todoRepository;
     private final CategoryRepository categoryRepository;
     private final RecurrenceOccurrenceCalculator occurrenceCalculator;
@@ -43,7 +35,7 @@ public class RecurrenceOccurrenceMaterializeService {
     private final UserReadService userReadService;
 
     /**
-     * 특정 반복 투두의 가상 회차를 실제 Todo로 생성 (이미 존재하면 생성하지 않음)
+     * 특정 반복 투두의 특정 날짜 인스턴스를 생성 (이미 존재하면 생성하지 않음)
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Todo materializeOccurrenceIfNotExists(Long userId, Long recurrenceId, LocalDate occurrenceDate) {
@@ -54,46 +46,24 @@ public class RecurrenceOccurrenceMaterializeService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        // 이미 존재하는지 확인
-        List<Todo> existingTodos = todoRepository.findAllByUserIdAndDate(userId, occurrenceDate);
-        Todo existingTodo = existingTodos.stream()
-                .filter(todo -> todo.getRecurrenceId() != null
-                        && todo.getRecurrenceId().equals(recurrenceId)
-                        && todo.getDeletedAt() == null)
-                .findFirst()
-                .orElse(null);
-
-        if (existingTodo != null) {
-            return existingTodo;
-        }
-
-        // 예외 확인 (DELETED, MOVED, DETACHED 제외)
-        List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
-        boolean isException = exceptions.stream()
-                .anyMatch(e -> e.getOccurrenceDate().equals(occurrenceDate));
-
-        if (isException) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        // 이미 존재하는지 확인 (삭제된 인스턴스도 포함 — 재생성 방지)
+        boolean alreadyExists = todoRepository.existsByRecurrenceIdAndDate(recurrenceId, occurrenceDate);
+        if (alreadyExists) {
+            return todoRepository.findByRecurrenceIdAndDate(recurrenceId, occurrenceDate).orElse(null);
         }
 
         // 발생일 계산으로 실제로 발생하는 날짜인지 확인
-        Set<LocalDate> cancelledDates = exceptions.stream()
-                .map(RecurrenceException::getOccurrenceDate)
-                .collect(Collectors.toSet());
-
         List<LocalDate> occurrenceDates = occurrenceCalculator.calculateOccurrences(
-                recurrence, occurrenceDate, occurrenceDate, cancelledDates
+                recurrence, occurrenceDate, occurrenceDate
         );
 
         if (occurrenceDates.isEmpty() || !occurrenceDates.contains(occurrenceDate)) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // Category 조회
         Category category = categoryRepository.findById(recurrence.getCategoryId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // Todo 생성
         Long maxOrder = todoRepository.findMaxDisplayOrder(userId, occurrenceDate);
         long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
 
@@ -108,18 +78,14 @@ public class RecurrenceOccurrenceMaterializeService {
 
         Todo savedTodo = todoRepository.save(todo);
 
-        // notificationTime이 있으면 TodoAlarm 생성
-        if (recurrence.getNotificationTime() != null) {
-            // 이미 TodoAlarm이 있는지 확인
+        if (recurrence.isAlarmEnabled() && recurrence.getNotificationTime() != null) {
             todoAlarmRepository.findByTodoId(savedTodo.getId())
                     .ifPresentOrElse(
                             existingAlarm -> {
-                                // 기존 알림이 있으면 시간만 업데이트 (occurrenceDate + notificationTime)
                                 LocalDateTime notifyAt = LocalDateTime.of(occurrenceDate, recurrence.getNotificationTime());
                                 existingAlarm.changeTime(notifyAt);
                             },
                             () -> {
-                                // 새로운 알림 생성
                                 User user = userReadService.findById(userId);
                                 LocalDateTime notifyAt = LocalDateTime.of(occurrenceDate, recurrence.getNotificationTime());
                                 TodoAlarm todoAlarm = TodoAlarm.create(savedTodo, user, notifyAt);
@@ -132,11 +98,10 @@ public class RecurrenceOccurrenceMaterializeService {
     }
 
     /**
-     * 특정 사용자의 오늘 날짜 가상 회차를 실제 Todo로 생성
+     * 특정 사용자의 오늘 날짜 인스턴스를 생성
      */
     @Transactional
     public void materializeTodayOccurrences(Long userId, LocalDate today) {
-        // 1. 해당 날짜에 발생하는 반복 규칙 조회
         List<Recurrence> recurrences = recurrenceRepository.findByUserIdAndDateRange(userId, today);
 
         if (recurrences.isEmpty()) {
@@ -147,44 +112,19 @@ public class RecurrenceOccurrenceMaterializeService {
 
         for (Recurrence recurrence : recurrences) {
             try {
-                // 2. 예외 조회 (DELETED, MOVED, DETACHED 모두 제외)
-                List<RecurrenceException> exceptions = recurrenceExceptionRepository
-                        .findByRecurrenceId(recurrence.getId());
-
-                // 해당 날짜가 예외인지 확인
-                boolean isException = exceptions.stream()
-                        .anyMatch(e -> e.getOccurrenceDate().equals(today));
-
-                if (isException) {
-                    continue;
-                }
-
-                // 3. 발생일 계산 (해당 날짜만)
-                Set<LocalDate> cancelledDates = exceptions.stream()
-                        .map(RecurrenceException::getOccurrenceDate)
-                        .collect(Collectors.toSet());
-
                 List<LocalDate> occurrenceDates = occurrenceCalculator.calculateOccurrences(
-                        recurrence, today, today, cancelledDates
+                        recurrence, today, today
                 );
 
-                // 해당 날짜에 발생하는 회차가 있는지 확인
                 if (occurrenceDates.isEmpty() || !occurrenceDates.contains(today)) {
                     continue;
                 }
 
-                // 4. 이미 DB에 존재하는지 확인
-                List<Todo> existingTodos = todoRepository.findAllByUserIdAndDate(userId, today);
-                boolean alreadyExists = existingTodos.stream()
-                        .anyMatch(todo -> todo.getRecurrenceId() != null
-                                && todo.getRecurrenceId().equals(recurrence.getId())
-                                && todo.getDeletedAt() == null);
-
-                if (alreadyExists) {
+                // 이미 존재하면 스킵 (삭제된 인스턴스도 포함)
+                if (todoRepository.existsByRecurrenceIdAndDate(recurrence.getId(), today)) {
                     continue;
                 }
 
-                // 5. Todo 생성 (materializeOccurrenceIfNotExists 호출)
                 try {
                     materializeOccurrenceIfNotExists(userId, recurrence.getId(), today);
                     createdCount++;

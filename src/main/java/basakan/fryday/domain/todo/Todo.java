@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Getter
@@ -42,6 +43,19 @@ public class Todo extends BaseEntity {
 
     @OneToOne(mappedBy = "todo", cascade = CascadeType.ALL, orphanRemoval = true)
     private TodoAlarm todoAlarm;
+
+    // 반복 인스턴스 override 필드 — non-recurring Todo에는 null
+    private String overrideTitle;
+
+    @Column(length = 300)
+    private String overrideMemo;
+
+    private Boolean overrideIsAlarm;
+
+    private LocalTime overrideAlarmTime;
+
+    @Column(nullable = false)
+    private boolean isOverridden;
 
     public enum Status {
         IN_PROGRESS, // 미완료 (체크 안 됨)
@@ -103,6 +117,14 @@ public class Todo extends BaseEntity {
 
     public void updateDescription(String description) {
         this.description = description;
+    }
+
+    public void applyOverride(String title, String memo, Boolean isAlarm, LocalTime alarmTime) {
+        if (title != null) this.overrideTitle = title;
+        if (memo != null) this.overrideMemo = memo;
+        if (isAlarm != null) this.overrideIsAlarm = isAlarm;
+        if (alarmTime != null) this.overrideAlarmTime = alarmTime;
+        this.isOverridden = true;
     }
 
 }

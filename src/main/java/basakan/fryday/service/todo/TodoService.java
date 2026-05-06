@@ -19,8 +19,6 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
-import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
-import basakan.fryday.domain.todo.RecurrenceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,9 +39,7 @@ public class TodoService {
     private final CategoryRepository categoryRepository;
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceRepository recurrenceRepository;
-    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final RecurrenceOccurrenceMaterializeService materializeService;
-    private final RecurrenceOccurrenceCalculator occurrenceCalculator;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
@@ -71,7 +67,7 @@ public class TodoService {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
-        todo.toggleCompletion();;
+        todo.toggleCompletion();
 
         return TodoResponse.from(todo);
     }
@@ -97,35 +93,7 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        // 반복 투두인 경우 DELETED 예외 생성하여 재생성 방지
-        if (todo.getRecurrenceId() != null) {
-            Long recurrenceId = todo.getRecurrenceId();
-            LocalDate occurrenceDate = todo.getDate();
-
-            // 이미 예외가 존재하는지 확인
-            RecurrenceException existingException = recurrenceExceptionRepository
-                    .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
-                    .orElse(null);
-
-            // DETACHED 예외가 있으면 이미 분리된 투두이므로 예외 생성 불필요
-            // DELETED 예외가 없으면 생성
-            if (existingException == null) {
-                RecurrenceException exception = RecurrenceException.builder()
-                        .recurrenceId(recurrenceId)
-                        .occurrenceDate(occurrenceDate)
-                        .type(RecurrenceException.ExceptionType.DELETED)
-                        .build();
-                recurrenceExceptionRepository.save(exception);
-            } else if (existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
-                // 이미 분리된 투두는 예외 생성 불필요
-            }
-            // 이미 DELETED 예외가 있으면 추가 생성 불필요
-        }
-
-        // TodoAlarm이 있으면 삭제 (soft delete 전에 처리)
         todoAlarmRepository.deleteByTodoId(todoId);
-
-        // Todo 삭제 (soft delete)
         todo.delete();
     }
 
@@ -163,16 +131,9 @@ public class TodoService {
             return TodoResponse.from(copiedTodo);
         }
 
-        LocalDate originalDate = todo.getDate();
-
+        // 반복 투두는 날짜 이동 시 recurrence에서 분리(detach)
         if (todo.getRecurrenceId() != null) {
-            preventRecurrenceOccurrenceRecreation(todo.getRecurrenceId(), originalDate, userId);
-            Recurrence recurrence = recurrenceRepository.findById(todo.getRecurrenceId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-            if (recurrence.getUserId() != userId) {
-                throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-            }
-            ensureMovedExceptionIfInSchedule(todo.getRecurrenceId(), targetDate, recurrence);
+            todo.setRecurrenceId(null);
         }
 
         todo.updateDate(targetDate);
@@ -202,7 +163,7 @@ public class TodoService {
             throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
         }
 
-        // 일반 투두(반복 아님): date 필드만 갱신 (Lost Update 방지)
+        // 일반 투두(반복 아님): date 필드만 갱신
         int updated = todoRepository.updateDateByIdAndUserIdForNonRecurring(todoId, userId, request.getDate());
         if (updated > 0) {
             Todo todo = todoRepository.findById(todoId)
@@ -210,7 +171,7 @@ public class TodoService {
             return TodoResponse.from(todo);
         }
 
-        // 반복 투두인 경우
+        // 반복 투두: recurrence에서 분리 후 날짜 이동
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
@@ -222,45 +183,14 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        Long recurrenceId = todo.getRecurrenceId();
-        LocalDate occurrenceDate = todo.getDate();
         LocalDate newDate = request.getDate();
+        todo.updateDate(newDate);
+        Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
+        long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+        todo.updateDisplayOrder(displayOrder);
 
-        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        if (recurrence.getUserId() != userId) {
-            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-        }
-
-        RecurrenceException existingException = recurrenceExceptionRepository
-                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, occurrenceDate)
-                .orElse(null);
-
-        if (existingException != null && existingException.getType() == RecurrenceException.ExceptionType.DETACHED) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
-        boolean shouldCreateDetached = (existingException == null);
-
-        if (!occurrenceDate.equals(newDate)) {
-            todo.updateDate(newDate);
-            Long maxOrder = todoRepository.findMaxDisplayOrder(userId, newDate);
-            long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
-            todo.updateDisplayOrder(displayOrder);
-        }
-
+        // recurrence에서 분리 (독립 투두로 변환)
         todo.setRecurrenceId(null);
-
-        if (shouldCreateDetached) {
-            RecurrenceException exception = RecurrenceException.builder()
-                    .recurrenceId(recurrenceId)
-                    .occurrenceDate(occurrenceDate)
-                    .type(RecurrenceException.ExceptionType.DETACHED)
-                    .detachedTodoId(todo.getId())
-                    .build();
-            recurrenceExceptionRepository.save(exception);
-        }
 
         return TodoResponse.from(todo);
     }
@@ -300,9 +230,6 @@ public class TodoService {
         }
     }
 
-    /**
-     * 반복 투두 materialization을 별도 트랜잭션에서 수행
-     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void materializeRecurrenceOccurrences(Long userId, LocalDate date, Long categoryId) {
         List<Recurrence> recurrences = recurrenceRepository.findByUserIdAndDateRange(userId, date);
@@ -322,18 +249,12 @@ public class TodoService {
                 }
                 throw e;
             } catch (Exception e) {
-                // REQUIRES_NEW로 분리된 트랜잭션에서 발생한 예외는 외부 트랜잭션에 영향을 주지 않음
-                log.error("반복 투두 materialize 중 예상치 못한 예외 발생 - recurrenceId: {}, date: {}. 스킵하고 계속 진행", 
+                log.error("반복 투두 materialize 중 예상치 못한 예외 발생 - recurrenceId: {}, date: {}. 스킵하고 계속 진행",
                         recurrence.getId(), date, e);
-                continue;
             }
         }
     }
 
-    /**
-     * 투두 목록 조회를 별도 트랜잭션에서 수행
-     * materialization이 완료된 후 조회하므로 새로 생성된 Todo를 포함하여 반환
-     */
     @Transactional(readOnly = true)
     public List<TodoListResponse> getTodoListInternal(Long userId, LocalDate date, Long categoryId) {
         List<Todo> todos;
@@ -352,12 +273,6 @@ public class TodoService {
         return allResponses;
     }
 
-    /**
-     * 투두 목록 조회
-     * 1. 먼저 반복 투두를 materialize (별도 트랜잭션)
-     * 2. 그 다음 투두 목록을 조회 (별도 읽기 전용 트랜잭션)
-     * 이렇게 분리하여 materialization이 커밋된 후 조회하므로 새로 생성된 Todo를 포함하여 반환
-     */
     public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
         materializeRecurrenceOccurrences(userId, date, categoryId);
         return getTodoListInternal(userId, date, categoryId);
@@ -380,7 +295,6 @@ public class TodoService {
                 .imageCode(imageCode)
                 .description(status.getDescription())
                 .build();
-
     }
 
     @Transactional
@@ -414,64 +328,7 @@ public class TodoService {
         return TodoDetailResponse.from(todo, todoAlarm, recurrence);
     }
 
-    /**
-     * 반복 투두를 이동한 원래 날짜에 MOVED 예외를 생성하여 재생성을 방지합니다.
-     */
-    private void preventRecurrenceOccurrenceRecreation(Long recurrenceId, LocalDate originalDate, Long userId) {
-        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-
-        if (recurrence.getUserId() != userId) {
-            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
-        }
-
-        RecurrenceException existingException = recurrenceExceptionRepository
-                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, originalDate)
-                .orElse(null);
-
-        if (existingException != null) {
-            return;
-        }
-
-        // 원래 날짜에 MOVED 예외 생성하여 재생성 방지
-        RecurrenceException exception = RecurrenceException.builder()
-                .recurrenceId(recurrenceId)
-                .occurrenceDate(originalDate)
-                .type(RecurrenceException.ExceptionType.MOVED)
-                .build();
-        recurrenceExceptionRepository.save(exception);
-    }
-
-    private void ensureMovedExceptionIfInSchedule(Long recurrenceId, LocalDate targetDate, Recurrence recurrence) {
-        RecurrenceException existingException = recurrenceExceptionRepository
-                .findByRecurrenceIdAndOccurrenceDate(recurrenceId, targetDate)
-                .orElse(null);
-
-        if (existingException != null) {
-            return;
-        }
-
-        List<RecurrenceException> exceptions = recurrenceExceptionRepository.findByRecurrenceId(recurrenceId);
-        Set<LocalDate> cancelledDates = exceptions.stream()
-                .map(RecurrenceException::getOccurrenceDate)
-                .collect(Collectors.toSet());
-
-        List<LocalDate> occurrenceDates = occurrenceCalculator.calculateOccurrences(
-                recurrence, targetDate, targetDate, cancelledDates
-        );
-
-        if (!occurrenceDates.isEmpty() && occurrenceDates.contains(targetDate)) {
-            RecurrenceException exception = RecurrenceException.builder()
-                    .recurrenceId(recurrenceId)
-                    .occurrenceDate(targetDate)
-                    .type(RecurrenceException.ExceptionType.MOVED)
-                    .build();
-            recurrenceExceptionRepository.save(exception);
-        }
-    }
-
     private String resolveImageCode(CharacterStatus status) {
         return status.getImageCode();
     }
-
 }
