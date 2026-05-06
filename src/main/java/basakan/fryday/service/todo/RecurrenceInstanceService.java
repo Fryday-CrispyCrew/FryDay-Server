@@ -67,6 +67,10 @@ public class RecurrenceInstanceService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
+        // terminateAt 호출 전 원본 endType/endDate 보존 (호출 후 값이 바뀌므로)
+        EndType originalEndType = oldMaster.getEndType();
+        LocalDate originalEndDate = oldMaster.getEndDate();
+
         // STEP 1: 기존 Master 종료
         oldMaster.terminateAt(T);
 
@@ -79,8 +83,8 @@ public class RecurrenceInstanceService {
                 .type(oldMaster.getType())
                 .frequencyValues(oldMaster.getFrequencyValues())
                 .startDate(T)
-                .endDate(oldMaster.getEndType() == EndType.UNTIL ? oldMaster.getEndDate() : null)
-                .endType(oldMaster.getEndType() == EndType.UNTIL ? EndType.UNTIL : EndType.NONE)
+                .endDate(originalEndType == EndType.UNTIL ? originalEndDate : null)
+                .endType(originalEndType == EndType.UNTIL ? EndType.UNTIL : EndType.NONE)
                 .endCount(oldMaster.getEndCount())
                 .notificationTime(payload.getAlarmTime() != null ? payload.getAlarmTime() : oldMaster.getNotificationTime())
                 .isAlarmEnabled(payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : oldMaster.isAlarmEnabled())
@@ -111,6 +115,7 @@ public class RecurrenceInstanceService {
                 payload.getAlarmTime() != null ? payload.getAlarmTime() : master.getNotificationTime(),
                 payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : master.isAlarmEnabled()
         );
+
     }
 
     // ── Delete ─────────────────────────────────────────────────────────────────
