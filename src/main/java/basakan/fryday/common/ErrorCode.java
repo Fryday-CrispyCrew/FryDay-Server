@@ -53,7 +53,10 @@ public enum ErrorCode {
     INVALID_REPORT_PERIOD(HttpStatus.BAD_REQUEST, "조회할 수 없는 기간입니다."),
 
     // Admin
-    ADMIN_KEY_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않은 Admin Key입니다.");
+    ADMIN_KEY_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않은 Admin Key입니다."),
+
+    // System
+    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서버 점검 중입니다. 잠시 후 다시 시도해주세요.");
 
     private final HttpStatus status;
     private final String message;
