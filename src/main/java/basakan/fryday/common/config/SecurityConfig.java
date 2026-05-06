@@ -70,6 +70,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/apple/login").permitAll()
                         .requestMatchers("/api/users/token/refresh").permitAll()
                         .requestMatchers("/api/users/nickname/check").permitAll()
+                        .requestMatchers("/api/admin/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
