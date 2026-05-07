@@ -16,7 +16,7 @@ public class RecurrenceInstanceController {
 
     private final RecurrenceInstanceService recurrenceInstanceService;
 
-    @PutMapping("/{instanceId}/edit")
+    @PatchMapping("/{instanceId}")
     public ApiResponse<Void> editInstance(
             @PathVariable long instanceId,
             @RequestBody @Valid InstanceEditRequest request,

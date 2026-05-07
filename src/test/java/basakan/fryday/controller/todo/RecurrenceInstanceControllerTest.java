@@ -74,7 +74,7 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                 "payload", payload
         );
 
-        mockMvc.perform(put("/api/todos/instances/{instanceId}/edit", instanceId)
+        mockMvc.perform(patch("/api/todos/instances/{instanceId}", instanceId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
@@ -130,7 +130,7 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                 "payload", payload
         );
 
-        mockMvc.perform(put("/api/todos/instances/{instanceId}/edit", instanceId)
+        mockMvc.perform(patch("/api/todos/instances/{instanceId}", instanceId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
@@ -183,7 +183,7 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                 "payload", payload
         );
 
-        mockMvc.perform(put("/api/todos/instances/{instanceId}/edit", instanceId)
+        mockMvc.perform(patch("/api/todos/instances/{instanceId}", instanceId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())

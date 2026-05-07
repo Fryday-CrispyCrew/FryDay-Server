@@ -514,7 +514,7 @@ include::{snippets}/todo-recurrence-delete-all/response-fields.adoc[]
 
 
 === 반복 인스턴스 수정
-`PUT /api/todos/instances/{instanceId}/edit`
+`PATCH /api/todos/instances/{instanceId}`
 
 반복 투두의 특정 인스턴스를 수정합니다. `scope` 값에 따라 수정 범위가 달라집니다.
 
