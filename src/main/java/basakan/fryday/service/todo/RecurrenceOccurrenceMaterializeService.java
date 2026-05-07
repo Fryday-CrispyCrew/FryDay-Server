@@ -81,7 +81,7 @@ public class RecurrenceOccurrenceMaterializeService {
 
         Todo savedTodo = todoRepository.save(todo);
 
-        if (recurrence.isAlarmEnabled() && recurrence.getNotificationTime() != null) {
+        if (recurrence.isAlarmEnabled()) {
             todoAlarmRepository.findByTodoId(savedTodo.getId())
                     .ifPresentOrElse(
                             existingAlarm -> {

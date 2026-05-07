@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @Service
@@ -93,8 +94,7 @@ public class RecurrenceInstanceService {
                 .endDate(newEndDate)
                 .endType(newEndDate != null ? EndType.UNTIL : EndType.NONE)
                 .endCount(oldMaster.getEndCount())
-                .notificationTime(payload.getAlarmTime() != null ? payload.getAlarmTime() : oldMaster.getNotificationTime())
-                .isAlarmEnabled(payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : oldMaster.isAlarmEnabled())
+                .notificationTime(resolveNotificationTime(payload, oldMaster.getNotificationTime()))
                 .lastGeneratedDate(T)
                 .build();
 
@@ -129,8 +129,7 @@ public class RecurrenceInstanceService {
 
             master.updateRule(newType, newFrequency, newStartDate, newEndDate);
             master.updateContent(payload.getTitle(), payload.getMemo(),
-                    payload.getAlarmTime() != null ? payload.getAlarmTime() : master.getNotificationTime(),
-                    payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : master.isAlarmEnabled());
+                    resolveNotificationTime(payload, master.getNotificationTime()));
 
             LocalDate today = LocalDate.now();
             LocalDate generateFrom = newStartDate.isAfter(today) ? newStartDate : today;
@@ -141,12 +140,8 @@ public class RecurrenceInstanceService {
             generateInstances(master, generateFrom, 365);
         } else {
             // 내용만 변경: Master 업데이트 + 비override 인스턴스 일괄 반영
-            master.updateContent(
-                    payload.getTitle(),
-                    payload.getMemo(),
-                    payload.getAlarmTime() != null ? payload.getAlarmTime() : master.getNotificationTime(),
-                    payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : master.isAlarmEnabled()
-            );
+            master.updateContent(payload.getTitle(), payload.getMemo(),
+                    resolveNotificationTime(payload, master.getNotificationTime()));
 
             if (payload.getTitle() != null) {
                 todoRepository.bulkUpdateDescriptionByRecurrenceId(master.getId(), payload.getTitle());
@@ -232,6 +227,12 @@ public class RecurrenceInstanceService {
     }
 
     // ── 공통 헬퍼 ──────────────────────────────────────────────────────────────
+
+    /** isAlarmEnabled=false이면 null(알람 OFF), 그 외에는 alarmTime 또는 기존 값 유지 */
+    private LocalTime resolveNotificationTime(Payload payload, LocalTime existing) {
+        if (Boolean.FALSE.equals(payload.getIsAlarmEnabled())) return null;
+        return payload.getAlarmTime() != null ? payload.getAlarmTime() : existing;
+    }
 
     private Todo findActiveInstance(long instanceId, long userId) {
         Todo instance = todoRepository.findById(instanceId)

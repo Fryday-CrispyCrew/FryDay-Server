@@ -50,9 +50,6 @@ public class Recurrence extends BaseEntity {
     private LocalTime notificationTime;
 
     @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
-    private boolean isAlarmEnabled;
-
-    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean isDeleted;
 
     @Column(nullable = false)
@@ -61,8 +58,7 @@ public class Recurrence extends BaseEntity {
     @Builder
     public Recurrence(long userId, long categoryId, String description, String memo, RecurrenceType type,
                       String frequencyValues, LocalDate startDate, LocalDate endDate, EndType endType,
-                      Integer endCount, LocalTime notificationTime, boolean isAlarmEnabled,
-                      LocalDate lastGeneratedDate) {
+                      Integer endCount, LocalTime notificationTime, LocalDate lastGeneratedDate) {
         this.userId = userId;
         this.categoryId = categoryId;
         this.description = description;
@@ -74,9 +70,12 @@ public class Recurrence extends BaseEntity {
         this.endType = endType != null ? endType : (endDate != null ? EndType.UNTIL : EndType.NONE);
         this.endCount = endCount;
         this.notificationTime = notificationTime;
-        this.isAlarmEnabled = isAlarmEnabled || notificationTime != null;
         this.isDeleted = false;
         this.lastGeneratedDate = lastGeneratedDate;
+    }
+
+    public boolean isAlarmEnabled() {
+        return notificationTime != null;
     }
 
     public void updateLastGeneratedDate(LocalDate date) {
@@ -91,7 +90,6 @@ public class Recurrence extends BaseEntity {
         this.endDate = endDate;
         this.endType = (endDate != null) ? EndType.UNTIL : EndType.NONE;
         this.notificationTime = notificationTime;
-        this.isAlarmEnabled = notificationTime != null;
     }
 
     /** 반복 규칙 자체를 변경 (type, frequencyValues, startDate, endDate) */
@@ -114,10 +112,9 @@ public class Recurrence extends BaseEntity {
         this.isDeleted = true;
     }
 
-    public void updateContent(String description, String memo, LocalTime notificationTime, boolean isAlarmEnabled) {
+    public void updateContent(String description, String memo, LocalTime notificationTime) {
         if (description != null) this.description = description;
         if (memo != null) this.memo = memo;
         this.notificationTime = notificationTime;
-        this.isAlarmEnabled = isAlarmEnabled;
     }
 }
