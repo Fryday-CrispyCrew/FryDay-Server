@@ -518,19 +518,80 @@ include::{snippets}/todo-recurrence-delete-all/response-fields.adoc[]
 
 반복 투두의 특정 인스턴스를 수정합니다. `scope` 값에 따라 수정 범위가 달라집니다.
 
-[cols="1,3"]
+NOTE: `instanceId`는 `GET /api/todos` 응답의 `data[].id` 필드입니다. 반복 투두도 날짜별로 독립된 인스턴스 ID를 가집니다.
+
+NOTE: 기존 `PATCH /api/todos/recurrence/{recurrenceId}` API는 단순 규칙 전체 교체만 지원합니다. 이번 API는 scope를 지정해 "이번만 / 이후 전체 / 전체" 중 하나로 세밀하게 수정할 수 있습니다. 반복 투두 수정은 이 API를 사용하세요.
+
+==== scope별 동작
+
+[cols="1,2,3"]
 |===
-|scope |설명
+|scope |UI 문구 예시 |동작
 
 |`THIS`
-|이번 인스턴스만 수정합니다. 해당 인스턴스에 override 값이 저장되며, 반복 규칙은 변경되지 않습니다.
+|이번 일정만 수정
+|해당 인스턴스에만 override 값이 저장됩니다. 반복 규칙과 다른 인스턴스는 변경되지 않습니다.
 
 |`THIS_AND_FUTURE`
-|이번 인스턴스 날짜부터 이후의 모든 인스턴스에 적용합니다. 기존 반복 규칙은 해당 날짜 하루 전에 종료되고, 새로운 반복 규칙이 생성됩니다.
+|이번 일정 이후 모든 반복 일정 수정
+|선택한 날짜부터 반복 규칙이 분기됩니다. 기존 규칙은 선택한 날짜 하루 전에 종료되고, 새로운 규칙이 해당 날짜부터 시작됩니다.
 
 |`ALL`
-|반복 규칙 전체에 적용합니다. 개별적으로 override된 인스턴스는 override 값이 유지됩니다.
+|전체 반복 일정 수정
+|반복 규칙 자체를 수정합니다. 개별적으로 수정된 인스턴스(`isOverridden=true`)는 override 값이 유지됩니다.
 |===
+
+==== payload 필드 구성
+
+`payload`는 **content 필드**와 **rule 필드**로 나뉩니다. 모두 선택사항이며, 변경하고 싶은 필드만 포함하면 됩니다.
+
+[cols="1,1,1,3"]
+|===
+|필드 |구분 |THIS에서 |설명
+
+|`title`
+|content
+|적용
+|제목
+
+|`memo`
+|content
+|적용
+|메모
+
+|`isAlarmEnabled`
+|content
+|적용
+|알람 활성화 여부
+
+|`alarmTime`
+|content
+|적용
+|알람 시간 (HH:mm:ss)
+
+|`type`
+|rule
+|**무시됨**
+|반복 주기 (`DAILY` / `WEEKLY` / `MONTHLY` / `YEARLY`)
+
+|`frequencyValues`
+|rule
+|**무시됨**
+|반복 상세 값. WEEKLY → `["MONDAY", "WEDNESDAY"]`, MONTHLY/YEARLY → `["15"]` 형식
+
+|`startDate`
+|rule
+|**무시됨**
+|반복 시작일 (YYYY-MM-DD). `scope=ALL` 에서만 유효
+
+|`endDate`
+|rule
+|**무시됨**
+|반복 종료일 (YYYY-MM-DD). 생략하거나 필드 자체를 넣지 않으면 기존 종료 조건을 유지합니다.
+|===
+
+NOTE: `scope=THIS`에서 rule 필드(`type`, `frequencyValues`, `startDate`, `endDate`)는 서버에서 무시됩니다. +
+`scope=ALL`에서 `startDate`를 변경하면 오늘 이후 인스턴스가 삭제되고 새 규칙으로 재생성됩니다.
 
 ==== 경로 파라미터
 include::{snippets}/instance-edit-this/path-parameters.adoc[]
@@ -538,19 +599,16 @@ include::{snippets}/instance-edit-this/path-parameters.adoc[]
 ==== 요청 필드
 include::{snippets}/instance-edit-this/request-fields.adoc[]
 
-==== HTTP 요청 예시 (THIS)
+==== HTTP 요청/응답 예시 — THIS (이번만 내용 수정)
 include::{snippets}/instance-edit-this/http-request.adoc[]
-==== HTTP 응답 예시 (THIS)
 include::{snippets}/instance-edit-this/http-response.adoc[]
 
-==== HTTP 요청 예시 (THIS_AND_FUTURE)
+==== HTTP 요청/응답 예시 — THIS_AND_FUTURE (이후 전체 + 반복 주기 변경)
 include::{snippets}/instance-edit-this-and-future/http-request.adoc[]
-==== HTTP 응답 예시 (THIS_AND_FUTURE)
 include::{snippets}/instance-edit-this-and-future/http-response.adoc[]
 
-==== HTTP 요청 예시 (ALL)
+==== HTTP 요청/응답 예시 — ALL (전체 내용 수정)
 include::{snippets}/instance-edit-all/http-request.adoc[]
-==== HTTP 응답 예시 (ALL)
 include::{snippets}/instance-edit-all/http-response.adoc[]
 
 ==== 응답 필드
@@ -562,18 +620,25 @@ include::{snippets}/instance-edit-this/response-fields.adoc[]
 
 반복 투두의 특정 인스턴스를 삭제합니다. `scope` 값에 따라 삭제 범위가 달라집니다.
 
-[cols="1,3"]
+NOTE: `instanceId`는 `GET /api/todos` 응답의 `data[].id` 필드입니다.
+
+==== scope별 동작
+
+[cols="1,2,3"]
 |===
-|scope |설명
+|scope |UI 문구 예시 |동작
 
 |`THIS`
-|이번 인스턴스만 삭제합니다. 반복 규칙은 유지됩니다.
+|이번 일정만 삭제
+|해당 날짜 인스턴스만 삭제됩니다. 반복 규칙과 다른 날짜 인스턴스는 유지됩니다.
 
 |`THIS_AND_FUTURE`
-|이번 인스턴스 날짜부터 이후의 모든 인스턴스를 삭제하고, 반복 규칙을 해당 날짜 하루 전에 종료합니다.
+|이번 일정 이후 모든 반복 일정 삭제
+|선택한 날짜부터 이후 인스턴스가 모두 삭제되고, 반복 규칙이 선택한 날짜 하루 전에 종료됩니다.
 
 |`ALL`
-|반복 규칙 전체와 모든 인스턴스를 삭제합니다.
+|전체 반복 일정 삭제
+|반복 규칙과 연결된 모든 인스턴스가 삭제됩니다.
 |===
 
 ==== 경로 파라미터
@@ -582,19 +647,16 @@ include::{snippets}/instance-delete-this/path-parameters.adoc[]
 ==== 요청 필드
 include::{snippets}/instance-delete-this/request-fields.adoc[]
 
-==== HTTP 요청 예시 (THIS)
+==== HTTP 요청/응답 예시 — THIS (이번만 삭제)
 include::{snippets}/instance-delete-this/http-request.adoc[]
-==== HTTP 응답 예시 (THIS)
 include::{snippets}/instance-delete-this/http-response.adoc[]
 
-==== HTTP 요청 예시 (THIS_AND_FUTURE)
+==== HTTP 요청/응답 예시 — THIS_AND_FUTURE (이후 전체 삭제)
 include::{snippets}/instance-delete-this-and-future/http-request.adoc[]
-==== HTTP 응답 예시 (THIS_AND_FUTURE)
 include::{snippets}/instance-delete-this-and-future/http-response.adoc[]
 
-==== HTTP 요청 예시 (ALL)
+==== HTTP 요청/응답 예시 — ALL (전체 삭제)
 include::{snippets}/instance-delete-all/http-request.adoc[]
-==== HTTP 응답 예시 (ALL)
 include::{snippets}/instance-delete-all/http-response.adoc[]
 
 ==== 응답 필드
