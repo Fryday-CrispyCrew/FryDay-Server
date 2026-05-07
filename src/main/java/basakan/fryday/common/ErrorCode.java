@@ -50,7 +50,10 @@ public enum ErrorCode {
     DEVICE_EXPIRED(HttpStatus.UNAUTHORIZED, "디바이스 세션이 만료되었습니다."),
 
     // Report
-    INVALID_REPORT_PERIOD(HttpStatus.BAD_REQUEST, "조회할 수 없는 기간입니다.");
+    INVALID_REPORT_PERIOD(HttpStatus.BAD_REQUEST, "조회할 수 없는 기간입니다."),
+
+    // Admin
+    ADMIN_KEY_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않은 Admin Key입니다.");
 
     private final HttpStatus status;
     private final String message;

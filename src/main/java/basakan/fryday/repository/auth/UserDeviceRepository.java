@@ -30,4 +30,6 @@ public interface UserDeviceRepository extends JpaRepository<UserDevice, Long> {
     List<UserDevice> findAllByUserIdAndIsActiveTrueAndPushNotificationAgreedTrue(Long userId);
 
     void deleteAllByUserId(Long userId);
+
+    List<UserDevice> findAllByIsActiveTrueAndPushNotificationAgreedTrueAndFcmTokenIsNotNull();
 }
