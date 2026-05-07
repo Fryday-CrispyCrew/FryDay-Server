@@ -97,18 +97,8 @@ public class CategoryService {
     public void initDefaultCategories(Long userId) {
         List<Category> defaultCategories = List.of(
                 Category.builder()
-                        .name("카테고리 1")
+                        .name("카테고리")
                         .color(CategoryColor.BR)
-                        .userId(userId)
-                        .build(),
-                Category.builder()
-                        .name("카테고리 2")
-                        .color(CategoryColor.CB)
-                        .userId(userId)
-                        .build(),
-                Category.builder()
-                        .name("카테고리 3")
-                        .color(CategoryColor.OR)
                         .userId(userId)
                         .build()
         );
