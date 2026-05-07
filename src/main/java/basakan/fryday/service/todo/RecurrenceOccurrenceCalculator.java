@@ -36,18 +36,10 @@ public class RecurrenceOccurrenceCalculator {
         }
 
         LocalDate current = startDate;
-        int generatedCount = 0;
 
         while (!current.isAfter(toDate)) {
-            if (recurrence.getEndType() == EndType.COUNT
-                    && recurrence.getEndCount() != null
-                    && generatedCount >= recurrence.getEndCount()) {
-                break;
-            }
-
             if (isMatch(recurrence, current)) {
                 occurrences.add(current);
-                generatedCount++;
             }
             current = current.plusDays(1);
         }

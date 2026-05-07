@@ -93,7 +93,6 @@ public class RecurrenceInstanceService {
                 .startDate(T)
                 .endDate(newEndDate)
                 .endType(newEndDate != null ? EndType.UNTIL : EndType.NONE)
-                .endCount(oldMaster.getEndCount())
                 .notificationTime(resolveNotificationTime(payload, oldMaster.getNotificationTime()))
                 .lastGeneratedDate(T)
                 .build();
