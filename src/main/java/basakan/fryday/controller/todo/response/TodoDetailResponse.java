@@ -20,6 +20,9 @@ public class TodoDetailResponse {
     private final Long categoryId;
     private final String memo;
     private final LocalDate date;
+    private final boolean isOverridden;
+    private final Boolean overrideIsAlarm;
+    private final LocalTime overrideAlarmTime;
 
     private final TodoAlarmInfo alarm;
     private final RecurrenceInfo recurrence;
@@ -52,6 +55,7 @@ public class TodoDetailResponse {
         private final LocalDate startDate;
         private final LocalDate endDate;
         private final LocalTime notificationTime;
+        private final boolean isAlarmEnabled;
 
         public static RecurrenceInfo from(Recurrence recurrence) {
             if (recurrence == null) {
@@ -64,6 +68,7 @@ public class TodoDetailResponse {
                     .startDate(recurrence.getStartDate())
                     .endDate(recurrence.getEndDate())
                     .notificationTime(recurrence.getNotificationTime())
+                    .isAlarmEnabled(recurrence.isAlarmEnabled())
                     .build();
         }
     }
@@ -71,11 +76,16 @@ public class TodoDetailResponse {
     public static TodoDetailResponse from(Todo todo, TodoAlarm todoAlarm, Recurrence recurrence) {
         return TodoDetailResponse.builder()
                 .id(todo.getId())
-                .description(todo.getDescription())
+                .description(todo.isOverridden() && todo.getOverrideTitle() != null
+                        ? todo.getOverrideTitle() : todo.getDescription())
                 .status(todo.getStatus().name())
                 .categoryId(todo.getCategory().getId())
-                .memo(todo.getMemo())
+                .memo(todo.isOverridden() && todo.getOverrideMemo() != null
+                        ? todo.getOverrideMemo() : todo.getMemo())
                 .date(todo.getDate())
+                .isOverridden(todo.isOverridden())
+                .overrideIsAlarm(todo.isOverridden() ? todo.getOverrideIsAlarm() : null)
+                .overrideAlarmTime(todo.isOverridden() ? todo.getOverrideAlarmTime() : null)
                 .alarm(TodoAlarmInfo.from(todoAlarm))
                 .recurrence(RecurrenceInfo.from(recurrence))
                 .build();

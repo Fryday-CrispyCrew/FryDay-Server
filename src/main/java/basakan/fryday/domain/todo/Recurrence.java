@@ -41,14 +41,21 @@ public class Recurrence extends BaseEntity {
 
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EndType endType;
+
     private LocalTime notificationTime;
+
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean isDeleted;
 
     @Column(nullable = false)
     private LocalDate lastGeneratedDate;
 
     @Builder
     public Recurrence(long userId, long categoryId, String description, String memo, RecurrenceType type,
-                      String frequencyValues, LocalDate startDate, LocalDate endDate,
+                      String frequencyValues, LocalDate startDate, LocalDate endDate, EndType endType,
                       LocalTime notificationTime, LocalDate lastGeneratedDate) {
         this.userId = userId;
         this.categoryId = categoryId;
@@ -58,20 +65,53 @@ public class Recurrence extends BaseEntity {
         this.frequencyValues = frequencyValues;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.endType = endType != null ? endType : (endDate != null ? EndType.UNTIL : EndType.NONE);
         this.notificationTime = notificationTime;
+        this.isDeleted = false;
         this.lastGeneratedDate = lastGeneratedDate;
+    }
+
+    public boolean isAlarmEnabled() {
+        return notificationTime != null;
     }
 
     public void updateLastGeneratedDate(LocalDate date) {
         this.lastGeneratedDate = date;
     }
 
-    public void update(RecurrenceType type, String frequencyValues, LocalDate startDate, 
+    public void update(RecurrenceType type, String frequencyValues, LocalDate startDate,
                       LocalDate endDate, LocalTime notificationTime) {
         this.type = type;
         this.frequencyValues = frequencyValues;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.endType = (endDate != null) ? EndType.UNTIL : EndType.NONE;
+        this.notificationTime = notificationTime;
+    }
+
+    /** 반복 규칙 자체를 변경 (type, frequencyValues, startDate, endDate) */
+    public void updateRule(RecurrenceType type, String frequencyValues, LocalDate startDate, LocalDate endDate) {
+        this.type = type;
+        this.frequencyValues = frequencyValues;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.endType = (endDate != null) ? EndType.UNTIL : EndType.NONE;
+    }
+
+    /** this_and_future 수정/삭제 시 기존 Master를 exclusiveDate 하루 전에 종료 */
+    public void terminateAt(LocalDate exclusiveDate) {
+        this.endType = EndType.UNTIL;
+        this.endDate = exclusiveDate.minusDays(1);
+    }
+
+    /** 전체 삭제 시 Master soft delete */
+    public void markDeleted() {
+        this.isDeleted = true;
+    }
+
+    public void updateContent(String description, String memo, LocalTime notificationTime) {
+        if (description != null) this.description = description;
+        if (memo != null) this.memo = memo;
         this.notificationTime = notificationTime;
     }
 }

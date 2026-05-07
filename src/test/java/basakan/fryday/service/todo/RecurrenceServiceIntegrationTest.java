@@ -1,20 +1,17 @@
 package basakan.fryday.service.todo;
 
-import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.config.JpaConfig;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
 import basakan.fryday.controller.todo.request.RecurrenceUpdateRequest;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
-import basakan.fryday.domain.todo.RecurrenceException;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
-import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.service.user.UserReadService;
 import org.junit.jupiter.api.DisplayName;
@@ -77,8 +74,6 @@ class RecurrenceServiceIntegrationTest {
     private CategoryRepository categoryRepository;
     @Autowired
     private TodoRepository todoRepository;
-    @Autowired
-    private RecurrenceExceptionRepository recurrenceExceptionRepository;
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -127,17 +122,17 @@ class RecurrenceServiceIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("사용자가 삭제한 회차는 규칙 수정 후에도 DELETED 예외가 유지되어 재생성되지 않는다")
-    void userDeletedOccurrence_keepsDeletedException_afterRecurrenceUpdate() {
-        User user = userJpaRepository.save(User.createNewUser(AuthProvider.APPLE, "dev-sub-2", "t2@t.com"));
+    @DisplayName("삭제된 인스턴스는 soft delete 상태로 DB에 남아 재생성되지 않는다")
+    void deletedOccurrence_notRegenerated_afterDeletion() {
+        User user = userJpaRepository.save(User.createNewUser(AuthProvider.APPLE, "dev-sub-3", "t3@t.com"));
         Long userId = user.getId();
 
         Category category = categoryRepository.save(
-                Category.builder().name("업무").color(CategoryColor.BR).userId(userId).displayOrder(1L).build()
+                Category.builder().name("업무2").color(CategoryColor.BR).userId(userId).displayOrder(1L).build()
         );
 
         Todo anchorTodo = todoRepository.save(
-                Todo.builder().description("반복 B").category(category).date(ANCHOR).displayOrder(1L).build()
+                Todo.builder().description("반복 C").category(category).date(ANCHOR).displayOrder(1L).build()
         );
 
         RecurrenceCreateRequest createRequest = new RecurrenceCreateRequest();
@@ -152,38 +147,24 @@ class RecurrenceServiceIntegrationTest {
         Todo refreshedAnchor = todoRepository.findById(anchorTodo.getId()).orElseThrow();
         Long recurrenceId = refreshedAnchor.getRecurrenceId();
 
+        // SECOND_DAY 인스턴스 생성
         materializeService.materializeOccurrenceIfNotExists(userId, recurrenceId, SECOND_DAY);
         Todo secondDayTodo = todoRepository.findAllByUserIdAndDate(userId, SECOND_DAY).stream()
                 .filter(t -> recurrenceId.equals(t.getRecurrenceId()))
                 .findFirst()
                 .orElseThrow();
 
+        // 인스턴스 삭제 (soft delete)
         todoService.deleteTodo(secondDayTodo.getId(), userId);
 
-        assertThat(recurrenceExceptionRepository.findByRecurrenceIdAndOccurrenceDate(recurrenceId, SECOND_DAY))
-                .isPresent();
-        assertThat(recurrenceExceptionRepository.findByRecurrenceIdAndOccurrenceDate(recurrenceId, SECOND_DAY).orElseThrow().getType())
-                .isEqualTo(RecurrenceException.ExceptionType.DELETED);
+        // 삭제 후 목록 조회 시 비어있음
         assertThat(todoRepository.findAllByUserIdAndDate(userId, SECOND_DAY)).isEmpty();
 
-        RecurrenceUpdateRequest updateRequest = new RecurrenceUpdateRequest();
-        ReflectionTestUtils.setField(updateRequest, "type", RecurrenceType.DAILY);
-        ReflectionTestUtils.setField(updateRequest, "startDate", ANCHOR);
-        ReflectionTestUtils.setField(updateRequest, "endDate", LocalDate.of(2026, 4, 12));
-        ReflectionTestUtils.setField(updateRequest, "notificationTime", null);
+        // 재생성 시도 → 삭제된 인스턴스가 DB에 존재하므로 null 반환 (SKIP)
+        Todo result = materializeService.materializeOccurrenceIfNotExists(userId, recurrenceId, SECOND_DAY);
+        assertThat(result).isNull();
 
-        recurrenceService.updateRecurrence(recurrenceId, updateRequest, userId);
-
-        assertThat(recurrenceExceptionRepository.findByRecurrenceIdAndOccurrenceDate(recurrenceId, SECOND_DAY))
-                .isPresent();
-        assertThat(recurrenceExceptionRepository.findByRecurrenceIdAndOccurrenceDate(recurrenceId, SECOND_DAY).orElseThrow().getType())
-                .isEqualTo(RecurrenceException.ExceptionType.DELETED);
-
-        assertThatThrownBy(() -> materializeService.materializeOccurrenceIfNotExists(userId, recurrenceId, SECOND_DAY))
-                .isInstanceOf(BusinessException.class)
-                .extracting(ex -> ((BusinessException) ex).getErrorCode())
-                .isEqualTo(ErrorCode.INVALID_INPUT_VALUE);
-
+        // 여전히 목록에 노출되지 않음
         assertThat(todoRepository.findAllByUserIdAndDate(userId, SECOND_DAY)).isEmpty();
     }
 }

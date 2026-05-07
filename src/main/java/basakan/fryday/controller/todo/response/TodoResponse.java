@@ -17,10 +17,12 @@ public class TodoResponse {
 
     public TodoResponse(Todo todo) {
         this.id = todo.getId();
-        this.description = todo.getDescription();
+        this.description = todo.isOverridden() && todo.getOverrideTitle() != null
+                ? todo.getOverrideTitle() : todo.getDescription();
         this.status = todo.getStatus().name();
         this.categoryId = todo.getCategory().getId();
-        this.memo = todo.getMemo();
+        this.memo = todo.isOverridden() && todo.getOverrideMemo() != null
+                ? todo.getOverrideMemo() : todo.getMemo();
         this.date = todo.getDate();
     }
 

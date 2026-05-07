@@ -12,7 +12,6 @@ import basakan.fryday.repository.auth.UserDeviceRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.common.security.RefreshTokenRepository;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
-import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -29,7 +28,6 @@ public class UserWriteService {
     private final AgreementJpaRepository agreementRepository;
     private final UserDeviceRepository userDeviceRepository;
     private final TodoAlarmRepository todoAlarmRepository;
-    private final RecurrenceExceptionRepository recurrenceExceptionRepository;
     private final TodoRepository todoRepository;
     private final RecurrenceRepository recurrenceRepository;
     private final CategoryRepository categoryRepository;
@@ -80,7 +78,6 @@ public class UserWriteService {
 
         // 연관 데이터 삭제 (FK 순서 고려)
         todoAlarmRepository.deleteAllByUserId(userId);
-        recurrenceExceptionRepository.deleteAllByUserId(userId);
         todoRepository.deleteAllByUserId(userId);
         recurrenceRepository.deleteAllByUserId(userId);
         categoryRepository.deleteAllByUserId(userId);

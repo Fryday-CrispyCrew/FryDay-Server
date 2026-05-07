@@ -8,7 +8,6 @@ import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.CategoryRepository;
-import basakan.fryday.repository.todo.RecurrenceExceptionRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -23,13 +22,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -49,13 +46,7 @@ class TodoServiceTest {
     private RecurrenceRepository recurrenceRepository;
 
     @Mock
-    private RecurrenceExceptionRepository recurrenceExceptionRepository;
-
-    @Mock
     private RecurrenceOccurrenceMaterializeService materializeService;
-
-    @Mock
-    private RecurrenceOccurrenceCalculator occurrenceCalculator;
 
     @InjectMocks
     private TodoService todoService;
@@ -170,7 +161,7 @@ class TodoServiceTest {
         }
 
         @Test
-        @DisplayName("미완료 반복 투두 - 이동")
+        @DisplayName("미완료 반복 투두 - 이동 후 recurrenceId 제거(detach)")
         void 미완료_반복투두_이동() {
             // given
             Long recurrenceId = 10L;
@@ -183,30 +174,15 @@ class TodoServiceTest {
                     .build();
             ReflectionTestUtils.setField(recurringTodo, "id", TODO_ID);
 
-            Recurrence recurrence = Recurrence.builder()
-                    .userId(USER_ID)
-                    .categoryId(CATEGORY_ID)
-                    .description("반복 운동")
-                    .type(RecurrenceType.DAILY)
-                    .startDate(today)
-                    .lastGeneratedDate(today)
-                    .build();
-
             given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(recurringTodo));
-            given(recurrenceRepository.findById(recurrenceId)).willReturn(Optional.of(recurrence));
-            given(recurrenceExceptionRepository.findByRecurrenceIdAndOccurrenceDate(recurrenceId, today))
-                    .willReturn(Optional.empty());
-            given(recurrenceExceptionRepository.findByRecurrenceId(recurrenceId)).willReturn(List.of());
-            given(occurrenceCalculator.calculateOccurrences(any(), eq(tomorrow), eq(tomorrow), any()))
-                    .willReturn(List.of(tomorrow));
 
             // when
             var result = todoService.postponeToTomorrow(TODO_ID, USER_ID);
 
-            // then
+            // then - 날짜 이동 + recurrenceId 제거(detach)
             assertThat(result.getId()).isEqualTo(TODO_ID);
             assertThat(result.getDate()).isEqualTo(tomorrow);
-            assertThat(recurringTodo.getDate()).isEqualTo(tomorrow);
+            assertThat(recurringTodo.getRecurrenceId()).isNull();
         }
 
         @Test
@@ -324,7 +300,7 @@ class TodoServiceTest {
         }
 
         @Test
-        @DisplayName("미완료 반복 투두 - 이동")
+        @DisplayName("미완료 반복 투두 - 이동 후 recurrenceId 제거(detach)")
         void 미완료_반복투두_이동() {
             // given
             Long recurrenceId = 10L;
@@ -337,29 +313,15 @@ class TodoServiceTest {
                     .build();
             ReflectionTestUtils.setField(recurringTodo, "id", TODO_ID);
 
-            Recurrence recurrence = Recurrence.builder()
-                    .userId(USER_ID)
-                    .categoryId(CATEGORY_ID)
-                    .description("반복 투두")
-                    .type(RecurrenceType.DAILY)
-                    .startDate(today)
-                    .lastGeneratedDate(tomorrow)
-                    .build();
-
             given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(recurringTodo));
-            given(recurrenceRepository.findById(recurrenceId)).willReturn(Optional.of(recurrence));
-            given(recurrenceExceptionRepository.findByRecurrenceIdAndOccurrenceDate(recurrenceId, tomorrow))
-                    .willReturn(Optional.empty());
-            given(recurrenceExceptionRepository.findByRecurrenceId(recurrenceId)).willReturn(List.of());
-            given(occurrenceCalculator.calculateOccurrences(any(), eq(today), eq(today), any()))
-                    .willReturn(List.of(today));
 
             // when
             var result = todoService.moveToToday(TODO_ID, USER_ID);
 
-            // then
+            // then - 날짜 이동 + detach
             assertThat(result.getId()).isEqualTo(TODO_ID);
             assertThat(result.getDate()).isEqualTo(today);
+            assertThat(recurringTodo.getRecurrenceId()).isNull();
         }
 
         @Test

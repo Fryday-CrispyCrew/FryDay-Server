@@ -37,6 +37,20 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.deletedAt IS NULL")
     List<Todo> findAllByRecurrenceId(@Param("recurrenceId") Long recurrenceId);
 
+    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN TRUE ELSE FALSE END FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date = :date")
+    boolean existsByRecurrenceIdAndDate(@Param("recurrenceId") Long recurrenceId, @Param("date") LocalDate date);
+
+    @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date = :date")
+    java.util.Optional<Todo> findByRecurrenceIdAndDate(@Param("recurrenceId") Long recurrenceId, @Param("date") LocalDate date);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.deletedAt = :now WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate AND t.deletedAt IS NULL")
+    int bulkSoftDeleteByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate, @Param("now") LocalDate now);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.deletedAt = :now WHERE t.recurrenceId = :recurrenceId AND t.deletedAt IS NULL")
+    int bulkSoftDeleteByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("now") LocalDate now);
+
     @Query("SELECT new basakan.fryday.service.report.dto.CategoryReportDto(" +
            "c.id, " +
            "c.name, " +
@@ -98,6 +112,18 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Todo t SET t.recurrenceId = :recurrenceId WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
     int updateRecurrenceIdByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("recurrenceId") Long recurrenceId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.description = :description WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
+    int bulkUpdateDescriptionByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("description") String description);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.memo = :memo WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
+    int bulkUpdateMemoByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("memo") String memo);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate")
+    int hardDeleteByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Todo t WHERE t.category.id IN " +
