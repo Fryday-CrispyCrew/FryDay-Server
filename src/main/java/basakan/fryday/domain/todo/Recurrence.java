@@ -94,6 +94,15 @@ public class Recurrence extends BaseEntity {
         this.isAlarmEnabled = notificationTime != null;
     }
 
+    /** 반복 규칙 자체를 변경 (type, frequencyValues, startDate, endDate) */
+    public void updateRule(RecurrenceType type, String frequencyValues, LocalDate startDate, LocalDate endDate) {
+        this.type = type;
+        this.frequencyValues = frequencyValues;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.endType = (endDate != null) ? EndType.UNTIL : EndType.NONE;
+    }
+
     /** this_and_future 수정/삭제 시 기존 Master를 exclusiveDate 하루 전에 종료 */
     public void terminateAt(LocalDate exclusiveDate) {
         this.endType = EndType.UNTIL;

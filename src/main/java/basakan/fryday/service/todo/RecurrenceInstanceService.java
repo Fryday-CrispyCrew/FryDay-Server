@@ -8,6 +8,7 @@ import basakan.fryday.controller.todo.request.InstanceEditRequest.Payload;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.EndType;
 import basakan.fryday.domain.todo.Recurrence;
+import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
@@ -75,16 +76,22 @@ public class RecurrenceInstanceService {
         oldMaster.terminateAt(T);
 
         // STEP 2: 새 Master(M_new) 생성 — payload로 덮어쓴 값 적용
+        // endDate: payload에 명시된 경우 우선, 없으면 기존 Master의 원본 종료 조건 인계
+        LocalDate newEndDate = payload.getEndDate() != null ? payload.getEndDate()
+                : (originalEndType == EndType.UNTIL ? originalEndDate : null);
+
         Recurrence newMaster = Recurrence.builder()
                 .userId(oldMaster.getUserId())
                 .categoryId(oldMaster.getCategoryId())
                 .description(payload.getTitle() != null ? payload.getTitle() : oldMaster.getDescription())
                 .memo(payload.getMemo() != null ? payload.getMemo() : oldMaster.getMemo())
-                .type(oldMaster.getType())
-                .frequencyValues(oldMaster.getFrequencyValues())
+                .type(payload.getType() != null ? payload.getType() : oldMaster.getType())
+                .frequencyValues(payload.getFrequencyValues() != null
+                        ? String.join(",", payload.getFrequencyValues())
+                        : oldMaster.getFrequencyValues())
                 .startDate(T)
-                .endDate(originalEndType == EndType.UNTIL ? originalEndDate : null)
-                .endType(originalEndType == EndType.UNTIL ? EndType.UNTIL : EndType.NONE)
+                .endDate(newEndDate)
+                .endType(newEndDate != null ? EndType.UNTIL : EndType.NONE)
                 .endCount(oldMaster.getEndCount())
                 .notificationTime(payload.getAlarmTime() != null ? payload.getAlarmTime() : oldMaster.getNotificationTime())
                 .isAlarmEnabled(payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : oldMaster.isAlarmEnabled())
@@ -109,19 +116,44 @@ public class RecurrenceInstanceService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        master.updateContent(
-                payload.getTitle(),
-                payload.getMemo(),
-                payload.getAlarmTime() != null ? payload.getAlarmTime() : master.getNotificationTime(),
-                payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : master.isAlarmEnabled()
-        );
+        boolean hasRuleChange = payload.getType() != null || payload.getFrequencyValues() != null
+                || payload.getStartDate() != null || payload.getEndDate() != null;
 
-        // 이미 materialized된 비override 인스턴스에도 변경 내용 반영
-        if (payload.getTitle() != null) {
-            todoRepository.bulkUpdateDescriptionByRecurrenceId(master.getId(), payload.getTitle());
-        }
-        if (payload.getMemo() != null) {
-            todoRepository.bulkUpdateMemoByRecurrenceId(master.getId(), payload.getMemo());
+        if (hasRuleChange) {
+            // 규칙 변경: Master 업데이트 후 오늘 이후 인스턴스 물리 삭제 → 새 규칙으로 재생성
+            RecurrenceType newType = payload.getType() != null ? payload.getType() : master.getType();
+            String newFrequency = payload.getFrequencyValues() != null
+                    ? String.join(",", payload.getFrequencyValues()) : master.getFrequencyValues();
+            LocalDate newStartDate = payload.getStartDate() != null ? payload.getStartDate() : master.getStartDate();
+            LocalDate newEndDate = payload.getEndDate();
+
+            master.updateRule(newType, newFrequency, newStartDate, newEndDate);
+            master.updateContent(payload.getTitle(), payload.getMemo(),
+                    payload.getAlarmTime() != null ? payload.getAlarmTime() : master.getNotificationTime(),
+                    payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : master.isAlarmEnabled());
+
+            LocalDate today = LocalDate.now();
+            LocalDate generateFrom = newStartDate.isAfter(today) ? newStartDate : today;
+            master.updateLastGeneratedDate(generateFrom);
+
+            // 오늘 이후 인스턴스 물리 삭제 (과거 완료 이력 보존)
+            todoRepository.hardDeleteByRecurrenceIdAndDateGte(master.getId(), today);
+            generateInstances(master, generateFrom, 365);
+        } else {
+            // 내용만 변경: Master 업데이트 + 비override 인스턴스 일괄 반영
+            master.updateContent(
+                    payload.getTitle(),
+                    payload.getMemo(),
+                    payload.getAlarmTime() != null ? payload.getAlarmTime() : master.getNotificationTime(),
+                    payload.getIsAlarmEnabled() != null ? payload.getIsAlarmEnabled() : master.isAlarmEnabled()
+            );
+
+            if (payload.getTitle() != null) {
+                todoRepository.bulkUpdateDescriptionByRecurrenceId(master.getId(), payload.getTitle());
+            }
+            if (payload.getMemo() != null) {
+                todoRepository.bulkUpdateMemoByRecurrenceId(master.getId(), payload.getMemo());
+            }
         }
     }
 

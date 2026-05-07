@@ -19,8 +19,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.time.LocalTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -87,15 +87,23 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                                 fieldWithPath("scope").type(JsonFieldType.STRING)
                                         .description("수정 범위: THIS(이번만) / THIS_AND_FUTURE(이번 이후 전체) / ALL(전체)"),
                                 fieldWithPath("payload").type(JsonFieldType.OBJECT)
-                                        .description("수정할 내용"),
+                                        .description("수정할 내용. content 필드와 rule 필드를 함께 사용할 수 있음"),
                                 fieldWithPath("payload.title").type(JsonFieldType.STRING)
-                                        .description("변경할 제목 (null이면 변경하지 않음)").optional(),
+                                        .description("[content] 변경할 제목").optional(),
                                 fieldWithPath("payload.memo").type(JsonFieldType.STRING)
-                                        .description("변경할 메모 (null이면 변경하지 않음)").optional(),
+                                        .description("[content] 변경할 메모").optional(),
                                 fieldWithPath("payload.isAlarmEnabled").type(JsonFieldType.BOOLEAN)
-                                        .description("알람 활성화 여부 (null이면 변경하지 않음)").optional(),
+                                        .description("[content] 알람 활성화 여부").optional(),
                                 fieldWithPath("payload.alarmTime").type(JsonFieldType.STRING)
-                                        .description("알람 시간 HH:mm:ss (null이면 변경하지 않음)").optional()
+                                        .description("[content] 알람 시간 HH:mm:ss").optional(),
+                                fieldWithPath("payload.type").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 주기 (DAILY/WEEKLY/MONTHLY/YEARLY). scope=THIS 에서는 무시됨").optional(),
+                                fieldWithPath("payload.frequencyValues").type(JsonFieldType.ARRAY)
+                                        .description("[rule] 반복 상세 값 (요일, 날짜 등). scope=THIS 에서는 무시됨").optional(),
+                                fieldWithPath("payload.startDate").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 시작일 (YYYY-MM-DD). scope=ALL 에서만 사용됨").optional(),
+                                fieldWithPath("payload.endDate").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 종료일 (YYYY-MM-DD). null이면 현재 종료 조건 유지. scope=THIS 에서는 무시됨").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -113,7 +121,9 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                 .edit(anyLong(), any(), any(), anyLong());
 
         Map<String, Object> payload = Map.of(
-                "title", "수정된 제목"
+                "title", "이후 수정 제목",
+                "type", "WEEKLY",
+                "frequencyValues", List.of("MONDAY", "WEDNESDAY")
         );
         Map<String, Object> request = Map.of(
                 "scope", "THIS_AND_FUTURE",
@@ -131,17 +141,23 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                         ),
                         requestFields(
                                 fieldWithPath("scope").type(JsonFieldType.STRING)
-                                        .description("수정 범위: THIS_AND_FUTURE — 이 인스턴스 날짜부터 이후 모든 인스턴스에 적용"),
+                                        .description("수정 범위: THIS_AND_FUTURE — 이 인스턴스 날짜부터 이후에 적용. 기존 Master 종료 후 새 Master 생성"),
                                 fieldWithPath("payload").type(JsonFieldType.OBJECT)
                                         .description("수정할 내용"),
                                 fieldWithPath("payload.title").type(JsonFieldType.STRING)
-                                        .description("변경할 제목").optional(),
+                                        .description("[content] 변경할 제목").optional(),
                                 fieldWithPath("payload.memo").type(JsonFieldType.STRING)
-                                        .description("변경할 메모").optional(),
+                                        .description("[content] 변경할 메모").optional(),
                                 fieldWithPath("payload.isAlarmEnabled").type(JsonFieldType.BOOLEAN)
-                                        .description("알람 활성화 여부").optional(),
+                                        .description("[content] 알람 활성화 여부").optional(),
                                 fieldWithPath("payload.alarmTime").type(JsonFieldType.STRING)
-                                        .description("알람 시간 HH:mm:ss").optional()
+                                        .description("[content] 알람 시간 HH:mm:ss").optional(),
+                                fieldWithPath("payload.type").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 주기 (DAILY/WEEKLY/MONTHLY/YEARLY)").optional(),
+                                fieldWithPath("payload.frequencyValues").type(JsonFieldType.ARRAY)
+                                        .description("[rule] 반복 상세 값 (요일, 날짜 등)").optional(),
+                                fieldWithPath("payload.endDate").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 종료일 (YYYY-MM-DD). null이면 기존 종료 조건 인계").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -180,15 +196,23 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                                 fieldWithPath("scope").type(JsonFieldType.STRING)
                                         .description("수정 범위: ALL — 반복 규칙 전체에 적용 (개별 override된 인스턴스는 유지)"),
                                 fieldWithPath("payload").type(JsonFieldType.OBJECT)
-                                        .description("수정할 내용"),
+                                        .description("수정할 내용. content 필드와 rule 필드를 함께 사용할 수 있음"),
                                 fieldWithPath("payload.title").type(JsonFieldType.STRING)
-                                        .description("변경할 제목").optional(),
+                                        .description("[content] 변경할 제목").optional(),
                                 fieldWithPath("payload.memo").type(JsonFieldType.STRING)
-                                        .description("변경할 메모").optional(),
+                                        .description("[content] 변경할 메모").optional(),
                                 fieldWithPath("payload.isAlarmEnabled").type(JsonFieldType.BOOLEAN)
-                                        .description("알람 활성화 여부").optional(),
+                                        .description("[content] 알람 활성화 여부").optional(),
                                 fieldWithPath("payload.alarmTime").type(JsonFieldType.STRING)
-                                        .description("알람 시간 HH:mm:ss").optional()
+                                        .description("[content] 알람 시간 HH:mm:ss").optional(),
+                                fieldWithPath("payload.type").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 주기 (DAILY/WEEKLY/MONTHLY/YEARLY)").optional(),
+                                fieldWithPath("payload.frequencyValues").type(JsonFieldType.ARRAY)
+                                        .description("[rule] 반복 상세 값 (요일, 날짜 등)").optional(),
+                                fieldWithPath("payload.startDate").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 시작일 (YYYY-MM-DD). scope=ALL 에서만 사용됨").optional(),
+                                fieldWithPath("payload.endDate").type(JsonFieldType.STRING)
+                                        .description("[rule] 반복 종료일 (YYYY-MM-DD). null이면 현재 종료 조건 유지").optional()
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
