@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 public class CategoryUpdateRequest {
 
     @NotBlank(message = "카테고리 이름은 필수입니다.")
-    @Size(max = 8, message = "카테고리 이름은 최대 8자까지 가능합니다.")
+    @Size(max = 12, message = "카테고리 이름은 최대 12자까지 가능합니다.")
     private String name;
 
     private CategoryColor color;
