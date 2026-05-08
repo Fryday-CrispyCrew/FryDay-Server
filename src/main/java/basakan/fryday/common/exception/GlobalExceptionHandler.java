@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.transaction.CannotCreateTransactionException;
+
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -246,7 +249,18 @@ public class GlobalExceptionHandler {
         return "요청 본문을 읽을 수 없습니다. JSON 형식이 올바른지 확인해주세요.";
     }
 
-    // 12. 그 외 모든 예외 처리
+    // 12. DB 연결 실패 (503 Service Unavailable)
+    @ExceptionHandler({DataAccessResourceFailureException.class, CannotCreateTransactionException.class})
+    protected ResponseEntity<ApiResponse<Void>> handleDatabaseConnectionException(Exception e, HttpServletRequest request) {
+        log.error("DB 연결 실패 [{} {}]: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+        ErrorCode errorCode = ErrorCode.SERVICE_UNAVAILABLE;
+
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.fail(errorCode.getMessage(), errorCode.name()));
+    }
+
+    // 13. 그 외 모든 예외 처리
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<ApiResponse<Void>> handleException(Exception e, HttpServletRequest request) {
         log.error("ERROR [{} {}] 예외타입: {} 메시지: {}", request.getMethod(), request.getRequestURI(),
