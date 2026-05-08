@@ -21,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -99,11 +102,13 @@ public class RecurrenceInstanceService {
 
         Recurrence savedNewMaster = recurrenceRepository.save(newMaster);
 
-        // STEP 3: T 이후 기존 인스턴스 일괄 soft delete
+        // STEP 3: T 이후 기존 인스턴스 일괄 soft delete (delete 전 displayOrder 보존)
+        Map<LocalDate, Long> preservedOrders = todoRepository.findAllByRecurrenceIdAndDateGte(oldMaster.getId(), T)
+                .stream().collect(Collectors.toMap(Todo::getDate, Todo::getDisplayOrder));
         todoRepository.bulkSoftDeleteByRecurrenceIdAndDateGte(oldMaster.getId(), T, LocalDate.now());
 
         // STEP 4: M_new 기준으로 T부터 새 인스턴스 배치 생성
-        generateInstances(savedNewMaster, T, 365);
+        generateInstances(savedNewMaster, T, 365, preservedOrders);
     }
 
     /** spec 4.5: Master 직접 수정 — override 있는 인스턴스는 건드리지 않음 */
@@ -134,9 +139,11 @@ public class RecurrenceInstanceService {
             LocalDate generateFrom = newStartDate.isAfter(today) ? newStartDate : today;
             master.updateLastGeneratedDate(generateFrom);
 
-            // 오늘 이후 인스턴스 물리 삭제 (과거 완료 이력 보존)
+            // 오늘 이후 인스턴스 물리 삭제 (과거 완료 이력 보존, delete 전 displayOrder 보존)
+            Map<LocalDate, Long> preservedOrders = todoRepository.findAllByRecurrenceIdAndDateGte(master.getId(), today)
+                    .stream().collect(Collectors.toMap(Todo::getDate, Todo::getDisplayOrder));
             todoRepository.hardDeleteByRecurrenceIdAndDateGte(master.getId(), today);
-            generateInstances(master, generateFrom, 365);
+            generateInstances(master, generateFrom, 365, preservedOrders);
         } else {
             // 내용만 변경: Master 업데이트 + 비override 인스턴스 일괄 반영
             master.updateContent(payload.getTitle(), payload.getMemo(),
@@ -194,6 +201,11 @@ public class RecurrenceInstanceService {
      * 이미 존재하는 날짜(삭제 포함)는 SKIP.
      */
     public List<Todo> generateInstances(Recurrence master, LocalDate startDate, int limitDays) {
+        return generateInstances(master, startDate, limitDays, Map.of());
+    }
+
+    public List<Todo> generateInstances(Recurrence master, LocalDate startDate, int limitDays,
+                                        Map<LocalDate, Long> preservedOrders) {
         LocalDate endLimit = startDate.plusDays(limitDays);
         LocalDate toDate = (master.getEndType() == EndType.UNTIL && master.getEndDate() != null
                 && master.getEndDate().isBefore(endLimit))
@@ -208,8 +220,10 @@ public class RecurrenceInstanceService {
         return occurrenceDates.stream()
                 .filter(date -> !todoRepository.existsByRecurrenceIdAndDate(master.getId(), date))
                 .map(date -> {
-                    Long maxOrder = todoRepository.findMaxDisplayOrder(master.getUserId(), date);
-                    long displayOrder = (maxOrder == null) ? 1 : maxOrder + 1;
+                    long displayOrder = preservedOrders.containsKey(date)
+                            ? preservedOrders.get(date)
+                            : Optional.ofNullable(todoRepository.findMaxDisplayOrder(master.getUserId(), date))
+                                    .map(max -> max + 1).orElse(1L);
 
                     Todo todo = Todo.builder()
                             .description(master.getDescription())

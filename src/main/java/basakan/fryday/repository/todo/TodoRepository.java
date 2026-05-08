@@ -37,6 +37,9 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.deletedAt IS NULL")
     List<Todo> findAllByRecurrenceId(@Param("recurrenceId") Long recurrenceId);
 
+    @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate AND t.deletedAt IS NULL")
+    List<Todo> findAllByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate);
+
     @Query("SELECT CASE WHEN COUNT(t) > 0 THEN TRUE ELSE FALSE END FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date = :date")
     boolean existsByRecurrenceIdAndDate(@Param("recurrenceId") Long recurrenceId, @Param("date") LocalDate date);
 
