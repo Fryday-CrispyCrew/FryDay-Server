@@ -2,10 +2,8 @@ package basakan.fryday.service.todo;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
-import basakan.fryday.controller.todo.request.CancelRecurrenceRequest.CancelScope;
-import basakan.fryday.controller.todo.request.InstanceDeleteRequest.DeleteScope;
-import basakan.fryday.controller.todo.request.InstanceEditRequest.EditScope;
 import basakan.fryday.controller.todo.request.InstanceEditRequest.Payload;
+import basakan.fryday.domain.todo.RecurrenceScope;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.EndType;
 import basakan.fryday.domain.todo.Recurrence;
@@ -37,7 +35,7 @@ public class RecurrenceInstanceService {
     private final RecurrenceOccurrenceCalculator occurrenceCalculator;
 
     @Transactional
-    public void edit(long instanceId, EditScope scope, Payload payload, long userId) {
+    public void edit(long instanceId, RecurrenceScope scope, Payload payload, long userId) {
         switch (scope) {
             case THIS -> editThis(instanceId, payload, userId);
             case THIS_AND_FUTURE -> editThisAndFuture(instanceId, payload, userId);
@@ -46,7 +44,7 @@ public class RecurrenceInstanceService {
     }
 
     @Transactional
-    public void delete(long instanceId, DeleteScope scope, long userId) {
+    public void delete(long instanceId, RecurrenceScope scope, long userId) {
         switch (scope) {
             case THIS -> deleteThis(instanceId, userId);
             case THIS_AND_FUTURE -> deleteThisAndFuture(instanceId, userId);
@@ -55,7 +53,7 @@ public class RecurrenceInstanceService {
     }
 
     @Transactional
-    public void cancelRecurrence(long instanceId, CancelScope scope, long userId) {
+    public void cancelRecurrence(long instanceId, RecurrenceScope scope, long userId) {
         switch (scope) {
             case THIS -> cancelThis(instanceId, userId);
             case THIS_AND_FUTURE -> cancelThisAndFuture(instanceId, userId);

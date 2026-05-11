@@ -7,6 +7,7 @@ import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.todo.request.CancelRecurrenceRequest;
 import basakan.fryday.controller.todo.request.InstanceDeleteRequest;
 import basakan.fryday.controller.todo.request.InstanceEditRequest;
+import basakan.fryday.domain.todo.RecurrenceScope;
 import basakan.fryday.service.todo.RecurrenceInstanceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -318,7 +319,7 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
     void cancelRecurrence_this() throws Exception {
         long instanceId = 1L;
         willDoNothing().given(recurrenceInstanceService)
-                .cancelRecurrence(anyLong(), any(CancelRecurrenceRequest.CancelScope.class), anyLong());
+                .cancelRecurrence(anyLong(), any(RecurrenceScope.class), anyLong());
 
         Map<String, Object> request = Map.of("scope", "THIS");
 
@@ -348,7 +349,7 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
     void cancelRecurrence_thisAndFuture() throws Exception {
         long instanceId = 1L;
         willDoNothing().given(recurrenceInstanceService)
-                .cancelRecurrence(anyLong(), any(CancelRecurrenceRequest.CancelScope.class), anyLong());
+                .cancelRecurrence(anyLong(), any(RecurrenceScope.class), anyLong());
 
         Map<String, Object> request = Map.of("scope", "THIS_AND_FUTURE");
 
@@ -378,7 +379,7 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
     void cancelRecurrence_all() throws Exception {
         long instanceId = 1L;
         willDoNothing().given(recurrenceInstanceService)
-                .cancelRecurrence(anyLong(), any(CancelRecurrenceRequest.CancelScope.class), anyLong());
+                .cancelRecurrence(anyLong(), any(RecurrenceScope.class), anyLong());
 
         Map<String, Object> request = Map.of("scope", "ALL");
 

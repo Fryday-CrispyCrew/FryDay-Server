@@ -1,5 +1,6 @@
 package basakan.fryday.controller.todo.request;
 
+import basakan.fryday.domain.todo.RecurrenceScope;
 import basakan.fryday.domain.todo.RecurrenceType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -15,17 +16,11 @@ import java.util.List;
 public class InstanceEditRequest {
 
     @NotNull
-    private EditScope scope;
+    private RecurrenceScope scope;
 
     @NotNull
     @Valid
     private Payload payload;
-
-    public enum EditScope {
-        THIS,
-        THIS_AND_FUTURE,
-        ALL
-    }
 
     @Getter
     @NoArgsConstructor

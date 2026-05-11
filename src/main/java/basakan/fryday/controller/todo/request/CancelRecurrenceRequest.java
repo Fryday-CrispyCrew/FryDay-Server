@@ -1,5 +1,6 @@
 package basakan.fryday.controller.todo.request;
 
+import basakan.fryday.domain.todo.RecurrenceScope;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,10 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CancelRecurrenceRequest {
 
-    public enum CancelScope {
-        THIS, THIS_AND_FUTURE, ALL
-    }
-
     @NotNull
-    private CancelScope scope;
+    private RecurrenceScope scope;
 }

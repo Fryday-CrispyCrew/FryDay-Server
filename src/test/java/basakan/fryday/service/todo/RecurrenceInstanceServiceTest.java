@@ -2,7 +2,7 @@ package basakan.fryday.service.todo;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
-import basakan.fryday.controller.todo.request.CancelRecurrenceRequest.CancelScope;
+import basakan.fryday.domain.todo.RecurrenceScope;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.EndType;
@@ -95,7 +95,7 @@ class RecurrenceInstanceServiceTest {
         void recurrenceId_null로_변경() {
             given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(instance));
 
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
 
             assertThat(instance.getRecurrenceId()).isNull();
         }
@@ -106,7 +106,7 @@ class RecurrenceInstanceServiceTest {
             instance.applyOverride("오버라이드 제목", "오버라이드 메모", null, null);
             given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(instance));
 
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
 
             assertThat(instance.getDescription()).isEqualTo("오버라이드 제목");
             assertThat(instance.getMemo()).isEqualTo("오버라이드 메모");
@@ -118,7 +118,7 @@ class RecurrenceInstanceServiceTest {
             instance.applyOverride("오버라이드 제목", "오버라이드 메모", true, null);
             given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(instance));
 
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
 
             assertThat(instance.getOverrideTitle()).isNull();
             assertThat(instance.getOverrideMemo()).isNull();
@@ -135,7 +135,7 @@ class RecurrenceInstanceServiceTest {
             ReflectionTestUtils.setField(nonRecurring, "id", INSTANCE_ID);
             given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(nonRecurring));
 
-            assertThatThrownBy(() -> service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS, USER_ID))
+            assertThatThrownBy(() -> service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.NOT_RECURRING_TODO);
         }
@@ -158,7 +158,7 @@ class RecurrenceInstanceServiceTest {
         void master_endDate_T_마이너스_1() {
             LocalDate T = instance.getDate(); // 2026-05-10
 
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS_AND_FUTURE, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS_AND_FUTURE, USER_ID);
 
             assertThat(master.getEndDate()).isEqualTo(T.minusDays(1)); // 2026-05-09
             assertThat(master.getEndType()).isEqualTo(EndType.UNTIL);
@@ -169,7 +169,7 @@ class RecurrenceInstanceServiceTest {
         void T_이후_인스턴스_soft_delete() {
             LocalDate T = instance.getDate();
 
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS_AND_FUTURE, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS_AND_FUTURE, USER_ID);
 
             then(todoRepository).should()
                     .bulkSoftDeleteByRecurrenceIdAndDateGte(eq(RECURRENCE_ID), eq(T.plusDays(1)), any());
@@ -178,7 +178,7 @@ class RecurrenceInstanceServiceTest {
         @Test
         @DisplayName("선택 Todo(T일)는 일반 Todo로 전환된다")
         void 선택_Todo_일반_전환() {
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS_AND_FUTURE, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS_AND_FUTURE, USER_ID);
 
             assertThat(instance.getRecurrenceId()).isNull();
         }
@@ -188,7 +188,7 @@ class RecurrenceInstanceServiceTest {
         void T_이전_인스턴스_유지() {
             LocalDate T = instance.getDate();
 
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS_AND_FUTURE, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS_AND_FUTURE, USER_ID);
 
             // T+1 이후만 삭제 → T-1 이전은 삭제되지 않음을 인자로 검증
             then(todoRepository).should()
@@ -201,7 +201,7 @@ class RecurrenceInstanceServiceTest {
             LocalDate T = instance.getDate();
             ReflectionTestUtils.setField(master, "startDate", T);
 
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.THIS_AND_FUTURE, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS_AND_FUTURE, USER_ID);
 
             // endDate = T-1 < startDate = T 이지만 예외 없이 실행됨
             assertThat(master.getEndDate()).isEqualTo(T.minusDays(1));
@@ -240,7 +240,7 @@ class RecurrenceInstanceServiceTest {
         @Test
         @DisplayName("선택 Todo의 recurrenceId가 null로 변경된다")
         void 선택_Todo_recurrenceId_null() {
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.ALL, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.ALL, USER_ID);
 
             assertThat(instance.getRecurrenceId()).isNull();
         }
@@ -248,7 +248,7 @@ class RecurrenceInstanceServiceTest {
         @Test
         @DisplayName("선택 Todo는 soft delete되지 않는다")
         void 선택_Todo_soft_delete_안됨() {
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.ALL, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.ALL, USER_ID);
 
             assertThat(instance.isDeleted()).isFalse();
         }
@@ -256,7 +256,7 @@ class RecurrenceInstanceServiceTest {
         @Test
         @DisplayName("나머지 모든 인스턴스가 soft delete된다")
         void 나머지_인스턴스_soft_delete() {
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.ALL, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.ALL, USER_ID);
 
             assertThat(other1.isDeleted()).isTrue();
             assertThat(other2.isDeleted()).isTrue();
@@ -265,7 +265,7 @@ class RecurrenceInstanceServiceTest {
         @Test
         @DisplayName("Master(Recurrence)가 삭제된다")
         void Master_삭제() {
-            service.cancelRecurrence(INSTANCE_ID, CancelScope.ALL, USER_ID);
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.ALL, USER_ID);
 
             then(recurrenceRepository).should().delete(master);
         }
