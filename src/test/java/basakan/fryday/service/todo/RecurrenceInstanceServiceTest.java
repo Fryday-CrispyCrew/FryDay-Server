@@ -9,6 +9,7 @@ import basakan.fryday.domain.todo.EndType;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.domain.todo.TodoAlarm;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +35,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RecurrenceInstanceService - cancelRecurrence")
@@ -90,40 +94,99 @@ class RecurrenceInstanceServiceTest {
     @DisplayName("cancelThis")
     class CancelThis {
 
-        @Test
-        @DisplayName("선택 Todo의 recurrenceId가 null로 변경된다")
-        void recurrenceId_null로_변경() {
+        @BeforeEach
+        void setUpMock() {
             given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(instance));
-
-            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
-
-            assertThat(instance.getRecurrenceId()).isNull();
+            lenient().when(todoRepository.save(any(Todo.class))).thenAnswer(inv -> inv.getArgument(0));
         }
 
         @Test
-        @DisplayName("override 값이 있으면 base 필드에 이관된다")
-        void override_base_필드_이관() {
+        @DisplayName("원본 인스턴스는 recurrenceId를 유지한 채 soft delete된다 (materializer 재생성 방지)")
+        void 원본_인스턴스_soft_delete_recurrenceId_유지() {
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
+
+            assertThat(instance.isDeleted()).isTrue();
+            assertThat(instance.getRecurrenceId()).isEqualTo(RECURRENCE_ID);
+        }
+
+        @Test
+        @DisplayName("새 독립 Todo가 recurrenceId null로 저장된다")
+        void 새_독립_Todo_저장() {
+            ArgumentCaptor<Todo> captor = ArgumentCaptor.forClass(Todo.class);
+
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
+
+            then(todoRepository).should().save(captor.capture());
+            assertThat(captor.getValue().getRecurrenceId()).isNull();
+        }
+
+        @Test
+        @DisplayName("override 값이 있으면 새 Todo의 description/memo에 반영된다")
+        void override_새_Todo에_반영() {
             instance.applyOverride("오버라이드 제목", "오버라이드 메모", null, null);
-            given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(instance));
+            ArgumentCaptor<Todo> captor = ArgumentCaptor.forClass(Todo.class);
 
             service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
 
-            assertThat(instance.getDescription()).isEqualTo("오버라이드 제목");
-            assertThat(instance.getMemo()).isEqualTo("오버라이드 메모");
+            then(todoRepository).should().save(captor.capture());
+            assertThat(captor.getValue().getDescription()).isEqualTo("오버라이드 제목");
+            assertThat(captor.getValue().getMemo()).isEqualTo("오버라이드 메모");
         }
 
         @Test
-        @DisplayName("override 필드가 null로 정리된다")
-        void override_필드_null_정리() {
-            instance.applyOverride("오버라이드 제목", "오버라이드 메모", true, null);
-            given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(instance));
+        @DisplayName("override 없으면 base memo가 새 Todo에 그대로 이관된다")
+        void base_memo_이관() {
+            Todo instanceWithMemo = Todo.builder()
+                    .description("마스터 제목")
+                    .category(category)
+                    .date(LocalDate.of(2026, 5, 10))
+                    .displayOrder(1L)
+                    .recurrenceId(RECURRENCE_ID)
+                    .memo("기본 메모")
+                    .build();
+            ReflectionTestUtils.setField(instanceWithMemo, "id", INSTANCE_ID);
+            given(todoRepository.findById(INSTANCE_ID)).willReturn(Optional.of(instanceWithMemo));
+            ArgumentCaptor<Todo> captor = ArgumentCaptor.forClass(Todo.class);
 
             service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
 
-            assertThat(instance.getOverrideTitle()).isNull();
-            assertThat(instance.getOverrideMemo()).isNull();
-            assertThat(instance.getOverrideIsAlarm()).isNull();
-            assertThat(instance.isOverridden()).isFalse();
+            then(todoRepository).should().save(captor.capture());
+            assertThat(captor.getValue().getMemo()).isEqualTo("기본 메모");
+        }
+
+        @Test
+        @DisplayName("완료 상태가 새 Todo에 유지된다")
+        void 완료_상태_유지() {
+            instance.toggleCompletion();
+            ArgumentCaptor<Todo> captor = ArgumentCaptor.forClass(Todo.class);
+
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
+
+            then(todoRepository).should().save(captor.capture());
+            assertThat(captor.getValue().isCompleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("알람이 있으면 새 독립 Todo로 이관된다")
+        void 알람_이관() {
+            TodoAlarm alarm = mock(TodoAlarm.class);
+            given(todoAlarmRepository.findByTodoId(INSTANCE_ID)).willReturn(Optional.of(alarm));
+            ArgumentCaptor<Todo> captor = ArgumentCaptor.forClass(Todo.class);
+
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
+
+            then(todoRepository).should().save(captor.capture());
+            then(alarm).should().reassignTo(captor.getValue());
+        }
+
+        @Test
+        @DisplayName("알람이 없으면 이관 없이 정상 완료된다")
+        void 알람_없으면_정상_완료() {
+            given(todoAlarmRepository.findByTodoId(INSTANCE_ID)).willReturn(Optional.empty());
+
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
+
+            then(todoAlarmRepository).shouldHaveNoMoreInteractions();
         }
 
         @Test

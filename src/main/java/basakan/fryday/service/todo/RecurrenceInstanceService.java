@@ -204,10 +204,35 @@ public class RecurrenceInstanceService {
 
     // ── Cancel ─────────────────────────────────────────────────────────────────
 
-    /** 해당 인스턴스만 일반 Todo로 전환, 나머지 반복 유지 */
+    /**
+     * 해당 인스턴스만 일반 Todo로 전환, 나머지 반복 유지.
+     */
     private void cancelThis(long instanceId, long userId) {
         Todo instance = findActiveInstance(instanceId, userId);
-        instance.detachFromRecurrence();
+
+        String finalDescription = instance.getOverrideTitle() != null
+                ? instance.getOverrideTitle() : instance.getDescription();
+        String finalMemo = instance.getOverrideMemo() != null
+                ? instance.getOverrideMemo() : instance.getMemo();
+        boolean wasCompleted = instance.isCompleted();
+
+        instance.delete();
+
+        Todo standalone = Todo.builder()
+                .description(finalDescription)
+                .category(instance.getCategory())
+                .date(instance.getDate())
+                .displayOrder(instance.getDisplayOrder())
+                .memo(finalMemo)
+                .build();
+        Todo saved = todoRepository.save(standalone);
+
+        if (wasCompleted) {
+            saved.toggleCompletion();
+        }
+
+        todoAlarmRepository.findByTodoId(instanceId)
+                .ifPresent(alarm -> alarm.reassignTo(saved));
     }
 
     /** Master 종료(endDate=T-1) + T+1 이후 soft delete + 선택 인스턴스(T) 일반 Todo 전환 */

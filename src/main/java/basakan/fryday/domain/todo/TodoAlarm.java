@@ -83,4 +83,8 @@ public class TodoAlarm extends BaseEntity {
     public boolean canRetry() {
         return this.status == AlarmStatus.PENDING && this.failCount < MAX_RETRY_COUNT;
     }
+
+    public void reassignTo(Todo newTodo) {
+        this.todo = newTodo;
+    }
 }
