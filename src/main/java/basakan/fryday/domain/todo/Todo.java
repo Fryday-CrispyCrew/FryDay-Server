@@ -127,4 +127,18 @@ public class Todo extends BaseEntity {
         this.isOverridden = true;
     }
 
+    /** override 값을 base 필드에 이관하고 반복 연결을 끊어 독립 Todo로 전환 */
+    public void detachFromRecurrence() {
+        if (this.overrideTitle != null) this.description = this.overrideTitle;
+        if (this.overrideMemo != null) this.memo = this.overrideMemo;
+
+        this.overrideTitle = null;
+        this.overrideMemo = null;
+        this.overrideIsAlarm = null;
+        this.overrideAlarmTime = null;
+        this.isOverridden = false;
+
+        this.recurrenceId = null;
+    }
+
 }
