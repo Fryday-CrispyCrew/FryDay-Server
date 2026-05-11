@@ -4,6 +4,7 @@ import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
+import basakan.fryday.controller.todo.request.CancelRecurrenceRequest;
 import basakan.fryday.controller.todo.request.InstanceDeleteRequest;
 import basakan.fryday.controller.todo.request.InstanceEditRequest;
 import basakan.fryday.service.todo.RecurrenceInstanceService;
@@ -310,5 +311,109 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
+    }
+
+    @Test
+    @DisplayName("반복 해제 - 이번만 (THIS)")
+    void cancelRecurrence_this() throws Exception {
+        long instanceId = 1L;
+        willDoNothing().given(recurrenceInstanceService)
+                .cancelRecurrence(anyLong(), any(CancelRecurrenceRequest.CancelScope.class), anyLong());
+
+        Map<String, Object> request = Map.of("scope", "THIS");
+
+        mockMvc.perform(patch("/api/todos/instances/{instanceId}/cancel-recurrence", instanceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("instance-cancel-recurrence-this",
+                        pathParameters(
+                                parameterWithName("instanceId").description("반복 해제할 인스턴스(투두) ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("scope").type(JsonFieldType.STRING)
+                                        .description("해제 범위: THIS(이번만) / THIS_AND_FUTURE(이번 이후 전체) / ALL(전체)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("반복 해제 - 이번 이후 전체 (THIS_AND_FUTURE)")
+    void cancelRecurrence_thisAndFuture() throws Exception {
+        long instanceId = 1L;
+        willDoNothing().given(recurrenceInstanceService)
+                .cancelRecurrence(anyLong(), any(CancelRecurrenceRequest.CancelScope.class), anyLong());
+
+        Map<String, Object> request = Map.of("scope", "THIS_AND_FUTURE");
+
+        mockMvc.perform(patch("/api/todos/instances/{instanceId}/cancel-recurrence", instanceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("instance-cancel-recurrence-this-and-future",
+                        pathParameters(
+                                parameterWithName("instanceId").description("반복 해제할 인스턴스(투두) ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("scope").type(JsonFieldType.STRING)
+                                        .description("해제 범위: THIS_AND_FUTURE — 이 날짜부터 이후 인스턴스 삭제, 선택 Todo는 일반 Todo로 전환")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("반복 해제 - 전체 (ALL)")
+    void cancelRecurrence_all() throws Exception {
+        long instanceId = 1L;
+        willDoNothing().given(recurrenceInstanceService)
+                .cancelRecurrence(anyLong(), any(CancelRecurrenceRequest.CancelScope.class), anyLong());
+
+        Map<String, Object> request = Map.of("scope", "ALL");
+
+        mockMvc.perform(patch("/api/todos/instances/{instanceId}/cancel-recurrence", instanceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("instance-cancel-recurrence-all",
+                        pathParameters(
+                                parameterWithName("instanceId").description("반복 해제할 인스턴스(투두) ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("scope").type(JsonFieldType.STRING)
+                                        .description("해제 범위: ALL — 선택 Todo는 일반 Todo로 전환, 나머지 전체 삭제 및 반복 규칙 삭제")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("반복 해제 실패 - scope 누락")
+    void cancelRecurrence_scopeMissing() throws Exception {
+        long instanceId = 1L;
+
+        Map<String, Object> request = Map.of();
+
+        mockMvc.perform(patch("/api/todos/instances/{instanceId}/cancel-recurrence", instanceId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
     }
 }
