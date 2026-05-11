@@ -246,8 +246,12 @@ public class RecurrenceInstanceService {
         }
 
         master.terminateAt(T);
+        // clearAutomatically = true로 영속성 컨텍스트가 초기화되므로 이후 재조회
         todoRepository.bulkSoftDeleteByRecurrenceIdAndDateGte(master.getId(), T.plusDays(1), LocalDate.now());
-        instance.detachFromRecurrence();
+
+        todoRepository.findById(instanceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND))
+                .detachFromRecurrence();
     }
 
     /** 선택 인스턴스 일반 Todo 전환 + 나머지 전체 soft delete + Master 물리 삭제 */

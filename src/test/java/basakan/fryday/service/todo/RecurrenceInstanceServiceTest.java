@@ -239,11 +239,23 @@ class RecurrenceInstanceServiceTest {
         }
 
         @Test
-        @DisplayName("선택 Todo(T일)는 일반 Todo로 전환된다")
+        @DisplayName("선택 Todo(T일)는 벌크 삭제 후 재조회한 인스턴스에 detach가 적용된다")
         void 선택_Todo_일반_전환() {
+            // clearAutomatically = true 이후 재조회를 시뮬레이션하기 위해
+            // 두 번째 findById 호출에서 별도 객체 반환
+            Todo reloaded = Todo.builder()
+                    .description("마스터 제목").category(category)
+                    .date(LocalDate.of(2026, 5, 10)).displayOrder(1L)
+                    .recurrenceId(RECURRENCE_ID).build();
+            ReflectionTestUtils.setField(reloaded, "id", INSTANCE_ID);
+            given(todoRepository.findById(INSTANCE_ID))
+                    .willReturn(Optional.of(instance))   // findActiveInstance
+                    .willReturn(Optional.of(reloaded));  // 벌크 삭제 후 재조회
+
             service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS_AND_FUTURE, USER_ID);
 
-            assertThat(instance.getRecurrenceId()).isNull();
+            assertThat(reloaded.getRecurrenceId()).isNull();  // 재조회한 인스턴스에 detach 적용
+            assertThat(instance.getRecurrenceId()).isEqualTo(RECURRENCE_ID);  // 원본은 변경 없음
         }
 
         @Test
