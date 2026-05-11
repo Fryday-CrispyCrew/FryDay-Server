@@ -2,6 +2,7 @@ package basakan.fryday.service.todo;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.todo.request.CancelRecurrenceRequest.CancelScope;
 import basakan.fryday.controller.todo.request.InstanceDeleteRequest.DeleteScope;
 import basakan.fryday.controller.todo.request.InstanceEditRequest.EditScope;
 import basakan.fryday.controller.todo.request.InstanceEditRequest.Payload;
@@ -50,6 +51,15 @@ public class RecurrenceInstanceService {
             case THIS -> deleteThis(instanceId, userId);
             case THIS_AND_FUTURE -> deleteThisAndFuture(instanceId, userId);
             case ALL -> deleteAll(instanceId, userId);
+        }
+    }
+
+    @Transactional
+    public void cancelRecurrence(long instanceId, CancelScope scope, long userId) {
+        switch (scope) {
+            case THIS -> cancelThis(instanceId, userId);
+            case THIS_AND_FUTURE -> cancelThisAndFuture(instanceId, userId);
+            case ALL -> cancelAll(instanceId, userId);
         }
     }
 
@@ -192,6 +202,53 @@ public class RecurrenceInstanceService {
 
         master.markDeleted();
         todoRepository.bulkSoftDeleteByRecurrenceId(master.getId(), LocalDate.now());
+    }
+
+    // ── Cancel ─────────────────────────────────────────────────────────────────
+
+    /** 해당 인스턴스만 일반 Todo로 전환, 나머지 반복 유지 */
+    private void cancelThis(long instanceId, long userId) {
+        Todo instance = findActiveInstance(instanceId, userId);
+        instance.detachFromRecurrence();
+    }
+
+    /** Master 종료(endDate=T-1) + T+1 이후 soft delete + 선택 인스턴스(T) 일반 Todo 전환 */
+    private void cancelThisAndFuture(long instanceId, long userId) {
+        Todo instance = findActiveInstance(instanceId, userId);
+        LocalDate T = instance.getDate();
+
+        Recurrence master = findMaster(instance);
+        if (master.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        master.terminateAt(T);
+        todoRepository.bulkSoftDeleteByRecurrenceIdAndDateGte(master.getId(), T.plusDays(1), LocalDate.now());
+        instance.detachFromRecurrence();
+    }
+
+    /** 선택 인스턴스 일반 Todo 전환 + 나머지 전체 soft delete + Master 물리 삭제 */
+    private void cancelAll(long instanceId, long userId) {
+        Todo instance = findActiveInstance(instanceId, userId);
+        Long recurrenceId = instance.getRecurrenceId();
+
+        Recurrence recurrence = recurrenceRepository.findById(recurrenceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (recurrence.getUserId() != userId) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
+        List<Todo> todos = todoRepository.findAllByRecurrenceId(recurrenceId);
+        for (Todo todo : todos) {
+            if (todo.getId().equals(instance.getId())) {
+                todo.detachFromRecurrence();
+            } else {
+                todo.delete();
+            }
+        }
+
+        recurrenceRepository.delete(recurrence);
     }
 
     // ── generateInstances ──────────────────────────────────────────────────────
