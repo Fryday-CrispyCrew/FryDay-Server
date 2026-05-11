@@ -98,7 +98,7 @@ public class CategoryService {
         List<Category> defaultCategories = List.of(
                 Category.builder()
                         .name("카테고리")
-                        .color(CategoryColor.BR)
+                        .color(CategoryColor.OR)
                         .userId(userId)
                         .build()
         );
