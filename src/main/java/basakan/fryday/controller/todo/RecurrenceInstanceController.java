@@ -1,6 +1,7 @@
 package basakan.fryday.controller.todo;
 
 import basakan.fryday.common.response.ApiResponse;
+import basakan.fryday.controller.todo.request.CancelRecurrenceRequest;
 import basakan.fryday.controller.todo.request.InstanceDeleteRequest;
 import basakan.fryday.controller.todo.request.InstanceEditRequest;
 import basakan.fryday.service.todo.RecurrenceInstanceService;
@@ -34,5 +35,15 @@ public class RecurrenceInstanceController {
     ) {
         recurrenceInstanceService.delete(instanceId, request.getScope(), userId);
         return ApiResponse.success(null);
+    }
+
+    @PatchMapping("/{instanceId}/cancel-recurrence")
+    public ApiResponse<Void> cancelRecurrence(
+            @PathVariable long instanceId,
+            @RequestBody @Valid CancelRecurrenceRequest request,
+            @AuthenticationPrincipal Long userId
+    ) {
+        recurrenceInstanceService.cancelRecurrence(instanceId, request.getScope(), userId);
+        return ApiResponse.success(null, "반복이 해제되었습니다.");
     }
 }

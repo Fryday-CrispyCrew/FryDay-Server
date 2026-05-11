@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class InstanceDeleteRequest {
+public class CancelRecurrenceRequest {
 
     @NotNull
     private RecurrenceScope scope;
