@@ -29,6 +29,9 @@ management:
     tags:
       application: fryday-prod
 
+jwt:
+  secret-key: ${JWT_SECRET_KEY_PROD}
+
 logging:
   file:
     name: /home/ubuntu/logs/prod/application.log

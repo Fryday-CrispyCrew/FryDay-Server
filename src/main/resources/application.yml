@@ -16,7 +16,6 @@ spring:
       thread-name-prefix: fryday-scheduler-
 
 jwt:
-  secret-key: ${JWT_SECRET_KEY:your-default-jwt-secret-key}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:1296000000}
 
