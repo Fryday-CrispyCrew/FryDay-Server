@@ -261,7 +261,7 @@ public class TodoService {
         if (categoryId == null) {
             todos = todoRepository.findAllByUserIdAndDate(userId, date);
         } else {
-            todos = todoRepository.findAllByCategoryIdAndDate(categoryId, date);
+            todos = todoRepository.findAllByCategoryIdAndDate(categoryId, userId, date);
         }
 
         List<TodoListResponse> allResponses = todos.stream()
