@@ -22,9 +22,9 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     List<Todo> findAllByUserIdAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
 
     @Query("SELECT t FROM Todo t " +
-            "WHERE t.category.id = :categoryId AND t.date = :date AND t.deletedAt IS NULL " +
+            "WHERE t.category.id = :categoryId AND t.category.userId = :userId AND t.date = :date AND t.deletedAt IS NULL " +
             "ORDER BY t.displayOrder ASC")
-    List<Todo> findAllByCategoryIdAndDate(@Param("categoryId") Long categoryId, @Param("date") LocalDate date);
+    List<Todo> findAllByCategoryIdAndDate(@Param("categoryId") Long categoryId, @Param("userId") Long userId, @Param("date") LocalDate date);
 
     @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
             "WHERE t.date = :date AND t.status = :status AND t.deletedAt IS NULL")

@@ -24,6 +24,9 @@ management:
     tags:
       application: fryday-dev
 
+jwt:
+  secret-key: ${JWT_SECRET_KEY_DEV}
+
 logging:
   file:
     name: /home/ubuntu/logs/dev/application.log
