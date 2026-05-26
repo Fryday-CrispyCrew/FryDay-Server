@@ -3,6 +3,7 @@ package basakan.fryday.common.service.push;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.domain.user.UserDevice;
 import basakan.fryday.repository.auth.UserDeviceRepository;
+import basakan.fryday.service.fcm.UserDeviceWriteService;
 import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.ApnsConfig;
@@ -16,10 +17,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -27,6 +29,7 @@ import java.util.List;
 public class FcmPushService implements PushService {
 
     private final UserDeviceRepository userDeviceRepository;
+    private final UserDeviceWriteService userDeviceWriteService;
 
     @Value("${fcm.enabled:false}")
     private boolean fcmEnabled;
@@ -46,9 +49,11 @@ public class FcmPushService implements PushService {
             return;
         }
 
+        Set<String> sentTokens = new HashSet<>();
         for (UserDevice device : devices) {
-            if (device.getFcmToken() != null && !device.getFcmToken().isEmpty()) {
-                sendToTokenInternal(device.getId(), device.getFcmToken(), device.getDeviceId(), title, body);
+            String token = device.getFcmToken();
+            if (token != null && !token.isBlank() && sentTokens.add(token)) {
+                sendToTokenInternal(device.getId(), token, device.getDeviceId(), title, body);
             }
         }
     }
@@ -60,8 +65,8 @@ public class FcmPushService implements PushService {
             return;
         }
 
-        if (fcmToken == null || fcmToken.isEmpty()) {
-            log.warn("FCM token is null or empty. Cannot send notification.");
+        if (fcmToken == null || fcmToken.isBlank()) {
+            log.warn("FCM token is null or blank. Cannot send notification.");
             return;
         }
 
@@ -76,15 +81,17 @@ public class FcmPushService implements PushService {
         }
     }
 
-    private void sendToTokenInternal(Long deviceId, String fcmToken, String deviceIdStr, String title, String body) {
+    private void sendToTokenInternal(Long deviceId, String fcmToken, String physicalDeviceId, String title, String body) {
         try {
             Message message = buildMessage(fcmToken, title, body);
 
             String response = FirebaseMessaging.getInstance().send(message);
-            log.info("Push notification sent successfully: response={}, deviceId={}", response, deviceIdStr);
+            log.info("Push notification sent successfully: response={}, deviceId={}", response, physicalDeviceId);
 
         } catch (FirebaseMessagingException e) {
             handleFcmException(e, fcmToken, deviceId);
+        } catch (RuntimeException e) {
+            log.error("Unexpected error sending push notification: deviceId={}, error={}", physicalDeviceId, e.getMessage(), e);
         }
     }
 
@@ -110,57 +117,56 @@ public class FcmPushService implements PushService {
     }
 
     private void handleFcmException(FirebaseMessagingException e, String fcmToken, Long deviceId) {
+        String maskedToken = maskToken(fcmToken);
         MessagingErrorCode errorCode = e.getMessagingErrorCode();
 
         if (errorCode == null) {
-            log.error("FCM error without error code: token={}, message={}", fcmToken, e.getMessage(), e);
-            throw new RuntimeException("FCM push failed: " + e.getMessage(), e);
+            log.error("FCM error without error code: token={}, message={}", maskedToken, e.getMessage(), e);
+            return;
         }
 
         switch (errorCode) {
             case UNREGISTERED:
-                log.warn("FCM token unregistered, deactivating device: token={}", fcmToken);
+                log.warn("FCM token unregistered, deactivating device: token={}", maskedToken);
                 if (deviceId != null) {
-                    deactivateDevice(deviceId);
+                    userDeviceWriteService.deactivateDeviceById(deviceId);
                 }
                 break;
 
             case INVALID_ARGUMENT:
-                log.warn("FCM invalid token format, deactivating device: token={}", fcmToken);
+                log.warn("FCM invalid token format, deactivating device: token={}", maskedToken);
                 if (deviceId != null) {
-                    deactivateDevice(deviceId);
+                    userDeviceWriteService.deactivateDeviceById(deviceId);
                 }
                 break;
 
             case SENDER_ID_MISMATCH:
-                log.error("FCM sender ID mismatch - check Firebase configuration: token={}", fcmToken);
+                log.error("FCM sender ID mismatch - check Firebase configuration: token={}", maskedToken);
                 break;
 
             case QUOTA_EXCEEDED:
-                log.warn("FCM quota exceeded, will retry later: token={}", fcmToken);
-                throw new RuntimeException("FCM quota exceeded", e);
+                log.warn("FCM quota exceeded, will retry later: token={}", maskedToken);
+                break;
 
             case UNAVAILABLE:
             case INTERNAL:
-                log.warn("FCM temporary error ({}), will retry later: token={}", errorCode, fcmToken);
-                throw new RuntimeException("FCM temporary error: " + errorCode, e);
+                log.warn("FCM temporary error ({}), will retry later: token={}", errorCode, maskedToken);
+                break;
 
             case THIRD_PARTY_AUTH_ERROR:
-                log.error("FCM third party auth error (APNs): token={}", fcmToken);
+                log.error("FCM third party auth error (APNs): token={}", maskedToken);
                 break;
 
             default:
-                log.error("FCM unknown error: code={}, token={}, message={}", errorCode, fcmToken, e.getMessage(), e);
-                throw new RuntimeException("FCM push failed: " + errorCode, e);
+                log.error("FCM unknown error: code={}, token={}, message={}", errorCode, maskedToken, e.getMessage(), e);
+                break;
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void deactivateDevice(Long deviceId) {
-        userDeviceRepository.findById(deviceId)
-                .ifPresent(device -> {
-                    device.deactivate();
-                    log.info("Device deactivated: deviceId={}", deviceId);
-                });
+    private static String maskToken(String token) {
+        if (token == null || token.length() < 8) {
+            return "[short-token]";
+        }
+        return "..." + token.substring(token.length() - 8);
     }
 }
