@@ -3,6 +3,9 @@ package basakan.fryday.repository.auth;
 import basakan.fryday.domain.user.UserDevice;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -32,4 +35,6 @@ public interface UserDeviceRepository extends JpaRepository<UserDevice, Long> {
     void deleteAllByUserId(Long userId);
 
     List<UserDevice> findAllByIsActiveTrueAndPushNotificationAgreedTrueAndFcmTokenIsNotNull();
+
+    Slice<UserDevice> findAllByIsActiveTrueAndPushNotificationAgreedTrueAndFcmTokenIsNotNull(Pageable pageable);
 }
