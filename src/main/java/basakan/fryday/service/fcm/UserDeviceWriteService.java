@@ -5,9 +5,13 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.domain.user.UserDevice;
 import basakan.fryday.repository.auth.UserDeviceRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -43,6 +47,15 @@ public class UserDeviceWriteService {
 
     public void deactivateDevice(UserDevice userDevice) {
         userDevice.deactivate();
+    }
+
+    @Transactional(propagation = REQUIRES_NEW)
+    public void deactivateDeviceById(Long deviceId) {
+        userDeviceRepository.findById(deviceId)
+                .ifPresent(device -> {
+                    device.deactivate();
+                    log.info("Device deactivated: deviceId={}", deviceId);
+                });
     }
 
     public void deactivateAllByUserId(Long userId) {
