@@ -150,6 +150,8 @@ public class RecurrenceInstanceService {
             // 오늘 이후 인스턴스 물리 삭제 (과거 완료 이력 보존, delete 전 displayOrder 보존)
             Map<LocalDate, Long> preservedOrders = todoRepository.findAllByRecurrenceIdAndDateGte(master.getId(), today)
                     .stream().collect(Collectors.toMap(Todo::getDate, Todo::getDisplayOrder));
+            // FK(todo_alarms.todo_id) 위반 방지: todo 삭제 전 알림부터 제거
+            todoAlarmRepository.deleteByRecurrenceIdAndDateGte(master.getId(), today);
             todoRepository.hardDeleteByRecurrenceIdAndDateGte(master.getId(), today);
             generateInstances(master, generateFrom, 365, preservedOrders);
         } else {
