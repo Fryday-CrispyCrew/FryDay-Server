@@ -110,7 +110,7 @@ class DailyResultControllerTest extends RestDocsSupport {
                                 fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
 
                                 fieldWithPath("data[].date").type(JsonFieldType.STRING).description("날짜"),
-                                fieldWithPath("data[].bowlType").type(JsonFieldType.STRING).description("그릇 타입 (EMPTY, LESS, MORE, FULL, BURNT"),
+                                fieldWithPath("data[].bowlType").type(JsonFieldType.STRING).description("그릇 타입 (EMPTY, COOKING, LESS, MORE, FULL, BURNT)"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                                 )
                 ));
