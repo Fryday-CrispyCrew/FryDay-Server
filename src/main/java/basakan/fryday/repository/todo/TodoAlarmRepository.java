@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,11 @@ public interface TodoAlarmRepository extends JpaRepository<TodoAlarm, Long> {
     @Modifying
     @Query("DELETE FROM TodoAlarm ta WHERE ta.todo.id = :todoId")
     void deleteByTodoId(Long todoId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM TodoAlarm ta WHERE ta.todo.id IN " +
+            "(SELECT t.id FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate)")
+    void deleteByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM TodoAlarm ta WHERE ta.user.id = :userId")
