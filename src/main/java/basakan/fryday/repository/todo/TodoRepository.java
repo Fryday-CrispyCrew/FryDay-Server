@@ -40,9 +40,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate AND t.deletedAt IS NULL")
     List<Todo> findAllByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate);
 
-    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN TRUE ELSE FALSE END FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date = :date")
-    boolean existsByRecurrenceIdAndDate(@Param("recurrenceId") Long recurrenceId, @Param("date") LocalDate date);
-
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date = :date")
     java.util.Optional<Todo> findByRecurrenceIdAndDate(@Param("recurrenceId") Long recurrenceId, @Param("date") LocalDate date);
 
@@ -124,9 +121,16 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("UPDATE Todo t SET t.memo = :memo WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
     int bulkUpdateMemoByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("memo") String memo);
 
+    /** 규칙 분기(fork) 시 살아남은 인스턴스를 새 Master로 옮긴다. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("DELETE FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate")
-    int hardDeleteByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate);
+    @Query("UPDATE Todo t SET t.recurrenceId = :newRecurrenceId " +
+            "WHERE t.id IN :ids")
+    int reassignRecurrenceId(@Param("ids") List<Long> ids, @Param("newRecurrenceId") Long newRecurrenceId);
+
+    /** 규칙에서 벗어난 인스턴스를 일괄 soft delete 한다. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.deletedAt = :now WHERE t.id IN :ids AND t.deletedAt IS NULL")
+    int softDeleteByIds(@Param("ids") List<Long> ids, @Param("now") LocalDate now);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Todo t WHERE t.category.id IN " +
