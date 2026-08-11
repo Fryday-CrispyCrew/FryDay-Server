@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -19,12 +20,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecurrenceOccurrenceMaterializeScheduler {
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
     private final UserJpaRepository userJpaRepository;
     private final RecurrenceOccurrenceMaterializeService materializeService;
 
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void materializeTodayRecurrenceOccurrences() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(KOREA_ZONE);
         log.info("Recurrence Occurrence Materialization start: {}", today);
 
         List<User> users = userJpaRepository.findAll();
