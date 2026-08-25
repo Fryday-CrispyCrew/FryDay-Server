@@ -4,12 +4,10 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.InstanceEditRequest.Payload;
 import basakan.fryday.domain.todo.RecurrenceScope;
-import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.todo.EndType;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
-import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -19,10 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +26,6 @@ public class RecurrenceInstanceService {
 
     private final TodoRepository todoRepository;
     private final RecurrenceRepository recurrenceRepository;
-    private final CategoryRepository categoryRepository;
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceOccurrenceCalculator occurrenceCalculator;
 
@@ -110,13 +105,10 @@ public class RecurrenceInstanceService {
 
         Recurrence savedNewMaster = recurrenceRepository.save(newMaster);
 
-        // STEP 3: T 이후 기존 인스턴스 일괄 soft delete (delete 전 displayOrder 보존)
-        Map<LocalDate, Long> preservedOrders = todoRepository.findAllByRecurrenceIdAndDateGte(oldMaster.getId(), T)
-                .stream().collect(Collectors.toMap(Todo::getDate, Todo::getDisplayOrder));
-        todoRepository.bulkSoftDeleteByRecurrenceIdAndDateGte(oldMaster.getId(), T, LocalDate.now());
-
-        // STEP 4: M_new 기준으로 T부터 새 인스턴스 배치 생성
-        generateInstances(savedNewMaster, T, 365, preservedOrders);
+        // STEP 3: T 이후 인스턴스를 새 규칙에 비춰 재배치한다.
+        //         지우고 다시 만들면 displayOrder·알람·완료 상태가 날아가므로,
+        //         새 규칙에 여전히 해당하는 회차는 그대로 두고 소속만 옮긴다.
+        realignInstances(oldMaster.getId(), savedNewMaster, T, payload);
     }
 
     /** spec 4.5: Master 직접 수정 — override 있는 인스턴스는 건드리지 않음 */
@@ -144,16 +136,11 @@ public class RecurrenceInstanceService {
                     resolveNotificationTime(payload, master.getNotificationTime()));
 
             LocalDate today = LocalDate.now();
-            LocalDate generateFrom = newStartDate.isAfter(today) ? newStartDate : today;
-            master.updateLastGeneratedDate(generateFrom);
+            LocalDate realignFrom = newStartDate.isAfter(today) ? newStartDate : today;
 
-            // 오늘 이후 인스턴스 물리 삭제 (과거 완료 이력 보존, delete 전 displayOrder 보존)
-            Map<LocalDate, Long> preservedOrders = todoRepository.findAllByRecurrenceIdAndDateGte(master.getId(), today)
-                    .stream().collect(Collectors.toMap(Todo::getDate, Todo::getDisplayOrder));
-            // FK(todo_alarms.todo_id) 위반 방지: todo 삭제 전 알림부터 제거
-            todoAlarmRepository.deleteByRecurrenceIdAndDateGte(master.getId(), today);
-            todoRepository.hardDeleteByRecurrenceIdAndDateGte(master.getId(), today);
-            generateInstances(master, generateFrom, 365, preservedOrders);
+            // 오늘 이후 인스턴스를 새 규칙에 비춰 재배치한다 (과거 완료 이력은 보존).
+            // Master가 그대로이므로 소속을 옮길 필요는 없고, 규칙에서 벗어난 회차만 정리한다.
+            realignInstances(master.getId(), master, realignFrom, payload);
         } else {
             // 내용만 변경: Master 업데이트 + 비override 인스턴스 일괄 반영
             master.updateContent(payload.getTitle(), payload.getMemo(),
@@ -280,49 +267,68 @@ public class RecurrenceInstanceService {
         recurrenceRepository.delete(recurrence);
     }
 
-    // ── generateInstances ──────────────────────────────────────────────────────
+    // ── realignInstances ───────────────────────────────────────────────────────
 
     /**
-     * spec 6: master 기준으로 startDate부터 limitDays 범위 내 인스턴스 배치 생성.
-     * 이미 존재하는 날짜(삭제 포함)는 SKIP.
+     * fromDate 이후의 기존 인스턴스를 새 규칙에 비춰 재배치한다.
+     * 지우고 다시 만드는 대신 차이만 반영한다. 새 규칙에도 해당하는 회차는 행을 그대로 두므로
+     * displayOrder·알람·override·완료 상태가 자연히 유지되고, 규칙에서 벗어난 회차만 정리된다.
+     * 새로 규칙에 들어온 날짜는 조회 시점에 생성된다(지연 생성).
+     *
+     * @param sourceRecurrenceId 재배치 대상 인스턴스가 현재 매달려 있는 Master
+     * @param newMaster          새 규칙. sourceRecurrenceId와 다르면 살아남은 회차의 소속을 옮긴다
      */
-    public List<Todo> generateInstances(Recurrence master, LocalDate startDate, int limitDays) {
-        return generateInstances(master, startDate, limitDays, Map.of());
+    private void realignInstances(Long sourceRecurrenceId, Recurrence newMaster,
+                                  LocalDate fromDate, Payload payload) {
+        List<Todo> candidates = todoRepository.findAllByRecurrenceIdAndDateGte(sourceRecurrenceId, fromDate);
+
+        List<Long> keptIds = new ArrayList<>();
+        List<Long> droppedIds = new ArrayList<>();
+
+        for (Todo instance : candidates) {
+            if (matchesRule(newMaster, instance.getDate())) {
+                keptIds.add(instance.getId());
+                applyContentChange(instance, payload);
+            } else {
+                droppedIds.add(instance.getId());
+            }
+        }
+
+        if (!droppedIds.isEmpty()) {
+            todoRepository.softDeleteByIds(droppedIds, LocalDate.now());
+        }
+
+        if (!keptIds.isEmpty() && !newMaster.getId().equals(sourceRecurrenceId)) {
+            todoRepository.reassignRecurrenceId(keptIds, newMaster.getId());
+        }
     }
 
-    public List<Todo> generateInstances(Recurrence master, LocalDate startDate, int limitDays,
-                                        Map<LocalDate, Long> preservedOrders) {
-        LocalDate endLimit = startDate.plusDays(limitDays);
-        LocalDate toDate = (master.getEndType() == EndType.UNTIL && master.getEndDate() != null
-                && master.getEndDate().isBefore(endLimit))
-                ? master.getEndDate()
-                : endLimit;
+    /** 새 규칙의 기간과 주기 양쪽을 만족하는 날짜인지 판정한다. */
+    private boolean matchesRule(Recurrence master, LocalDate date) {
+        if (date.isBefore(master.getStartDate())) {
+            return false;
+        }
+        if (master.getEndType() == EndType.UNTIL && master.getEndDate() != null
+                && date.isAfter(master.getEndDate())) {
+            return false;
+        }
+        return occurrenceCalculator.isMatch(master, date);
+    }
 
-        Category category = categoryRepository.findById(master.getCategoryId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
-
-        List<LocalDate> occurrenceDates = occurrenceCalculator.calculateOccurrences(master, startDate, toDate);
-
-        return occurrenceDates.stream()
-                .filter(date -> !todoRepository.existsByRecurrenceIdAndDate(master.getId(), date))
-                .map(date -> {
-                    long displayOrder = preservedOrders.containsKey(date)
-                            ? preservedOrders.get(date)
-                            : Optional.ofNullable(todoRepository.findMaxDisplayOrder(master.getUserId(), date))
-                                    .map(max -> max + 1).orElse(1L);
-
-                    Todo todo = Todo.builder()
-                            .description(master.getDescription())
-                            .category(category)
-                            .date(date)
-                            .displayOrder(displayOrder)
-                            .recurrenceId(master.getId())
-                            .memo(master.getMemo())
-                            .build();
-
-                    return todoRepository.save(todo);
-                })
-                .toList();
+    /**
+     * 살아남은 회차에 내용 변경을 반영한다.
+     * 사용자가 개별 수정한(override) 회차는 건드리지 않는다.
+     */
+    private void applyContentChange(Todo instance, Payload payload) {
+        if (instance.isOverridden()) {
+            return;
+        }
+        if (payload.getTitle() != null) {
+            instance.updateDescription(payload.getTitle());
+        }
+        if (payload.getMemo() != null) {
+            instance.updateMemo(payload.getMemo());
+        }
     }
 
     // ── 공통 헬퍼 ──────────────────────────────────────────────────────────────

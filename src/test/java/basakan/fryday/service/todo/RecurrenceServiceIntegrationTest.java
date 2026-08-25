@@ -50,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         JpaConfig.class,
         RecurrenceService.class,
         TodoService.class,
+        RecurrenceOccurrenceWriter.class,
         RecurrenceOccurrenceMaterializeService.class,
         RecurrenceOccurrenceCalculator.class,
         UserReadService.class
@@ -66,7 +67,7 @@ class RecurrenceServiceIntegrationTest {
     @Autowired
     private TodoService todoService;
     @Autowired
-    private RecurrenceOccurrenceMaterializeService materializeService;
+    private RecurrenceOccurrenceWriter occurrenceWriter;
 
     @Autowired
     private UserJpaRepository userJpaRepository;
@@ -113,7 +114,7 @@ class RecurrenceServiceIntegrationTest {
 
         assertThat(todoRepository.findAllByUserIdAndDate(userId, ANCHOR)).isEmpty();
 
-        Todo materialized = materializeService.materializeOccurrenceIfNotExists(userId, recurrenceId, ANCHOR);
+        Todo materialized = occurrenceWriter.materializeIfAbsent(userId, recurrenceId, ANCHOR);
 
         assertThat(materialized.getDate()).isEqualTo(ANCHOR);
         assertThat(materialized.getRecurrenceId()).isEqualTo(recurrenceId);
@@ -148,7 +149,7 @@ class RecurrenceServiceIntegrationTest {
         Long recurrenceId = refreshedAnchor.getRecurrenceId();
 
         // SECOND_DAY 인스턴스 생성
-        materializeService.materializeOccurrenceIfNotExists(userId, recurrenceId, SECOND_DAY);
+        occurrenceWriter.materializeIfAbsent(userId, recurrenceId, SECOND_DAY);
         Todo secondDayTodo = todoRepository.findAllByUserIdAndDate(userId, SECOND_DAY).stream()
                 .filter(t -> recurrenceId.equals(t.getRecurrenceId()))
                 .findFirst()
@@ -161,10 +162,11 @@ class RecurrenceServiceIntegrationTest {
         assertThat(todoRepository.findAllByUserIdAndDate(userId, SECOND_DAY)).isEmpty();
 
         // 재생성 시도 → 삭제된 인스턴스가 DB에 존재하므로 null 반환 (SKIP)
-        Todo result = materializeService.materializeOccurrenceIfNotExists(userId, recurrenceId, SECOND_DAY);
+        Todo result = occurrenceWriter.materializeIfAbsent(userId, recurrenceId, SECOND_DAY);
         assertThat(result).isNull();
 
         // 여전히 목록에 노출되지 않음
         assertThat(todoRepository.findAllByUserIdAndDate(userId, SECOND_DAY)).isEmpty();
     }
+
 }

@@ -20,9 +20,7 @@ import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -30,7 +28,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TodoService {
@@ -230,31 +227,6 @@ public class TodoService {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void materializeRecurrenceOccurrences(Long userId, LocalDate date, Long categoryId) {
-        List<Recurrence> recurrences = recurrenceRepository.findByUserIdAndDateRange(userId, date);
-
-        if (categoryId != null) {
-            recurrences = recurrences.stream()
-                    .filter(r -> r.getCategoryId() == categoryId)
-                    .collect(Collectors.toList());
-        }
-
-        for (Recurrence recurrence : recurrences) {
-            try {
-                materializeService.materializeOccurrenceIfNotExists(userId, recurrence.getId(), date);
-            } catch (BusinessException e) {
-                if (e.getErrorCode() == ErrorCode.INVALID_INPUT_VALUE) {
-                    continue;
-                }
-                throw e;
-            } catch (Exception e) {
-                log.error("반복 투두 materialize 중 예상치 못한 예외 발생 - recurrenceId: {}, date: {}. 스킵하고 계속 진행",
-                        recurrence.getId(), date, e);
-            }
-        }
-    }
-
     @Transactional(readOnly = true)
     public List<TodoListResponse> getTodoListInternal(Long userId, LocalDate date, Long categoryId) {
         List<Todo> todos;
@@ -274,7 +246,7 @@ public class TodoService {
     }
 
     public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
-        materializeRecurrenceOccurrences(userId, date, categoryId);
+        materializeService.materializeOccurrencesForDate(userId, date, categoryId);
         return getTodoListInternal(userId, date, categoryId);
     }
 
