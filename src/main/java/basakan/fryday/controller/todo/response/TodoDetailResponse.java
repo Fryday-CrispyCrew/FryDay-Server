@@ -24,8 +24,27 @@ public class TodoDetailResponse {
     private final Boolean overrideIsAlarm;
     private final LocalTime overrideAlarmTime;
 
+    /** 반복 인스턴스의 알림 적용 상태. 비반복 투두는 null */
+    private final AlarmSource alarmSource;
+
     private final TodoAlarmInfo alarm;
     private final RecurrenceInfo recurrence;
+
+    public enum AlarmSource {
+        INHERIT,   // Master 반복 알림 적용 중
+        OVERRIDE,  // 개별 알림 적용 중
+        NONE       // 알림 없음 (개별적으로 껐거나 Master 알림이 없음)
+    }
+
+    private static AlarmSource resolveAlarmSource(Todo todo, Recurrence recurrence) {
+        if (recurrence == null) {
+            return null;
+        }
+        if (todo.getOverrideIsAlarm() == null) {
+            return recurrence.isAlarmEnabled() ? AlarmSource.INHERIT : AlarmSource.NONE;
+        }
+        return todo.getOverrideIsAlarm() ? AlarmSource.OVERRIDE : AlarmSource.NONE;
+    }
 
     @Getter
     @Builder
@@ -84,8 +103,9 @@ public class TodoDetailResponse {
                         ? todo.getOverrideMemo() : todo.getMemo())
                 .date(todo.getDate())
                 .isOverridden(todo.isOverridden())
-                .overrideIsAlarm(todo.isOverridden() ? todo.getOverrideIsAlarm() : null)
-                .overrideAlarmTime(todo.isOverridden() ? todo.getOverrideAlarmTime() : null)
+                .overrideIsAlarm(todo.getOverrideIsAlarm())
+                .overrideAlarmTime(todo.getOverrideAlarmTime())
+                .alarmSource(resolveAlarmSource(todo, recurrence))
                 .alarm(TodoAlarmInfo.from(todoAlarm))
                 .recurrence(RecurrenceInfo.from(recurrence))
                 .build();
