@@ -98,10 +98,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     int updateDescriptionByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("description") String description);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE Todo t SET t.memo = :memo WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
-    int updateMemoByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("memo") String memo);
-
-    @Modifying(clearAutomatically = true)
     @Query("UPDATE Todo t SET t.date = :date WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.recurrenceId IS NULL AND t.category.userId = :userId")
     int updateDateByIdAndUserIdForNonRecurring(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("date") LocalDate date);
 
@@ -113,11 +109,12 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("UPDATE Todo t SET t.recurrenceId = :recurrenceId WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
     int updateRecurrenceIdByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("recurrenceId") Long recurrenceId);
 
-    @Modifying(clearAutomatically = true)
+    // flushAutomatically: editAll에서 직전 master.updateContent(dirty)가 clear로 유실되지 않도록 벌크 실행 전 flush
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Todo t SET t.description = :description WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
     int bulkUpdateDescriptionByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("description") String description);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Todo t SET t.memo = :memo WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
     int bulkUpdateMemoByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("memo") String memo);
 

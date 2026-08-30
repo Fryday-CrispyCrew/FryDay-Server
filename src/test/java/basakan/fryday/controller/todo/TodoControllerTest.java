@@ -264,7 +264,8 @@ class TodoControllerTest extends RestDocsSupport {
                                 parameterWithName("todoId").description("메모를 수정할 투두 ID")
                         ),
                         requestFields(
-                                fieldWithPath("memo").type(JsonFieldType.STRING).description("수정할 메모 내용")
+                                fieldWithPath("memo").type(JsonFieldType.STRING)
+                                        .description("설정할 메모 전체 값. null/빈 문자열이면 비움")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),

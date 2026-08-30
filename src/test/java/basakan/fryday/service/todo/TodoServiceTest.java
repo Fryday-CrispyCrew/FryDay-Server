@@ -7,6 +7,8 @@ import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.controller.todo.request.MemoRequest;
+import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
@@ -368,6 +370,85 @@ class TodoServiceTest {
             assertThatThrownBy(() -> todoService.moveToToday(TODO_ID, USER_ID))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TODO_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("updateMemo")
+    class UpdateMemo {
+
+        @Test
+        @DisplayName("일반 투두 - base memo를 직접 갱신하고 override는 남기지 않는다")
+        void 일반투두_base_memo_갱신() {
+            // given
+            Todo todo = Todo.builder()
+                    .description("일반 할 일")
+                    .category(category)
+                    .date(today)
+                    .displayOrder(1L)
+                    .memo("기존 메모")
+                    .build();
+            ReflectionTestUtils.setField(todo, "id", TODO_ID);
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(todo));
+
+            // when
+            MemoResponse result = todoService.updateMemo(TODO_ID, USER_ID, new MemoRequest("새 메모"));
+
+            // then
+            assertThat(result.getMemo()).isEqualTo("새 메모");
+            assertThat(todo.getMemo()).isEqualTo("새 메모");
+            assertThat(todo.isOverridden()).isFalse();
+            assertThat(todo.getOverrideMemo()).isNull();
+        }
+
+        @Test
+        @DisplayName("반복 인스턴스 - base memo는 두고 override로 기록한다")
+        void 반복인스턴스_override_기록() {
+            // given - 상속받은 base memo를 가진 반복 인스턴스
+            Todo instance = Todo.builder()
+                    .description("반복 할 일")
+                    .category(category)
+                    .date(today)
+                    .displayOrder(1L)
+                    .recurrenceId(10L)
+                    .memo("마스터 메모")
+                    .build();
+            ReflectionTestUtils.setField(instance, "id", TODO_ID);
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(instance));
+
+            // when
+            MemoResponse result = todoService.updateMemo(TODO_ID, USER_ID, new MemoRequest("개별 메모"));
+
+            // then - override에만 저장, base(상속) memo는 보존
+            assertThat(result.getMemo()).isEqualTo("개별 메모");
+            assertThat(instance.getOverrideMemo()).isEqualTo("개별 메모");
+            assertThat(instance.isOverridden()).isTrue();
+            assertThat(instance.getMemo()).isEqualTo("마스터 메모");
+        }
+
+        @Test
+        @DisplayName("반복 인스턴스 - 메모 삭제(null)는 빈 override로 남겨 마스터 메모를 재상속하지 않는다")
+        void 반복인스턴스_삭제는_빈_override() {
+            // given
+            Todo instance = Todo.builder()
+                    .description("반복 할 일")
+                    .category(category)
+                    .date(today)
+                    .displayOrder(1L)
+                    .recurrenceId(10L)
+                    .memo("마스터 메모")
+                    .build();
+            ReflectionTestUtils.setField(instance, "id", TODO_ID);
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(instance));
+
+            // when - memo=null (삭제 의도)
+            MemoResponse result = todoService.updateMemo(TODO_ID, USER_ID, new MemoRequest(null));
+
+            // then - 빈 문자열 override → 응답은 빈 값, 마스터 메모 재상속 안 함
+            assertThat(result.getMemo()).isEmpty();
+            assertThat(instance.getOverrideMemo()).isEmpty();
+            assertThat(instance.isOverridden()).isTrue();
+            assertThat(instance.getMemo()).isEqualTo("마스터 메모");
         }
     }
 }

@@ -71,13 +71,28 @@ public class TodoService {
 
     @Transactional
     public MemoResponse updateMemo(Long todoId, Long userId, MemoRequest request) {
-        int updated = todoRepository.updateMemoByIdAndUserId(todoId, userId, request.getMemo());
-        if (updated == 0) {
+        Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
-        Todo todo = todoRepository.findById(todoId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-        return MemoResponse.from(todo.getId(), todo.getMemo());
+
+        if (todo.getRecurrenceId() != null) {
+            // 반복 인스턴스: base memo를 직접 덮어쓰면 상속 메모가 오염되고, 마스터 전체 수정 시
+            // 재상속되므로 개별 override로 기록한다.
+            todo.applyMemoOverride(request.getMemo());
+        } else {
+            todo.updateMemo(request.getMemo());
+        }
+
+        return MemoResponse.from(todo.getId(), resolveEffectiveMemo(todo));
+    }
+
+    private String resolveEffectiveMemo(Todo todo) {
+        return todo.isOverridden() && todo.getOverrideMemo() != null
+                ? todo.getOverrideMemo() : todo.getMemo();
     }
 
     @Transactional

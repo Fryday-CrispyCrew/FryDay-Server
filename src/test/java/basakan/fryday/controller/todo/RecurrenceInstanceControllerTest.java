@@ -91,9 +91,9 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                                 fieldWithPath("payload").type(JsonFieldType.OBJECT)
                                         .description("수정할 내용. content 필드와 rule 필드를 함께 사용할 수 있음"),
                                 fieldWithPath("payload.title").type(JsonFieldType.STRING)
-                                        .description("[content] 변경할 제목").optional(),
+                                        .description("[content] 변경할 제목. null이면 미변경, 빈 문자열이면 삭제").optional(),
                                 fieldWithPath("payload.memo").type(JsonFieldType.STRING)
-                                        .description("[content] 변경할 메모").optional(),
+                                        .description("[content] 변경할 메모. null이면 미변경, 빈 문자열이면 삭제").optional(),
                                 fieldWithPath("payload.isAlarmEnabled").type(JsonFieldType.BOOLEAN)
                                         .description("[content] 알람 활성화 여부").optional(),
                                 fieldWithPath("payload.alarmTime").type(JsonFieldType.STRING)
@@ -147,9 +147,9 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                                 fieldWithPath("payload").type(JsonFieldType.OBJECT)
                                         .description("수정할 내용"),
                                 fieldWithPath("payload.title").type(JsonFieldType.STRING)
-                                        .description("[content] 변경할 제목").optional(),
+                                        .description("[content] 변경할 제목. null이면 미변경, 빈 문자열이면 삭제").optional(),
                                 fieldWithPath("payload.memo").type(JsonFieldType.STRING)
-                                        .description("[content] 변경할 메모").optional(),
+                                        .description("[content] 변경할 메모. null이면 미변경, 빈 문자열이면 삭제").optional(),
                                 fieldWithPath("payload.isAlarmEnabled").type(JsonFieldType.BOOLEAN)
                                         .description("[content] 알람 활성화 여부").optional(),
                                 fieldWithPath("payload.alarmTime").type(JsonFieldType.STRING)
@@ -200,9 +200,9 @@ class RecurrenceInstanceControllerTest extends RestDocsSupport {
                                 fieldWithPath("payload").type(JsonFieldType.OBJECT)
                                         .description("수정할 내용. content 필드와 rule 필드를 함께 사용할 수 있음"),
                                 fieldWithPath("payload.title").type(JsonFieldType.STRING)
-                                        .description("[content] 변경할 제목").optional(),
+                                        .description("[content] 변경할 제목. null이면 미변경, 빈 문자열이면 삭제").optional(),
                                 fieldWithPath("payload.memo").type(JsonFieldType.STRING)
-                                        .description("[content] 변경할 메모").optional(),
+                                        .description("[content] 변경할 메모. null이면 미변경, 빈 문자열이면 삭제").optional(),
                                 fieldWithPath("payload.isAlarmEnabled").type(JsonFieldType.BOOLEAN)
                                         .description("[content] 알람 활성화 여부").optional(),
                                 fieldWithPath("payload.alarmTime").type(JsonFieldType.STRING)
