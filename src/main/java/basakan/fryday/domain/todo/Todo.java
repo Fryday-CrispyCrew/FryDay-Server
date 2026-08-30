@@ -132,6 +132,11 @@ public class Todo extends BaseEntity {
         this.isOverridden = true;
     }
 
+    /**
+     * 반복 인스턴스를 개별 수정(override)한다. 각 인자는 부분 수정 규약을 따른다.
+     *   - null: 해당 필드를 변경하지 않음(기존 override/상속 값 유지)
+     *   - 빈 문자열(title/memo): 값을 삭제. 빈 override 로 남겨 마스터 값을 다시 상속하지 않음
+     */
     public void applyOverride(String title, String memo, Boolean isAlarm, LocalTime alarmTime) {
         if (title != null) this.overrideTitle = title;
         if (memo != null) this.overrideMemo = memo;
