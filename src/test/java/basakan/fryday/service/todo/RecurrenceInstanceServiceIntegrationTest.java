@@ -54,7 +54,9 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @Import({
         JpaConfig.class,
         RecurrenceInstanceService.class,
-        RecurrenceOccurrenceCalculator.class
+        RecurrenceOccurrenceCalculator.class,
+        TodoAlarmSynchronizer.class,
+        basakan.fryday.service.user.UserReadService.class
 })
 @DisplayName("RecurrenceInstanceService 통합")
 class RecurrenceInstanceServiceIntegrationTest {

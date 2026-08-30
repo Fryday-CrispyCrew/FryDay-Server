@@ -136,13 +136,32 @@ public class Todo extends BaseEntity {
      * 반복 인스턴스를 개별 수정(override)한다. 각 인자는 부분 수정 규약을 따른다.
      *   - null: 해당 필드를 변경하지 않음(기존 override/상속 값 유지)
      *   - 빈 문자열(title/memo): 값을 삭제. 빈 override 로 남겨 마스터 값을 다시 상속하지 않음
+     *   - 알림은 isAlarm 기준 3-state: null=상속 유지, true=개별 알림(alarmTime), false=알림 사용 안 함
      */
     public void applyOverride(String title, String memo, Boolean isAlarm, LocalTime alarmTime) {
         if (title != null) this.overrideTitle = title;
         if (memo != null) this.overrideMemo = memo;
-        if (isAlarm != null) this.overrideIsAlarm = isAlarm;
-        if (alarmTime != null) this.overrideAlarmTime = alarmTime;
-        this.isOverridden = true;
+        if (isAlarm != null) {
+            this.overrideIsAlarm = isAlarm;
+            this.overrideAlarmTime = isAlarm ? alarmTime : null;
+        }
+        this.isOverridden = hasAnyOverride();
+    }
+
+    private boolean hasAnyOverride() {
+        return overrideTitle != null || overrideMemo != null || overrideIsAlarm != null;
+    }
+
+    public boolean inheritsAlarm() {
+        return overrideIsAlarm == null;
+    }
+
+    /** 이 회차의 유효 알림 시각. null이면 알림이 없다. */
+    public LocalTime resolveEffectiveAlarmTime(LocalTime masterNotificationTime) {
+        if (overrideIsAlarm == null) {
+            return masterNotificationTime;
+        }
+        return overrideIsAlarm ? overrideAlarmTime : null;
     }
 
     /** override 값을 base 필드에 이관하고 반복 연결을 끊어 독립 Todo로 전환 */
