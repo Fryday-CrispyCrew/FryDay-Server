@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,10 +26,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecurrenceInstanceService {
 
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
+
     private final TodoRepository todoRepository;
     private final RecurrenceRepository recurrenceRepository;
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceOccurrenceCalculator occurrenceCalculator;
+    private final TodoAlarmSynchronizer alarmSynchronizer;
 
     @Transactional
     public void edit(long instanceId, RecurrenceScope scope, Payload payload, long userId) {
@@ -58,11 +63,32 @@ public class RecurrenceInstanceService {
 
     // ── Edit ──────────────────────────────────────────────────────────────────
 
-    /** spec 4.3: 해당 instance의 override 필드만 갱신 */
+    /** spec 4.2: 해당 instance의 override 필드 갱신 + 개별 알림을 발송 행에 반영 */
     private void editThis(long instanceId, Payload payload, long userId) {
         Todo instance = findActiveInstance(instanceId, userId);
+        validateAlarmOverride(payload, instance);
+
         instance.applyOverride(payload.getTitle(), payload.getMemo(),
                 payload.getIsAlarmEnabled(), payload.getAlarmTime());
+
+        if (payload.getIsAlarmEnabled() != null) {
+            // override가 확정된 상태이므로 Master 시각은 판정에 쓰이지 않는다
+            alarmSynchronizer.sync(instance, userId, instance.resolveEffectiveAlarmTime(null));
+        }
+    }
+
+    /** 개별 알림 설정 시 시각 필수, 지난 시각 거부 */
+    private void validateAlarmOverride(Payload payload, Todo instance) {
+        if (!Boolean.TRUE.equals(payload.getIsAlarmEnabled())) {
+            return;
+        }
+        if (payload.getAlarmTime() == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        LocalDateTime notifyAt = LocalDateTime.of(instance.getDate(), payload.getAlarmTime());
+        if (notifyAt.isBefore(LocalDateTime.now(KOREA_ZONE))) {
+            throw new BusinessException(ErrorCode.ALARM_TIME_IN_PAST);
+        }
     }
 
     /** spec 4.4: 기존 Master 종료 → 새 Master 생성 → T 이후 인스턴스 재생성 */
@@ -108,7 +134,7 @@ public class RecurrenceInstanceService {
         // STEP 3: T 이후 인스턴스를 새 규칙에 비춰 재배치한다.
         //         지우고 다시 만들면 displayOrder·알람·완료 상태가 날아가므로,
         //         새 규칙에 여전히 해당하는 회차는 그대로 두고 소속만 옮긴다.
-        realignInstances(oldMaster.getId(), savedNewMaster, T, payload);
+        realignInstances(oldMaster.getId(), savedNewMaster, T, payload, userId);
     }
 
     /** spec 4.5: Master 직접 수정 — override 있는 인스턴스는 건드리지 않음 */
@@ -140,7 +166,7 @@ public class RecurrenceInstanceService {
 
             // 오늘 이후 인스턴스를 새 규칙에 비춰 재배치한다 (과거 완료 이력은 보존).
             // Master가 그대로이므로 소속을 옮길 필요는 없고, 규칙에서 벗어난 회차만 정리한다.
-            realignInstances(master.getId(), master, realignFrom, payload);
+            realignInstances(master.getId(), master, realignFrom, payload, userId);
         } else {
             // 내용만 변경: Master 업데이트 + 비override 인스턴스 일괄 반영
             master.updateContent(payload.getTitle(), payload.getMemo(),
@@ -152,7 +178,24 @@ public class RecurrenceInstanceService {
             if (payload.getMemo() != null) {
                 todoRepository.bulkUpdateMemoByRecurrenceId(master.getId(), payload.getMemo());
             }
+            if (hasAlarmChange(payload)) {
+                propagateAlarmsToInheritingInstances(master, userId, LocalDate.now());
+            }
         }
+    }
+
+    /** Master 알림 변경을 오늘 이후의 상속(비override) 회차 발송 행에 전파한다. */
+    private void propagateAlarmsToInheritingInstances(Recurrence master, long userId, LocalDate fromDate) {
+        List<Todo> instances = todoRepository.findAllByRecurrenceIdAndDateGte(master.getId(), fromDate);
+        for (Todo instance : instances) {
+            if (instance.inheritsAlarm()) {
+                alarmSynchronizer.sync(instance, userId, master.getNotificationTime());
+            }
+        }
+    }
+
+    private boolean hasAlarmChange(Payload payload) {
+        return payload.getIsAlarmEnabled() != null || payload.getAlarmTime() != null;
     }
 
     // ── Delete ─────────────────────────────────────────────────────────────────
@@ -279,7 +322,7 @@ public class RecurrenceInstanceService {
      * @param newMaster          새 규칙. sourceRecurrenceId와 다르면 살아남은 회차의 소속을 옮긴다
      */
     private void realignInstances(Long sourceRecurrenceId, Recurrence newMaster,
-                                  LocalDate fromDate, Payload payload) {
+                                  LocalDate fromDate, Payload payload, long userId) {
         List<Todo> candidates = todoRepository.findAllByRecurrenceIdAndDateGte(sourceRecurrenceId, fromDate);
 
         List<Long> keptIds = new ArrayList<>();
@@ -289,6 +332,9 @@ public class RecurrenceInstanceService {
             if (matchesRule(newMaster, instance.getDate())) {
                 keptIds.add(instance.getId());
                 applyContentChange(instance, payload);
+                if (hasAlarmChange(payload) && instance.inheritsAlarm()) {
+                    alarmSynchronizer.sync(instance, userId, newMaster.getNotificationTime());
+                }
             } else {
                 droppedIds.add(instance.getId());
             }
