@@ -123,6 +123,15 @@ public class Todo extends BaseEntity {
         this.description = description;
     }
 
+    /**
+     * 반복 인스턴스의 메모만 개별 수정(override)한다.
+     * 삭제/빈 값은 빈 문자열 override로 남겨, 마스터 메모를 다시 상속하지 않도록 한다.
+     */
+    public void applyMemoOverride(String memo) {
+        this.overrideMemo = (memo != null) ? memo : "";
+        this.isOverridden = true;
+    }
+
     public void applyOverride(String title, String memo, Boolean isAlarm, LocalTime alarmTime) {
         if (title != null) this.overrideTitle = title;
         if (memo != null) this.overrideMemo = memo;

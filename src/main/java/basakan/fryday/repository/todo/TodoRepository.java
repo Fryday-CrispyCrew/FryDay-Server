@@ -98,10 +98,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     int updateDescriptionByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("description") String description);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE Todo t SET t.memo = :memo WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
-    int updateMemoByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("memo") String memo);
-
-    @Modifying(clearAutomatically = true)
     @Query("UPDATE Todo t SET t.date = :date WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.recurrenceId IS NULL AND t.category.userId = :userId")
     int updateDateByIdAndUserIdForNonRecurring(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("date") LocalDate date);
 
