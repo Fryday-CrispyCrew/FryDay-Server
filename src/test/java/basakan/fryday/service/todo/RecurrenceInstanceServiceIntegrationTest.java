@@ -231,4 +231,116 @@ class RecurrenceInstanceServiceIntegrationTest {
                 .as("재생성된 회차의 displayOrder가 유지되어야 한다")
                 .isEqualTo(2L);
     }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("개별 수정한 메모는 scope=ALL 내용 수정 후에도 유지되고, 나머지 회차만 새 메모를 반영한다")
+    void editThisMemo_survivesEditAll() {
+        User user = userJpaRepository.save(User.createNewUser(AuthProvider.APPLE, "memo-keep-sub", "memo-keep@t.com"));
+        Long userId = user.getId();
+
+        Category category = categoryRepository.save(
+                Category.builder().name("업무").color(CategoryColor.BR).userId(userId).displayOrder(1L).build()
+        );
+
+        LocalDate today = LocalDate.now();
+        LocalDate dayA = today.plusDays(1);
+        LocalDate dayB = today.plusDays(2);
+
+        Recurrence master = recurrenceRepository.save(Recurrence.builder()
+                .userId(userId)
+                .categoryId(category.getId())
+                .description("반복 작업")
+                .memo("마스터 메모")
+                .type(RecurrenceType.DAILY)
+                .frequencyValues(null)
+                .startDate(today)
+                .endType(EndType.NONE)
+                .lastGeneratedDate(today)
+                .build()
+        );
+
+        // 상속 메모를 가진 두 회차. dayA만 개별 수정한다.
+        Todo overridden = todoRepository.save(Todo.builder()
+                .description("반복 작업").category(category).date(dayA)
+                .displayOrder(1L).recurrenceId(master.getId()).memo("마스터 메모").build()
+        );
+        Todo plain = todoRepository.save(Todo.builder()
+                .description("반복 작업").category(category).date(dayB)
+                .displayOrder(1L).recurrenceId(master.getId()).memo("마스터 메모").build()
+        );
+
+        // 1) dayA 회차만 메모 개별 수정 (override 기록)
+        Payload editThis = new Payload();
+        ReflectionTestUtils.setField(editThis, "memo", "개별 메모");
+        recurrenceInstanceService.edit(overridden.getId(), RecurrenceScope.THIS, editThis, userId);
+
+        // 2) scope=ALL 내용 수정으로 마스터 메모 변경
+        Payload editAll = new Payload();
+        ReflectionTestUtils.setField(editAll, "memo", "새 마스터 메모");
+        recurrenceInstanceService.edit(plain.getId(), RecurrenceScope.ALL, editAll, userId);
+
+        // then - 개별 수정 회차는 override 유지 (마스터 메모 재상속 안 함)
+        Todo reloadedOverridden = todoRepository.findById(overridden.getId()).orElseThrow();
+        assertThat(reloadedOverridden.isOverridden()).isTrue();
+        assertThat(reloadedOverridden.getOverrideMemo())
+                .as("개별 수정 메모는 마스터 전체 수정에도 유지된다")
+                .isEqualTo("개별 메모");
+
+        // 개별 수정 안 된 회차만 새 마스터 메모를 반영 (override 회차와 대비)
+        Todo reloadedPlain = todoRepository.findById(plain.getId()).orElseThrow();
+        assertThat(reloadedPlain.getMemo())
+                .as("개별 수정 안 된 회차는 새 마스터 메모를 반영한다")
+                .isEqualTo("새 마스터 메모");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("개별 삭제(빈 메모)한 회차는 scope=ALL 수정 후에도 마스터 메모를 재상속하지 않는다")
+    void editThisEmptyMemo_notReinheritedAfterEditAll() {
+        User user = userJpaRepository.save(User.createNewUser(AuthProvider.APPLE, "memo-del-sub", "memo-del@t.com"));
+        Long userId = user.getId();
+
+        Category category = categoryRepository.save(
+                Category.builder().name("업무").color(CategoryColor.BR).userId(userId).displayOrder(1L).build()
+        );
+
+        LocalDate today = LocalDate.now();
+        LocalDate day = today.plusDays(1);
+
+        Recurrence master = recurrenceRepository.save(Recurrence.builder()
+                .userId(userId)
+                .categoryId(category.getId())
+                .description("반복 작업")
+                .memo("마스터 메모")
+                .type(RecurrenceType.DAILY)
+                .frequencyValues(null)
+                .startDate(today)
+                .endType(EndType.NONE)
+                .lastGeneratedDate(today)
+                .build()
+        );
+
+        Todo instance = todoRepository.save(Todo.builder()
+                .description("반복 작업").category(category).date(day)
+                .displayOrder(1L).recurrenceId(master.getId()).memo("마스터 메모").build()
+        );
+
+        // 1) 메모 개별 삭제 (빈 문자열 → 빈 override)
+        Payload delete = new Payload();
+        ReflectionTestUtils.setField(delete, "memo", "");
+        recurrenceInstanceService.edit(instance.getId(), RecurrenceScope.THIS, delete, userId);
+
+        // 2) scope=ALL 내용 수정으로 마스터 메모 변경
+        Payload editAll = new Payload();
+        ReflectionTestUtils.setField(editAll, "memo", "새 마스터 메모");
+        recurrenceInstanceService.edit(instance.getId(), RecurrenceScope.ALL, editAll, userId);
+
+        // then - 빈 override 유지, 마스터 메모 재상속 안 함
+        Todo reloaded = todoRepository.findById(instance.getId()).orElseThrow();
+        assertThat(reloaded.isOverridden()).isTrue();
+        assertThat(reloaded.getOverrideMemo())
+                .as("빈 override는 마스터 전체 수정에도 유지된다")
+                .isEmpty();
+    }
 }
