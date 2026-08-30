@@ -343,4 +343,48 @@ class RecurrenceInstanceServiceIntegrationTest {
                 .as("빈 override는 마스터 전체 수정에도 유지된다")
                 .isEmpty();
     }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("scope=ALL 내용 수정 시 마스터 메모 변경이 유실되지 않고 저장된다")
+    void editAll_contentChange_persistsMasterMemo() {
+        User user = userJpaRepository.save(User.createNewUser(AuthProvider.APPLE, "master-memo-sub", "master-memo@t.com"));
+        Long userId = user.getId();
+
+        Category category = categoryRepository.save(
+                Category.builder().name("업무").color(CategoryColor.BR).userId(userId).displayOrder(1L).build()
+        );
+
+        LocalDate today = LocalDate.now();
+        LocalDate day = today.plusDays(1);
+
+        Recurrence master = recurrenceRepository.save(Recurrence.builder()
+                .userId(userId)
+                .categoryId(category.getId())
+                .description("반복 작업")
+                .memo("마스터 메모")
+                .type(RecurrenceType.DAILY)
+                .frequencyValues(null)
+                .startDate(today)
+                .endType(EndType.NONE)
+                .lastGeneratedDate(today)
+                .build()
+        );
+
+        Todo instance = todoRepository.save(Todo.builder()
+                .description("반복 작업").category(category).date(day)
+                .displayOrder(1L).recurrenceId(master.getId()).memo("마스터 메모").build()
+        );
+
+        // scope=ALL 내용 수정 (메모 벌크 갱신이 뒤따른다)
+        Payload editAll = new Payload();
+        ReflectionTestUtils.setField(editAll, "memo", "새 마스터 메모");
+        recurrenceInstanceService.edit(instance.getId(), RecurrenceScope.ALL, editAll, userId);
+
+        // 벌크의 컨텍스트 clear로 인해 유실되지 않고 Recurrence 엔티티에도 반영되어야 한다.
+        // (미래 회차가 새 메모를 상속하려면 마스터에 저장돼 있어야 함)
+        assertThat(recurrenceRepository.findById(master.getId()).orElseThrow().getMemo())
+                .as("scope=ALL 내용 수정은 마스터 엔티티에도 반영되어야 한다")
+                .isEqualTo("새 마스터 메모");
+    }
 }

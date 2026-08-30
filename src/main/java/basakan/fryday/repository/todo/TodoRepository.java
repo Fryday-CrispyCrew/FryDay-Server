@@ -109,11 +109,12 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("UPDATE Todo t SET t.recurrenceId = :recurrenceId WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
     int updateRecurrenceIdByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("recurrenceId") Long recurrenceId);
 
-    @Modifying(clearAutomatically = true)
+    // flushAutomatically: editAll에서 직전 master.updateContent(dirty)가 clear로 유실되지 않도록 벌크 실행 전 flush
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Todo t SET t.description = :description WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
     int bulkUpdateDescriptionByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("description") String description);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Todo t SET t.memo = :memo WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
     int bulkUpdateMemoByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("memo") String memo);
 
