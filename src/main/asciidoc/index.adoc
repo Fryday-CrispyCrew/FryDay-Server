@@ -897,3 +897,103 @@ include::{snippets}/daily-result-list/http-request.adoc[]
 include::{snippets}/daily-result-list/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/daily-result-list/response-fields.adoc[]
+
+== 그룹(Group)
+
+사용자가 선택한 사람들과 당일 투두 진행 상태를 공유하는 기능입니다.
+그룹은 고유한 초대 코드로 구분하며, 이름은 중복될 수 있습니다.
+모든 API는 인증이 필요하며, 그룹원이 아닌 사용자에게는 그룹의 존재 자체를 알리지 않습니다(404).
+
+=== 그룹 생성
+`POST /api/groups`
+
+그룹을 만들고 초대 코드를 즉시 발급합니다.
+그룹을 만든 사용자가 그룹장이 되며, 만든 사람의 카테고리는 모두 공개 상태로 등록됩니다.
+
+==== 요청 필드
+include::{snippets}/group-create/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-create/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-create/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-create/response-fields.adoc[]
+
+=== 그룹 조회
+`GET /api/groups/{groupId}`
+
+그룹 정보와 그룹원 목록을 한 번에 조회합니다.
+그룹원마다 자신이 이 그룹에 공개한 카테고리 기준으로 오늘의 전체 투두 수와 완료 수를 함께 내려줍니다.
+그룹장은 항상 목록의 첫 번째이며, 나머지 그룹원은 참여한 순서대로 정렬됩니다.
+
+==== 경로 파라미터
+include::{snippets}/group-detail/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-detail/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-detail/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-detail/response-fields.adoc[]
+
+=== 그룹 이름 변경
+`PATCH /api/groups/{groupId}/name`
+
+그룹 이름을 변경합니다. 그룹장만 사용할 수 있습니다(그룹원은 403).
+
+==== 경로 파라미터
+include::{snippets}/group-name-update/path-parameters.adoc[]
+==== 요청 필드
+include::{snippets}/group-name-update/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-name-update/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-name-update/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-name-update/response-fields.adoc[]
+
+=== 그룹 해체
+`DELETE /api/groups/{groupId}`
+
+그룹을 해체합니다. 그룹장만 사용할 수 있습니다(그룹원은 403).
+해체하면 모든 그룹원이 그룹에서 빠지고 공개 카테고리 설정도 함께 삭제됩니다.
+
+==== 경로 파라미터
+include::{snippets}/group-delete/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-delete/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-delete/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-delete/response-fields.adoc[]
+
+=== 공개 카테고리 조회
+`GET /api/groups/{groupId}/public-categories`
+
+내 카테고리 전체와 각각이 이 그룹에 공개 중인지를 조회합니다.
+공개 설정은 그룹마다 독립적으로 관리됩니다.
+
+==== 경로 파라미터
+include::{snippets}/group-public-categories/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-public-categories/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-public-categories/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-public-categories/response-fields.adoc[]
+
+=== 공개 카테고리 변경
+`PATCH /api/groups/{groupId}/public-categories`
+
+이 그룹에 공개할 카테고리를 변경합니다. 기존 설정을 통째로 교체하며, 최소 1개 이상이어야 합니다.
+변경 즉시 그룹의 투두 집계에 반영됩니다.
+
+==== 경로 파라미터
+include::{snippets}/group-public-categories-update/path-parameters.adoc[]
+==== 요청 필드
+include::{snippets}/group-public-categories-update/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-public-categories-update/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-public-categories-update/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-public-categories-update/response-fields.adoc[]
