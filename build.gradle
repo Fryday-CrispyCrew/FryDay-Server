@@ -76,6 +76,8 @@ ext {
 
 test {
 	outputs.dir snippetsDir
+	// GroupMigrationSchemaTest 가 db/*.sql 원본을 읽으므로, 마이그레이션이 바뀌면 테스트도 다시 돌아야 한다.
+	inputs.dir file('db')
 	useJUnitPlatform()
 	testLogging {
 		showStandardStreams = true
