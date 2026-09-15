@@ -17,6 +17,8 @@ import java.time.LocalDateTime;
 })
 public class Category extends BaseEntity {
 
+    public static final int MAX_COUNT_PER_USER = 6;
+
     @Column(nullable = false)
     private String name;
 
