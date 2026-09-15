@@ -15,6 +15,7 @@ import basakan.fryday.repository.auth.client.SocialUserInfo;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.group.GroupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class UserWriteService {
     private final CategoryRepository categoryRepository;
     private final DailyResultRepository dailyResultRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final GroupService groupService;
 
     public void agreeConsent(User user, Agreement agreement, boolean termsAgreed, boolean privacyAgreed, boolean marketingAgreed) {
         agreement.updateConsent(termsAgreed, privacyAgreed, marketingAgreed);
@@ -84,6 +86,7 @@ public class UserWriteService {
         dailyResultRepository.deleteAllByUserId(userId);
         userDeviceRepository.deleteAllByUserId(userId);
         agreementRepository.deleteByUser(user);
+        groupService.leaveAllGroups(userId);
 
         // 계정 상태 변경 (7일 후 스케줄러가 User 삭제)
         user.withdraw();
