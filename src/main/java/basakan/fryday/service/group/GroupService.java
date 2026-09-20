@@ -7,6 +7,7 @@ import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
+import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
@@ -34,6 +35,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -79,6 +81,17 @@ public class GroupService {
                 .toList();
 
         return GroupListResponse.from(groups);
+    }
+
+    /** 초대 코드 입력 팝업용. 참여 가능 여부까지 판단해 내려준다. */
+    public GroupInvitePreviewResponse previewByInviteCode(String rawInviteCode, Long userId) {
+        FryGroup group = fryGroupRepository.findByInviteCode(normalizeInviteCode(rawInviteCode))
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVITE_CODE_NOT_FOUND));
+
+        return GroupInvitePreviewResponse.of(
+                group,
+                (int) groupMemberRepository.countByGroupId(group.getId()),
+                groupMemberRepository.existsByGroupIdAndUserId(group.getId(), userId));
     }
 
     public GroupDetailResponse getGroup(Long groupId, Long userId) {
@@ -187,6 +200,11 @@ public class GroupService {
                         .categoryId(category.getId())
                         .build())
                 .toList());
+    }
+
+    /** 초대 코드는 대문자로 발급되지만 입력은 대소문자를 가리지 않는다. */
+    private String normalizeInviteCode(String rawInviteCode) {
+        return rawInviteCode.trim().toUpperCase(Locale.ROOT);
     }
 
     /** 요청된 id 가 전부 내 소유의 살아있는 카테고리인지 한 번의 조회로 확인한다. */

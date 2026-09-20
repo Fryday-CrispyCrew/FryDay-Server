@@ -932,6 +932,23 @@ include::{snippets}/group-create/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/group-create/response-fields.adoc[]
 
+=== 초대 코드 조회
+`GET /api/groups/invite/{inviteCode}`
+
+초대 코드로 그룹 정보를 미리 조회합니다. 참여 팝업에서 어떤 그룹인지 보여주기 위한 API 입니다.
+존재하지 않는 코드는 404 로 응답합니다.
+정원이 찼거나 이미 참여 중인 그룹도 오류 대신 `full`, `alreadyJoined` 플래그로 내려주므로,
+앱은 이 값으로 참여 버튼의 활성화 여부를 결정하면 됩니다.
+
+==== 경로 파라미터
+include::{snippets}/group-invite-preview/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-invite-preview/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-invite-preview/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-invite-preview/response-fields.adoc[]
+
 === 그룹 조회
 `GET /api/groups/{groupId}`
 

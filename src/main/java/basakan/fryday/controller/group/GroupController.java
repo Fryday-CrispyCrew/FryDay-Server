@@ -6,6 +6,7 @@ import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
+import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
@@ -39,6 +40,13 @@ public class GroupController {
     @GetMapping
     public ApiResponse<GroupListResponse> getMyGroups(@AuthenticationPrincipal Long userId) {
         GroupListResponse response = groupService.getMyGroups(userId);
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/invite/{inviteCode}")
+    public ApiResponse<GroupInvitePreviewResponse> getGroupByInviteCode(@PathVariable String inviteCode,
+                                                                        @AuthenticationPrincipal Long userId) {
+        GroupInvitePreviewResponse response = groupService.previewByInviteCode(inviteCode, userId);
         return ApiResponse.success(response);
     }
 

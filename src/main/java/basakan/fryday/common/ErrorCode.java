@@ -62,6 +62,7 @@ public enum ErrorCode {
     GROUP_NAME_HAS_EMOJI(HttpStatus.BAD_REQUEST, "그룹 이름에는 이모지를 사용할 수 없습니다."),
     PUBLIC_CATEGORY_REQUIRED(HttpStatus.BAD_REQUEST, "공개 카테고리는 최소 1개 이상 선택해야 합니다."),
     INVITE_CODE_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "초대 코드 생성에 실패했습니다. 잠시 후 다시 시도해주세요."),
+    INVITE_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 초대 코드입니다."),
 
     // System
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서버 점검 중입니다. 잠시 후 다시 시도해주세요.");

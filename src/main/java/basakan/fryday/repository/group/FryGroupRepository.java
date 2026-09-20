@@ -13,6 +13,8 @@ public interface FryGroupRepository extends JpaRepository<FryGroup, Long> {
 
     boolean existsByInviteCode(String inviteCode);
 
+    Optional<FryGroup> findByInviteCode(String inviteCode);
+
     /** 요청자가 그룹원인 경우에만 그룹을 반환한다. 비그룹원에게는 그룹의 존재 자체를 감춘다. */
     @Query("SELECT g FROM FryGroup g " +
             "WHERE g.id = :groupId " +
