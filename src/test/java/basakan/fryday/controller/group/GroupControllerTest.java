@@ -5,11 +5,13 @@ import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
+import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
+import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
@@ -197,6 +199,63 @@ class GroupControllerTest extends RestDocsSupport {
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
+    }
+
+    @Test
+    @DisplayName("그룹 참여 API")
+    void joinGroup() throws Exception {
+        // given
+        given(groupService.join(any(GroupJoinRequest.class), anyLong()))
+                .willReturn(GroupJoinResponse.of(group(), 2));
+
+        // when & then
+        mockMvc.perform(post("/api/groups/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new GroupJoinRequest("FRY123", List.of(10L, 11L)))))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groupId").value(GROUP_ID))
+                .andExpect(jsonPath("$.data.memberCount").value(2))
+                .andDo(document("group-join",
+                        requestFields(
+                                fieldWithPath("inviteCode").type(JsonFieldType.STRING)
+                                        .description("초대 코드 6자리 (대소문자 구분 없음)"),
+                                fieldWithPath("categoryIds").type(JsonFieldType.ARRAY)
+                                        .description("이 그룹에 공개할 카테고리 ID 목록. 최소 1개 이상이어야 참여할 수 있다")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.groupId").type(JsonFieldType.NUMBER).description("참여한 그룹 ID"),
+                                fieldWithPath("data.name").type(JsonFieldType.STRING).description("그룹 이름"),
+                                fieldWithPath("data.memberCount").type(JsonFieldType.NUMBER)
+                                        .description("참여 후 그룹원 수"),
+                                fieldWithPath("data.maxMemberCount").type(JsonFieldType.NUMBER)
+                                        .description("최대 그룹원 수"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("공개 카테고리를 선택하지 않으면 그룹에 참여할 수 없다")
+    void joinGroupWithoutCategoriesFails() throws Exception {
+        mockMvc.perform(post("/api/groups/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupJoinRequest("FRY123", List.of()))))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("초대 코드가 6자리가 아니면 그룹에 참여할 수 없다")
+    void joinGroupWithMalformedInviteCodeFails() throws Exception {
+        mockMvc.perform(post("/api/groups/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupJoinRequest("FRY", List.of(10L)))))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
     }
 
     @Test

@@ -949,6 +949,25 @@ include::{snippets}/group-invite-preview/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/group-invite-preview/response-fields.adoc[]
 
+=== 그룹 참여
+`POST /api/groups/join`
+
+초대 코드로 그룹에 참여합니다.
+그룹마다 최소 1개의 카테고리를 공개해야 하므로, 참여와 공개 카테고리 설정을 한 번의 요청으로 함께 처리합니다.
+카테고리를 하나도 선택하지 않으면 참여할 수 없습니다(400).
+
+존재하지 않는 초대 코드는 404, 이미 참여 중이거나 정원(10명)이 찬 그룹은 409 로 응답합니다.
+참여에 성공하면 그룹 상세 조회 API 로 이어가면 됩니다.
+
+==== 요청 필드
+include::{snippets}/group-join/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-join/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-join/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-join/response-fields.adoc[]
+
 === 그룹 조회
 `GET /api/groups/{groupId}`
 

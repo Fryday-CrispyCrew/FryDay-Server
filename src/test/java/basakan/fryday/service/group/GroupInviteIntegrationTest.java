@@ -4,11 +4,14 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.config.JpaConfig;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
+import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
+import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupMember;
+import basakan.fryday.domain.group.GroupPublicCategory;
 import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
@@ -28,6 +31,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,6 +75,119 @@ class GroupInviteIntegrationTest {
 
         ownerId = saveUser("owner", "연우");
         joinerId = saveUser("joiner", "수정");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("초대 코드로 참여하면 그룹원과 선택한 공개 카테고리가 함께 등록된다")
+    void joinRegistersMemberAndSelectedCategories() {
+        // given
+        saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+
+        Category study = saveCategory(joinerId, "공부");
+        Category hidden = saveCategory(joinerId, "비밀");
+
+        // when — 공부만 공개하고 참여한다
+        GroupJoinResponse response = groupService.join(
+                new GroupJoinRequest(inviteCodeOf(groupId), List.of(study.getId())), joinerId);
+
+        // then
+        assertThat(response.getGroupId()).isEqualTo(groupId);
+        assertThat(response.getName()).isEqualTo("바삭한 사람들");
+        assertThat(response.getMemberCount()).isEqualTo(2);
+        assertThat(response.getMaxMemberCount()).isEqualTo(FryGroup.MAX_MEMBER_COUNT);
+
+        assertThat(groupMemberRepository.existsByGroupIdAndUserId(groupId, joinerId)).isTrue();
+        assertThat(groupPublicCategoryRepository.findAllByGroupIdAndUserId(groupId, joinerId))
+                .extracting(GroupPublicCategory::getCategoryId)
+                .containsExactly(study.getId())
+                .doesNotContain(hidden.getId());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("초대 코드는 대소문자를 가리지 않는다")
+    void joinAcceptsLowercaseInviteCode() {
+        // given
+        saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+        Category study = saveCategory(joinerId, "공부");
+
+        // when
+        GroupJoinResponse response = groupService.join(
+                new GroupJoinRequest(inviteCodeOf(groupId).toLowerCase(), List.of(study.getId())), joinerId);
+
+        // then
+        assertThat(response.getGroupId()).isEqualTo(groupId);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("존재하지 않는 초대 코드로는 참여할 수 없다")
+    void joinRejectsUnknownInviteCode() {
+        // given
+        Category study = saveCategory(joinerId, "공부");
+
+        // when & then
+        assertThatThrownBy(() -> groupService.join(new GroupJoinRequest("ZZZZZZ", List.of(study.getId())), joinerId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.INVITE_CODE_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("이미 참여 중인 그룹에는 다시 참여할 수 없다")
+    void joinRejectsDuplicateMember() {
+        // given
+        saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+        Category study = saveCategory(joinerId, "공부");
+        groupService.join(new GroupJoinRequest(inviteCodeOf(groupId), List.of(study.getId())), joinerId);
+
+        // when & then
+        assertThatThrownBy(() -> groupService.join(
+                new GroupJoinRequest(inviteCodeOf(groupId), List.of(study.getId())), joinerId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.GROUP_ALREADY_JOINED.getMessage());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("정원이 찬 그룹에는 참여할 수 없다")
+    void joinRejectsFullGroup() {
+        // given — 그룹장 포함 10명을 채운다
+        saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+        for (int i = 0; i < FryGroup.MAX_MEMBER_COUNT - 1; i++) {
+            addMember(groupId, saveUser("filler" + i, "채움" + i));
+        }
+        Category study = saveCategory(joinerId, "공부");
+
+        // when & then
+        assertThatThrownBy(() -> groupService.join(
+                new GroupJoinRequest(inviteCodeOf(groupId), List.of(study.getId())), joinerId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.GROUP_FULL.getMessage());
+
+        assertThat(groupMemberRepository.existsByGroupIdAndUserId(groupId, joinerId)).isFalse();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("내 카테고리가 아니면 공개 대상으로 지정할 수 없다")
+    void joinRejectsCategoryOwnedByOthers() {
+        // given
+        Category ownerCategory = saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+
+        // when & then
+        assertThatThrownBy(() -> groupService.join(
+                new GroupJoinRequest(inviteCodeOf(groupId), List.of(ownerCategory.getId())), joinerId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.CATEGORY_NOT_FOUND.getMessage());
+
+        assertThat(groupMemberRepository.existsByGroupIdAndUserId(groupId, joinerId)).isFalse();
     }
 
     @Test

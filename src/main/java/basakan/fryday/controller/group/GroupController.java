@@ -2,11 +2,13 @@ package basakan.fryday.controller.group;
 
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
+import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
+import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
@@ -48,6 +50,13 @@ public class GroupController {
                                                                         @AuthenticationPrincipal Long userId) {
         GroupInvitePreviewResponse response = groupService.previewByInviteCode(inviteCode, userId);
         return ApiResponse.success(response);
+    }
+
+    @PostMapping("/join")
+    public ApiResponse<GroupJoinResponse> joinGroup(@Valid @RequestBody GroupJoinRequest request,
+                                                    @AuthenticationPrincipal Long userId) {
+        GroupJoinResponse response = groupService.join(request, userId);
+        return ApiResponse.success(response, "그룹에 참여했습니다.");
     }
 
     @GetMapping("/{groupId}")
