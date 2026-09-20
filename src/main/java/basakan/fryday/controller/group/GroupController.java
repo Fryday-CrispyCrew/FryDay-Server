@@ -6,6 +6,7 @@ import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
+import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.service.group.GroupService;
@@ -33,6 +34,12 @@ public class GroupController {
                                                         @AuthenticationPrincipal Long userId) {
         GroupCreateResponse response = groupService.createGroup(request, userId);
         return ApiResponse.success(response, "그룹이 생성되었습니다.");
+    }
+
+    @GetMapping
+    public ApiResponse<GroupListResponse> getMyGroups(@AuthenticationPrincipal Long userId) {
+        GroupListResponse response = groupService.getMyGroups(userId);
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/{groupId}")

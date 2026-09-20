@@ -9,10 +9,12 @@ import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
+import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
+import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.FryGroup;
@@ -20,6 +22,7 @@ import basakan.fryday.domain.group.GroupRole;
 import basakan.fryday.service.group.GroupService;
 import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
+import basakan.fryday.service.group.dto.GroupSummaryDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -125,6 +128,38 @@ class GroupControllerTest extends RestDocsSupport {
                         .content(objectMapper.writeValueAsString(new GroupCreateRequest("   "))))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("내 그룹 목록 조회 API")
+    void getMyGroups() throws Exception {
+        // given
+        given(groupService.getMyGroups(anyLong())).willReturn(groupList());
+
+        // when & then
+        mockMvc.perform(get("/api/groups"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groups[0].name").value("바삭한 사람들"))
+                .andExpect(jsonPath("$.data.groups[0].myRole").value("OWNER"))
+                .andExpect(jsonPath("$.data.groups[1].myRole").value("MEMBER"))
+                .andDo(document("group-list",
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.groups[].groupId").type(JsonFieldType.NUMBER)
+                                        .description("그룹 ID"),
+                                fieldWithPath("data.groups[].name").type(JsonFieldType.STRING)
+                                        .description("그룹 이름"),
+                                fieldWithPath("data.groups[].memberCount").type(JsonFieldType.NUMBER)
+                                        .description("현재 그룹원 수"),
+                                fieldWithPath("data.groups[].maxMemberCount").type(JsonFieldType.NUMBER)
+                                        .description("최대 그룹원 수"),
+                                fieldWithPath("data.groups[].myRole").type(JsonFieldType.STRING)
+                                        .description("내 권한 (OWNER: 그룹장, MEMBER: 그룹원)"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
     }
 
     @Test
@@ -338,6 +373,12 @@ class GroupControllerTest extends RestDocsSupport {
 
         return GroupDetailResponse.of(group(), GroupRole.OWNER, 2,
                 LocalDate.of(2026, 9, 15), List.of(owner, member));
+    }
+
+    private GroupListResponse groupList() {
+        return GroupListResponse.from(List.of(
+                GroupSummaryResponse.of(new GroupSummaryDto(GROUP_ID, "바삭한 사람들", OWNER_ID, 3), OWNER_ID),
+                GroupSummaryResponse.of(new GroupSummaryDto(2L, "눅눅한 사람들", MEMBER_ID, 5), OWNER_ID)));
     }
 
     private GroupPublicCategoryListResponse publicCategories() {

@@ -7,10 +7,12 @@ import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
+import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
+import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupMember;
@@ -68,6 +70,15 @@ public class GroupService {
             }
         }
         throw new BusinessException(ErrorCode.INVITE_CODE_GENERATION_FAILED);
+    }
+
+    /** 참여 중인 그룹을 최근 가입순으로 내려준다. 참여한 그룹이 없으면 빈 목록이다. */
+    public GroupListResponse getMyGroups(Long userId) {
+        List<GroupSummaryResponse> groups = groupMemberRepository.findMyGroups(userId).stream()
+                .map(group -> GroupSummaryResponse.of(group, userId))
+                .toList();
+
+        return GroupListResponse.from(groups);
     }
 
     public GroupDetailResponse getGroup(Long groupId, Long userId) {

@@ -5,7 +5,9 @@ import basakan.fryday.common.config.JpaConfig;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
+import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
+import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.GroupMember;
@@ -195,6 +197,62 @@ class GroupReadIntegrationTest {
         assertThatThrownBy(() -> groupService.getGroup(groupId, strangerId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.GROUP_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("내 그룹 목록은 최근 가입한 그룹이 맨 앞에 온다")
+    void myGroupsAreSortedByRecentJoin() {
+        // given
+        saveCategory(ownerId, "운동");
+        Long first = createGroup("첫번째", ownerId);
+        Long second = createGroup("두번째", ownerId);
+        Long third = createGroup("세번째", ownerId);
+
+        // when
+        GroupListResponse response = groupService.getMyGroups(ownerId);
+
+        // then
+        assertThat(response.getGroups())
+                .extracting(GroupSummaryResponse::getGroupId)
+                .containsExactly(third, second, first);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("내 그룹 목록에는 인원수와 내 권한이 함께 내려온다")
+    void myGroupsCarryMemberCountAndRole() {
+        // given
+        saveCategory(ownerId, "운동");
+        Long ownedGroup = createGroup("내가 만든 그룹", ownerId);
+        join(ownedGroup, memberId);
+
+        saveCategory(strangerId, "독서");
+        Long joinedGroup = createGroup("남이 만든 그룹", strangerId);
+        join(joinedGroup, ownerId);
+
+        // when
+        GroupListResponse response = groupService.getMyGroups(ownerId);
+
+        // then
+        assertThat(response.getGroups())
+                .extracting(GroupSummaryResponse::getName,
+                        GroupSummaryResponse::getMemberCount,
+                        GroupSummaryResponse::getMyRole)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("남이 만든 그룹", 2, GroupRole.MEMBER),
+                        org.assertj.core.groups.Tuple.tuple("내가 만든 그룹", 2, GroupRole.OWNER));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("참여한 그룹이 없으면 빈 목록을 내려준다")
+    void myGroupsIsEmptyWhenNotJoined() {
+        // when
+        GroupListResponse response = groupService.getMyGroups(strangerId);
+
+        // then
+        assertThat(response.getGroups()).isEmpty();
     }
 
     private Long createGroup(String name, Long userId) {
