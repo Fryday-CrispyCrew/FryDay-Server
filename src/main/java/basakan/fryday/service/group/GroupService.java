@@ -163,6 +163,12 @@ public class GroupService {
         List<Category> categories = findOwnedCategories(categoryIds, userId);
 
         groupPublicCategoryRepository.deleteAllByGroupIdAndUserId(groupId, userId);
+        publishCategories(groupId, userId, categories);
+
+        return getPublicCategories(groupId, userId);
+    }
+
+    private void publishCategories(Long groupId, Long userId, List<Category> categories) {
         groupPublicCategoryRepository.saveAll(categories.stream()
                 .map(category -> GroupPublicCategory.builder()
                         .groupId(groupId)
@@ -170,8 +176,6 @@ public class GroupService {
                         .categoryId(category.getId())
                         .build())
                 .toList());
-
-        return getPublicCategories(groupId, userId);
     }
 
     /** 요청된 id 가 전부 내 소유의 살아있는 카테고리인지 한 번의 조회로 확인한다. */
