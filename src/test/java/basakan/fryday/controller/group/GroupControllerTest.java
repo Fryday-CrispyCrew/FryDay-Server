@@ -5,14 +5,19 @@ import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
+import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
+import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
+import basakan.fryday.controller.group.response.GroupJoinResponse;
+import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
+import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.FryGroup;
@@ -20,6 +25,7 @@ import basakan.fryday.domain.group.GroupRole;
 import basakan.fryday.service.group.GroupService;
 import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
+import basakan.fryday.service.group.dto.GroupSummaryDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -123,6 +129,131 @@ class GroupControllerTest extends RestDocsSupport {
         mockMvc.perform(post("/api/groups")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new GroupCreateRequest("   "))))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("내 그룹 목록 조회 API")
+    void getMyGroups() throws Exception {
+        // given
+        given(groupService.getMyGroups(anyLong())).willReturn(groupList());
+
+        // when & then
+        mockMvc.perform(get("/api/groups"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groups[0].name").value("바삭한 사람들"))
+                .andExpect(jsonPath("$.data.groups[0].myRole").value("OWNER"))
+                .andExpect(jsonPath("$.data.groups[1].myRole").value("MEMBER"))
+                .andDo(document("group-list",
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.groups[].groupId").type(JsonFieldType.NUMBER)
+                                        .description("그룹 ID"),
+                                fieldWithPath("data.groups[].name").type(JsonFieldType.STRING)
+                                        .description("그룹 이름"),
+                                fieldWithPath("data.groups[].memberCount").type(JsonFieldType.NUMBER)
+                                        .description("현재 그룹원 수"),
+                                fieldWithPath("data.groups[].maxMemberCount").type(JsonFieldType.NUMBER)
+                                        .description("최대 그룹원 수"),
+                                fieldWithPath("data.groups[].myRole").type(JsonFieldType.STRING)
+                                        .description("내 권한 (OWNER: 그룹장, MEMBER: 그룹원)"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("초대 코드 조회 API")
+    void getGroupByInviteCode() throws Exception {
+        // given
+        given(groupService.previewByInviteCode(any(String.class), anyLong()))
+                .willReturn(GroupInvitePreviewResponse.of(group(), 3, false));
+
+        // when & then
+        mockMvc.perform(get("/api/groups/invite/{inviteCode}", "FRY123"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.memberCount").value(3))
+                .andExpect(jsonPath("$.data.full").value(false))
+                .andExpect(jsonPath("$.data.alreadyJoined").value(false))
+                .andDo(document("group-invite-preview",
+                        pathParameters(
+                                parameterWithName("inviteCode").description("조회할 초대 코드 (대소문자 구분 없음)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.groupId").type(JsonFieldType.NUMBER).description("그룹 ID"),
+                                fieldWithPath("data.name").type(JsonFieldType.STRING).description("그룹 이름"),
+                                fieldWithPath("data.memberCount").type(JsonFieldType.NUMBER)
+                                        .description("현재 그룹원 수"),
+                                fieldWithPath("data.maxMemberCount").type(JsonFieldType.NUMBER)
+                                        .description("최대 그룹원 수"),
+                                fieldWithPath("data.full").type(JsonFieldType.BOOLEAN)
+                                        .description("정원이 가득 찼는지 여부. true 면 참여 버튼을 막아야 한다"),
+                                fieldWithPath("data.alreadyJoined").type(JsonFieldType.BOOLEAN)
+                                        .description("이미 참여 중인 그룹인지 여부"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("그룹 참여 API")
+    void joinGroup() throws Exception {
+        // given
+        given(groupService.join(any(GroupJoinRequest.class), anyLong()))
+                .willReturn(GroupJoinResponse.of(group(), 2));
+
+        // when & then
+        mockMvc.perform(post("/api/groups/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new GroupJoinRequest("FRY123", List.of(10L, 11L)))))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groupId").value(GROUP_ID))
+                .andExpect(jsonPath("$.data.memberCount").value(2))
+                .andDo(document("group-join",
+                        requestFields(
+                                fieldWithPath("inviteCode").type(JsonFieldType.STRING)
+                                        .description("초대 코드 6자리 (대소문자 구분 없음)"),
+                                fieldWithPath("categoryIds").type(JsonFieldType.ARRAY)
+                                        .description("이 그룹에 공개할 카테고리 ID 목록. 최소 1개 이상이어야 참여할 수 있다")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.groupId").type(JsonFieldType.NUMBER).description("참여한 그룹 ID"),
+                                fieldWithPath("data.name").type(JsonFieldType.STRING).description("그룹 이름"),
+                                fieldWithPath("data.memberCount").type(JsonFieldType.NUMBER)
+                                        .description("참여 후 그룹원 수"),
+                                fieldWithPath("data.maxMemberCount").type(JsonFieldType.NUMBER)
+                                        .description("최대 그룹원 수"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("공개 카테고리를 선택하지 않으면 그룹에 참여할 수 없다")
+    void joinGroupWithoutCategoriesFails() throws Exception {
+        mockMvc.perform(post("/api/groups/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupJoinRequest("FRY123", List.of()))))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("초대 코드가 6자리가 아니면 그룹에 참여할 수 없다")
+    void joinGroupWithMalformedInviteCodeFails() throws Exception {
+        mockMvc.perform(post("/api/groups/join")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupJoinRequest("FRY", List.of(10L)))))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
     }
@@ -338,6 +469,12 @@ class GroupControllerTest extends RestDocsSupport {
 
         return GroupDetailResponse.of(group(), GroupRole.OWNER, 2,
                 LocalDate.of(2026, 9, 15), List.of(owner, member));
+    }
+
+    private GroupListResponse groupList() {
+        return GroupListResponse.from(List.of(
+                GroupSummaryResponse.of(new GroupSummaryDto(GROUP_ID, "바삭한 사람들", OWNER_ID, 3), OWNER_ID),
+                GroupSummaryResponse.of(new GroupSummaryDto(2L, "눅눅한 사람들", MEMBER_ID, 5), OWNER_ID)));
     }
 
     private GroupPublicCategoryListResponse publicCategories() {

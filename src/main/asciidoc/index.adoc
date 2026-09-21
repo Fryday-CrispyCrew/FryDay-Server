@@ -904,6 +904,19 @@ include::{snippets}/daily-result-list/response-fields.adoc[]
 그룹은 고유한 초대 코드로 구분하며, 이름은 중복될 수 있습니다.
 모든 API는 인증이 필요하며, 그룹원이 아닌 사용자에게는 그룹의 존재 자체를 알리지 않습니다(404).
 
+=== 내 그룹 목록 조회
+`GET /api/groups`
+
+참여 중인 그룹을 최근 가입한 순서대로 조회합니다.
+참여한 그룹이 없으면 `groups` 가 빈 배열로 내려옵니다. 이때 앱은 Empty UI 를 노출합니다.
+
+==== HTTP 요청 예시
+include::{snippets}/group-list/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-list/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-list/response-fields.adoc[]
+
 === 그룹 생성
 `POST /api/groups`
 
@@ -918,6 +931,42 @@ include::{snippets}/group-create/http-request.adoc[]
 include::{snippets}/group-create/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/group-create/response-fields.adoc[]
+
+=== 초대 코드 조회
+`GET /api/groups/invite/{inviteCode}`
+
+초대 코드로 그룹 정보를 미리 조회합니다. 참여 팝업에서 어떤 그룹인지 보여주기 위한 API 입니다.
+존재하지 않는 코드는 404 로 응답합니다.
+정원이 찼거나 이미 참여 중인 그룹도 오류 대신 `full`, `alreadyJoined` 플래그로 내려주므로,
+앱은 이 값으로 참여 버튼의 활성화 여부를 결정하면 됩니다.
+
+==== 경로 파라미터
+include::{snippets}/group-invite-preview/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-invite-preview/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-invite-preview/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-invite-preview/response-fields.adoc[]
+
+=== 그룹 참여
+`POST /api/groups/join`
+
+초대 코드로 그룹에 참여합니다.
+그룹마다 최소 1개의 카테고리를 공개해야 하므로, 참여와 공개 카테고리 설정을 한 번의 요청으로 함께 처리합니다.
+카테고리를 하나도 선택하지 않으면 참여할 수 없습니다(400).
+
+존재하지 않는 초대 코드는 404, 이미 참여 중이거나 정원(10명)이 찬 그룹은 409 로 응답합니다.
+참여에 성공하면 그룹 상세 조회 API 로 이어가면 됩니다.
+
+==== 요청 필드
+include::{snippets}/group-join/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-join/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-join/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-join/response-fields.adoc[]
 
 === 그룹 조회
 `GET /api/groups/{groupId}`
