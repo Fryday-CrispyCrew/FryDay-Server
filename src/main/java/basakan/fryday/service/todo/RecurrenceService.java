@@ -10,7 +10,9 @@ import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ public class RecurrenceService {
 
     private final RecurrenceRepository recurrenceRepository;
     private final TodoRepository todoRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public TodoResponse createRecurrence(Long userId, RecurrenceCreateRequest request) {
@@ -99,6 +102,7 @@ public class RecurrenceService {
         }
 
         recurrenceRepository.delete(recurrence);
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
     }
 
     @Transactional
@@ -116,6 +120,7 @@ public class RecurrenceService {
         }
 
         recurrenceRepository.delete(recurrence);
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
     }
 
     @Transactional
@@ -144,6 +149,7 @@ public class RecurrenceService {
         );
 
         recurrence.updateLastGeneratedDate(request.getStartDate());
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
 
         return recurrence;
     }

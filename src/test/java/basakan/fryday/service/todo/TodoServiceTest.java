@@ -13,6 +13,7 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -31,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class TodoServiceTest {
@@ -49,6 +52,9 @@ class TodoServiceTest {
 
     @Mock
     private RecurrenceOccurrenceMaterializeService materializeService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private TodoService todoService;
@@ -106,6 +112,21 @@ class TodoServiceTest {
             // then
             assertThat(result.getStatus()).isEqualTo(Todo.Status.COMPLETED.name());
             assertThat(inProgressTodo.isCompleted()).isTrue();
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
+        }
+
+        @Test
+        @DisplayName("완료를 취소하면 그룹 진행 상태 이벤트를 발행하지 않는다")
+        void 완료_취소_이벤트_없음() {
+            // given
+            given(todoRepository.findById(TODO_ID + 1)).willReturn(Optional.of(completedTodo));
+
+            // when
+            todoService.toggleTodoCompletion(TODO_ID + 1, USER_ID);
+
+            // then
+            assertThat(completedTodo.isCompleted()).isFalse();
+            then(eventPublisher).should(never()).publishEvent(any());
         }
 
         @Test
@@ -133,6 +154,25 @@ class TodoServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TODO_NOT_FOUND);
             assertThat(inProgressTodo.isCompleted()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteTodo")
+    class DeleteTodo {
+
+        @Test
+        @DisplayName("삭제하면 그룹 진행 상태 이벤트를 발행한다")
+        void 삭제_이벤트_발행() {
+            // given
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when
+            todoService.deleteTodo(TODO_ID, USER_ID);
+
+            // then
+            assertThat(inProgressTodo.isDeleted()).isTrue();
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
         }
     }
 

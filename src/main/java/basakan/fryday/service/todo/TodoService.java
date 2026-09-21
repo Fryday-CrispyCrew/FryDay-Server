@@ -19,7 +19,9 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +39,7 @@ public class TodoService {
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceRepository recurrenceRepository;
     private final RecurrenceOccurrenceMaterializeService materializeService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
@@ -70,6 +73,9 @@ public class TodoService {
         }
 
         todo.toggleCompletion();
+        if (todo.isCompleted()) {
+            publishProgressChanged(userId);
+        }
 
         return TodoResponse.from(todo);
     }
@@ -112,6 +118,7 @@ public class TodoService {
 
         todoAlarmRepository.deleteByTodoId(todoId);
         todo.delete();
+        publishProgressChanged(userId);
     }
 
     @Transactional
@@ -127,7 +134,9 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_TODAY);
         }
 
-        return moveOrCopyTodoToDate(todo, LocalDate.now().plusDays(1), userId);
+        TodoResponse response = moveOrCopyTodoToDate(todo, LocalDate.now().plusDays(1), userId);
+        publishProgressChanged(userId);
+        return response;
     }
 
     @Transactional
@@ -140,6 +149,10 @@ public class TodoService {
         }
 
         return moveOrCopyTodoToDate(todo, LocalDate.now(), userId);
+    }
+
+    private void publishProgressChanged(Long userId) {
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
     }
 
     private TodoResponse moveOrCopyTodoToDate(Todo todo, LocalDate targetDate, Long userId) {
@@ -185,6 +198,7 @@ public class TodoService {
         if (updated > 0) {
             Todo todo = todoRepository.findById(todoId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+            publishProgressChanged(userId);
             return TodoResponse.from(todo);
         }
 
@@ -208,6 +222,7 @@ public class TodoService {
 
         // recurrence에서 분리 (독립 투두로 변환)
         todo.setRecurrenceId(null);
+        publishProgressChanged(userId);
 
         return TodoResponse.from(todo);
     }
@@ -227,6 +242,7 @@ public class TodoService {
         }
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+        publishProgressChanged(userId);
         return TodoResponse.from(todo);
     }
 

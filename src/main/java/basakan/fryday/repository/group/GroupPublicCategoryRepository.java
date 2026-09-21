@@ -2,6 +2,7 @@ package basakan.fryday.repository.group;
 
 import basakan.fryday.domain.group.GroupPublicCategory;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
+import basakan.fryday.service.group.dto.GroupProgressDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -50,4 +51,15 @@ public interface GroupPublicCategoryRepository extends JpaRepository<GroupPublic
             "GROUP BY gpc.userId")
     List<GroupMemberTodoCountDto> findTodoCountsByGroupAndDate(@Param("groupId") Long groupId,
                                                                @Param("date") LocalDate date);
+
+    @Query("SELECT new basakan.fryday.service.group.dto.GroupProgressDto(" +
+            "gpc.groupId, " +
+            "CAST(COUNT(t.id) AS int), " +
+            "CAST(SUM(CASE WHEN t.status = 'COMPLETED' THEN 1 ELSE 0 END) AS int)) " +
+            "FROM GroupPublicCategory gpc " +
+            "JOIN Category c ON c.id = gpc.categoryId AND c.deletedAt IS NULL " +
+            "JOIN Todo t ON t.category = c AND t.date = :date AND t.deletedAt IS NULL " +
+            "WHERE gpc.userId = :userId " +
+            "GROUP BY gpc.groupId")
+    List<GroupProgressDto> findProgressByUserAndDate(@Param("userId") Long userId, @Param("date") LocalDate date);
 }
