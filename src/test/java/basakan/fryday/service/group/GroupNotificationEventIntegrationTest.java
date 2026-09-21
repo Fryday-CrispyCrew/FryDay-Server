@@ -165,6 +165,31 @@ class GroupNotificationEventIntegrationTest {
         assertThat(disbanded.get(0).recipientIds()).containsExactlyInAnyOrder(memberId, joinerId);
     }
 
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("그룹장이 회원 탈퇴하면 내가 만든 그룹마다 해체 알림을 보내고, 참여만 한 그룹에는 보내지 않는다")
+    void withdrawingOwnerNotifiesEachOwnedGroup() {
+        // given
+        Long crispy = createGroup("바삭한 사람들");
+        join(crispy, memberId);
+        Long soggy = createGroup("눅눅한 사람들");
+        join(soggy, joinerId);
+
+        saveCategory(memberId, "독서");
+        Long othersGroup = groupService.createGroup(new GroupCreateRequest("남의 그룹"), memberId).getGroupId();
+        join(othersGroup, ownerId);
+
+        // when
+        groupService.leaveAllGroups(ownerId);
+
+        // then
+        assertThat(events.stream(GroupDisbandedEvent.class))
+                .extracting(GroupDisbandedEvent::groupName, GroupDisbandedEvent::recipientIds)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("바삭한 사람들", List.of(memberId)),
+                        org.assertj.core.groups.Tuple.tuple("눅눅한 사람들", List.of(joinerId)));
+    }
+
     private GroupJoinedEvent lastJoinedEvent() {
         List<GroupJoinedEvent> joined = events.stream(GroupJoinedEvent.class).toList();
         return joined.get(joined.size() - 1);
