@@ -118,6 +118,30 @@ class GroupQueryCountTest {
         assertThat(fryGroupRepository.findById(groupId)).isEmpty();
     }
 
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("그룹 탈퇴는 조회 1회 + 삭제 2회로 끝난다")
+    void leaveGroupDoesNotReSelect() {
+        // given
+        Long groupId = groupService.createGroup(new GroupCreateRequest("바삭한 사람들"), ownerId).getGroupId();
+        Long memberId = saveUserWithTodos("leaver" + groupId, "떠날사람");
+        groupMemberRepository.saveAndFlush(
+                GroupMember.builder().groupId(groupId).userId(memberId).build());
+        Category category = categoryRepository
+                .findAllByUserIdAndDeletedAtIsNullOrderByDisplayOrderAsc(memberId).get(0);
+        groupPublicCategoryRepository.saveAndFlush(basakan.fryday.domain.group.GroupPublicCategory.builder()
+                .groupId(groupId).userId(memberId).categoryId(category.getId()).build());
+
+        // when
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        statistics.clear();
+        groupService.leaveGroup(groupId, memberId);
+
+        // then — 그룹 조회 1 + 공개카테고리/그룹원 삭제 2
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(3);
+        assertThat(groupMemberRepository.existsByGroupIdAndUserId(groupId, memberId)).isFalse();
+    }
+
     private long countQueries(Long groupId) {
         Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
         statistics.clear();

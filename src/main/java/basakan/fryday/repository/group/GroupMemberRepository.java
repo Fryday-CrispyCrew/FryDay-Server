@@ -24,6 +24,10 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     @Query("DELETE FROM GroupMember gm WHERE gm.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("DELETE FROM GroupMember gm WHERE gm.groupId = :groupId AND gm.userId = :userId")
+    void deleteAllByGroupIdAndUserId(@Param("groupId") Long groupId, @Param("userId") Long userId);
+
     /** 내가 참여 중인 그룹을 최근 가입순으로 조회한다. 인원수는 그룹별 서브쿼리로 한 번에 센다. */
     @Query("SELECT new basakan.fryday.service.group.dto.GroupSummaryDto(" +
             "g.id, g.name, g.ownerId, " +

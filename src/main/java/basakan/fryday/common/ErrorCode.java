@@ -65,6 +65,7 @@ public enum ErrorCode {
     INVITE_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 초대 코드입니다."),
     GROUP_ALREADY_JOINED(HttpStatus.CONFLICT, "이미 참여 중인 그룹입니다."),
     GROUP_FULL(HttpStatus.CONFLICT, "그룹 정원이 가득 차 참여할 수 없습니다."),
+    GROUP_OWNER_CANNOT_LEAVE(HttpStatus.FORBIDDEN, "그룹장은 탈퇴할 수 없습니다. 그룹을 해체해주세요."),
 
     // System
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서버 점검 중입니다. 잠시 후 다시 시도해주세요.");
