@@ -194,14 +194,16 @@ public class GroupService {
 
     @Transactional
     public void deleteGroup(Long groupId, Long userId) {
-        FryGroup group = findGroupOwnedBy(groupId, userId);
+        disband(findGroupOwnedBy(groupId, userId));
+    }
 
+    private void disband(FryGroup group) {
         // 아래 벌크 삭제가 그룹원 행을 지우므로 수신자는 그 전에 읽어둔다
         eventPublisher.publishEvent(new GroupDisbandedEvent(
-                group.getName(), groupMemberRepository.findNotifiableUserIds(groupId, userId)));
+                group.getName(), groupMemberRepository.findNotifiableUserIds(group.getId(), group.getOwnerId())));
 
-        groupPublicCategoryRepository.deleteAllByGroupId(groupId);
-        groupMemberRepository.deleteAllByGroupId(groupId);
+        groupPublicCategoryRepository.deleteAllByGroupId(group.getId());
+        groupMemberRepository.deleteAllByGroupId(group.getId());
         fryGroupRepository.deleteGroupById(group.getId());
     }
 
@@ -241,11 +243,7 @@ public class GroupService {
      */
     @Transactional
     public void leaveAllGroups(Long userId) {
-        for (FryGroup ownedGroup : fryGroupRepository.findAllByOwnerId(userId)) {
-            groupPublicCategoryRepository.deleteAllByGroupId(ownedGroup.getId());
-            groupMemberRepository.deleteAllByGroupId(ownedGroup.getId());
-            fryGroupRepository.deleteGroupById(ownedGroup.getId());
-        }
+        fryGroupRepository.findAllByOwnerId(userId).forEach(this::disband);
 
         groupPublicCategoryRepository.deleteAllByUserId(userId);
         groupMemberRepository.deleteAllByUserId(userId);
