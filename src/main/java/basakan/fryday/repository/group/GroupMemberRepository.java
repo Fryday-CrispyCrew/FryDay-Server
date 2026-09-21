@@ -41,6 +41,11 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             "ORDER BY gm.createdAt DESC, gm.id DESC")
     List<GroupSummaryDto> findMyGroups(@Param("userId") Long userId);
 
+    @Query("SELECT gm.userId FROM GroupMember gm " +
+            "JOIN User u ON u.id = gm.userId AND u.accountStatus = 'ACTIVE' " +
+            "WHERE gm.groupId = :groupId AND gm.notificationEnabled = true AND gm.userId <> :excludeUserId")
+    List<Long> findNotifiableUserIds(@Param("groupId") Long groupId, @Param("excludeUserId") Long excludeUserId);
+
     /** 그룹원을 참여 순서대로 조회한다. 탈퇴 대기 중인 계정은 제외한다. */
     @Query("SELECT new basakan.fryday.service.group.dto.GroupMemberDto(gm.userId, u.nickname, gm.createdAt) " +
             "FROM GroupMember gm " +
