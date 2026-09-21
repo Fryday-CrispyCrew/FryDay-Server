@@ -14,6 +14,7 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -47,6 +49,7 @@ class RecurrenceInstanceServiceTest {
     @Mock private CategoryRepository categoryRepository;
     @Mock private TodoAlarmRepository todoAlarmRepository;
     @Mock private RecurrenceOccurrenceCalculator occurrenceCalculator;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private RecurrenceInstanceService service;
@@ -107,6 +110,14 @@ class RecurrenceInstanceServiceTest {
 
             assertThat(instance.isDeleted()).isTrue();
             assertThat(instance.getRecurrenceId()).isEqualTo(RECURRENCE_ID);
+        }
+
+        @Test
+        @DisplayName("반복을 해제하면 그룹 진행 상태 이벤트를 발행한다")
+        void 그룹_진행_상태_이벤트_발행() {
+            service.cancelRecurrence(INSTANCE_ID, RecurrenceScope.THIS, USER_ID);
+
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
         }
 
         @Test

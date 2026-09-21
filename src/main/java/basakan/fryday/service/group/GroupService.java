@@ -33,6 +33,7 @@ import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
 import basakan.fryday.service.group.event.GroupDisbandedEvent;
 import basakan.fryday.service.group.event.GroupJoinedEvent;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -281,6 +282,7 @@ public class GroupService {
 
         groupPublicCategoryRepository.deleteAllByGroupIdAndUserId(groupId, userId);
         publishCategories(groupId, userId, categories);
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
 
         return getPublicCategories(groupId, userId);
     }

@@ -11,7 +11,9 @@ import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class RecurrenceInstanceService {
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceOccurrenceCalculator occurrenceCalculator;
     private final TodoAlarmSynchronizer alarmSynchronizer;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void edit(long instanceId, RecurrenceScope scope, Payload payload, long userId) {
@@ -41,6 +44,7 @@ public class RecurrenceInstanceService {
             case THIS_AND_FUTURE -> editThisAndFuture(instanceId, payload, userId);
             case ALL -> editAll(instanceId, payload, userId);
         }
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
     }
 
     @Transactional
@@ -50,6 +54,7 @@ public class RecurrenceInstanceService {
             case THIS_AND_FUTURE -> deleteThisAndFuture(instanceId, userId);
             case ALL -> deleteAll(instanceId, userId);
         }
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
     }
 
     @Transactional
@@ -59,6 +64,7 @@ public class RecurrenceInstanceService {
             case THIS_AND_FUTURE -> cancelThisAndFuture(instanceId, userId);
             case ALL -> cancelAll(instanceId, userId);
         }
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
     }
 
     // ── Edit ──────────────────────────────────────────────────────────────────
