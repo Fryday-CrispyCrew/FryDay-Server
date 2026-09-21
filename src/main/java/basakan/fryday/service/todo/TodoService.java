@@ -62,7 +62,12 @@ public class TodoService {
     @Transactional
     public TodoResponse toggleTodoCompletion(Long todoId, Long userId) {
         Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
 
         todo.toggleCompletion();
 

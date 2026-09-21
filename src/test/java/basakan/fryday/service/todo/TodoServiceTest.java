@@ -91,6 +91,52 @@ class TodoServiceTest {
     }
 
     @Nested
+    @DisplayName("toggleTodoCompletion")
+    class ToggleTodoCompletion {
+
+        @Test
+        @DisplayName("미완료 투두를 완료로 바꾼다")
+        void 미완료_투두_완료() {
+            // given
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when
+            var result = todoService.toggleTodoCompletion(TODO_ID, USER_ID);
+
+            // then
+            assertThat(result.getStatus()).isEqualTo(Todo.Status.COMPLETED.name());
+            assertThat(inProgressTodo.isCompleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("실패 - 다른 사용자의 투두")
+        void 실패_다른_사용자_투두() {
+            // given
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when & then
+            assertThatThrownBy(() -> todoService.toggleTodoCompletion(TODO_ID, 999L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TODO_NOT_FOUND);
+            assertThat(inProgressTodo.isCompleted()).isFalse();
+        }
+
+        @Test
+        @DisplayName("실패 - 삭제된 투두")
+        void 실패_삭제된_투두() {
+            // given
+            inProgressTodo.delete();
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when & then
+            assertThatThrownBy(() -> todoService.toggleTodoCompletion(TODO_ID, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TODO_NOT_FOUND);
+            assertThat(inProgressTodo.isCompleted()).isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("postponeToTomorrow")
     class PostponeToTomorrow {
 
