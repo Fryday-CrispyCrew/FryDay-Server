@@ -19,6 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      image-tag: ${{ steps.sha.outputs.tag }}
 
     steps:
       - name: Checkout
@@ -47,6 +49,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Short sha
+        id: sha
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Image metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -55,7 +61,7 @@ jobs:
           tags: |
             type=raw,value=dev,enable=${{ github.ref == 'refs/heads/develop' }}
             type=raw,value=prod,enable=${{ github.ref == 'refs/heads/main' }}
-            type=sha,prefix=,format=short
+            type=raw,value=${{ steps.sha.outputs.tag }}
 
       # Dockerfile에 RUN이 없어 x86 러너에서도 QEMU 없이 arm64 이미지를 만들 수 있다.
       - name: Build and push image
@@ -66,3 +72,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-dev:
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: dev
+      image-tag: ${{ needs.build.outputs.image-tag }}
+    secrets: inherit

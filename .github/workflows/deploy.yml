@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SERVER: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
+      DEPLOY_DIR: fryday-${{ inputs.environment }}
+      COMPOSE_FILE_PATH: deploy/${{ inputs.environment }}/compose.yml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: deploy
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST_KEY: ${{ secrets.SERVER_HOST_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$HOST_KEY" > ~/.ssh/known_hosts
+
+      - name: Copy compose file
+        run: scp "$COMPOSE_FILE_PATH" "$SERVER:$DEPLOY_DIR/compose.yml"
+
+      # GHCR 로그인은 이 실행 동안만 유효한 GITHUB_TOKEN으로 하고, 끝나면 로그아웃해 서버에 자격 증명을 남기지 않는다.
+      - name: Deploy
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          IMAGE_TAG: ${{ inputs.image-tag }}
+        run: |
+          ssh "$SERVER" bash -s <<EOF
+          set -euo pipefail
+          cd ~/$DEPLOY_DIR
+          trap 'docker logout ghcr.io >/dev/null' EXIT
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          export APP_TAG=$IMAGE_TAG
+          docker compose pull app
+          docker compose up -d app
+          EOF
