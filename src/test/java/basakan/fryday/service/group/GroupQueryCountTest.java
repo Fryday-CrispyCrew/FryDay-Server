@@ -103,7 +103,7 @@ class GroupQueryCountTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("그룹 해체는 재조회 없이 조회 1회 + 삭제 3회로 끝난다")
+    @DisplayName("그룹 해체는 재조회 없이 조회 2회 + 삭제 3회로 끝난다")
     void deleteGroupDoesNotReSelect() {
         // given
         Long groupId = createGroupWith(2);
@@ -113,8 +113,8 @@ class GroupQueryCountTest {
         statistics.clear();
         groupService.deleteGroup(groupId, ownerId);
 
-        // then — 그룹 조회 1 + 공개카테고리/그룹원/그룹 삭제 3
-        assertThat(statistics.getPrepareStatementCount()).isEqualTo(4);
+        // then — 그룹 조회 1 + 알림 수신자 조회 1 + 공개카테고리/그룹원/그룹 삭제 3
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(5);
         assertThat(fryGroupRepository.findById(groupId)).isEmpty();
     }
 

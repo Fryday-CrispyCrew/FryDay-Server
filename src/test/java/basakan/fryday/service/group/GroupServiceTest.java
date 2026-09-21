@@ -8,6 +8,7 @@ import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.repository.CategoryRepository;
+import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.group.FryGroupRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -43,7 +45,9 @@ class GroupServiceTest {
     @Mock private GroupMemberRepository groupMemberRepository;
     @Mock private GroupPublicCategoryRepository groupPublicCategoryRepository;
     @Mock private CategoryRepository categoryRepository;
+    @Mock private UserJpaRepository userJpaRepository;
     @Mock private GroupCreator groupCreator;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private GroupService groupService;
 

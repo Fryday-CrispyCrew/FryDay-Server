@@ -5,6 +5,7 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
+import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
@@ -13,6 +14,7 @@ import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
+import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
@@ -21,13 +23,18 @@ import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupPublicCategory;
 import basakan.fryday.domain.group.GroupRole;
+import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
+import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.group.FryGroupRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
 import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
+import basakan.fryday.service.group.event.GroupDisbandedEvent;
+import basakan.fryday.service.group.event.GroupJoinedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -55,7 +62,9 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final GroupPublicCategoryRepository groupPublicCategoryRepository;
     private final CategoryRepository categoryRepository;
+    private final UserJpaRepository userJpaRepository;
     private final GroupCreator groupCreator;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 초대 코드는 발급 직전 중복 확인과 DB unique 제약 사이에 아주 좁은 경쟁 구간이 있다.
@@ -119,6 +128,12 @@ public class GroupService {
         saveMember(group.getId(), userId);
         publishCategories(group.getId(), userId, categories);
 
+        eventPublisher.publishEvent(new GroupJoinedEvent(
+                group.getId(),
+                group.getName(),
+                userJpaRepository.findById(userId).map(User::getNickname).orElse(null),
+                groupMemberRepository.findNotifiableUserIds(group.getId(), userId)));
+
         return GroupJoinResponse.of(group, (int) memberCount + 1);
     }
 
@@ -180,6 +195,10 @@ public class GroupService {
     public void deleteGroup(Long groupId, Long userId) {
         FryGroup group = findGroupOwnedBy(groupId, userId);
 
+        // 아래 벌크 삭제가 그룹원 행을 지우므로 수신자는 그 전에 읽어둔다
+        eventPublisher.publishEvent(new GroupDisbandedEvent(
+                group.getName(), groupMemberRepository.findNotifiableUserIds(groupId, userId)));
+
         groupPublicCategoryRepository.deleteAllByGroupId(groupId);
         groupMemberRepository.deleteAllByGroupId(groupId);
         fryGroupRepository.deleteGroupById(group.getId());
@@ -195,6 +214,25 @@ public class GroupService {
 
         groupPublicCategoryRepository.deleteAllByGroupIdAndUserId(groupId, userId);
         groupMemberRepository.deleteAllByGroupIdAndUserId(groupId, userId);
+    }
+
+    public GroupNotificationSettingResponse getNotificationSetting(Long groupId, Long userId) {
+        return GroupNotificationSettingResponse.from(findMembership(groupId, userId));
+    }
+
+    @Transactional
+    public GroupNotificationSettingResponse updateNotificationSetting(Long groupId, Long userId,
+                                                                      GroupNotificationSettingRequest request) {
+        GroupMember member = findMembership(groupId, userId);
+
+        member.updateNotificationEnabled(request.getEnabled());
+
+        return GroupNotificationSettingResponse.from(member);
+    }
+
+    private GroupMember findMembership(Long groupId, Long userId) {
+        return groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
     }
 
     /**
