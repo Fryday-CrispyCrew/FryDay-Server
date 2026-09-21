@@ -169,6 +169,9 @@ class GroupNotificationDeliveryTest {
         Category study = join(groupId, joinerId);
         Todo first = saveTodo(study);
         saveTodo(study);
+        // 참여 알림은 비동기로 발송되므로, 도착한 뒤에 비워야 아래 never() 검증에 섞이지 않는다.
+        verify(pushService, timeout(2000)).sendToUser(any(), anyString(), anyString(),
+                argThat(data -> "GROUP_JOINED".equals(data.get("type"))));
         clearInvocations(pushService);
 
         // when
