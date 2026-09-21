@@ -1,6 +1,7 @@
 package basakan.fryday.service.group;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.domain.group.GroupPushType;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.service.group.event.GroupDisbandedEvent;

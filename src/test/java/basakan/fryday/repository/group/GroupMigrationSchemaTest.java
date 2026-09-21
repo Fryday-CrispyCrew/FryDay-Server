@@ -41,11 +41,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("그룹 테이블 마이그레이션 스크립트")
 class GroupMigrationSchemaTest {
 
-    private static final Path MIGRATION = Path.of("db/2026-09-15_create_group_tables.sql");
+    private static final List<Path> MIGRATIONS = List.of(
+            Path.of("db/2026-09-15_create_group_tables.sql"),
+            Path.of("db/2026-09-21_create_group_push_history.sql"));
     private static final String HIBERNATE_SCHEMA = "fryday_group_schema";
     private static final String MIGRATION_SCHEMA = "fryday_migration_check";
     private static final List<String> GROUP_TABLES =
-            List.of("fry_group", "group_member", "group_public_category");
+            List.of("fry_group", "group_member", "group_public_category", "group_push_history");
 
     @Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
@@ -88,10 +90,13 @@ class GroupMigrationSchemaTest {
     }
 
     private void applyMigrationToSeparateSchema(Connection connection) throws IOException, SQLException {
-        List<String> createTables = Arrays.stream(Files.readString(MIGRATION).split(";"))
-                .map(GroupMigrationSchemaTest::stripComments)
-                .filter(statement -> statement.toUpperCase().startsWith("CREATE TABLE"))
-                .toList();
+        List<String> createTables = new ArrayList<>();
+        for (Path migration : MIGRATIONS) {
+            Arrays.stream(Files.readString(migration).split(";"))
+                    .map(GroupMigrationSchemaTest::stripComments)
+                    .filter(statement -> statement.toUpperCase().startsWith("CREATE TABLE"))
+                    .forEach(createTables::add);
+        }
         assertThat(createTables).as("마이그레이션 파일의 CREATE TABLE 문").hasSize(GROUP_TABLES.size());
 
         try (Statement statement = connection.createStatement()) {
