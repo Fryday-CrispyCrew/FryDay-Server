@@ -96,6 +96,6 @@ asciidoctor {
 bootJar {
 	dependsOn asciidoctor
 	from ("build/docs/asciidoc") {
-		into 'static/docs'
+		into 'BOOT-INF/classes/static/docs'
 	}
 }
