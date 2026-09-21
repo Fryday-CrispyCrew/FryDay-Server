@@ -81,6 +81,13 @@ public class GroupController {
         return ApiResponse.success(null, "그룹이 해체되었습니다.");
     }
 
+    @DeleteMapping("/{groupId}/members/me")
+    public ApiResponse<Void> leaveGroup(@PathVariable Long groupId,
+                                        @AuthenticationPrincipal Long userId) {
+        groupService.leaveGroup(groupId, userId);
+        return ApiResponse.success(null, "그룹에서 탈퇴했습니다.");
+    }
+
     @GetMapping("/{groupId}/public-categories")
     public ApiResponse<GroupPublicCategoryListResponse> getPublicCategories(@PathVariable Long groupId,
                                                                             @AuthenticationPrincipal Long userId) {

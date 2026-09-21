@@ -361,6 +361,28 @@ class GroupControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("그룹 탈퇴 API")
+    void leaveGroup() throws Exception {
+        // given
+        willDoNothing().given(groupService).leaveGroup(anyLong(), anyLong());
+
+        // when & then
+        mockMvc.perform(delete("/api/groups/{groupId}/members/me", GROUP_ID))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("group-leave",
+                        pathParameters(
+                                parameterWithName("groupId").description("탈퇴할 그룹 ID (그룹원만 가능)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
     @DisplayName("공개 카테고리 조회 API")
     void getPublicCategories() throws Exception {
         // given

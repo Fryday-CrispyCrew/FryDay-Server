@@ -185,6 +185,18 @@ public class GroupService {
         fryGroupRepository.deleteGroupById(group.getId());
     }
 
+    @Transactional
+    public void leaveGroup(Long groupId, Long userId) {
+        FryGroup group = findGroupJoinedBy(groupId, userId);
+
+        if (group.isOwner(userId)) {
+            throw new BusinessException(ErrorCode.GROUP_OWNER_CANNOT_LEAVE);
+        }
+
+        groupPublicCategoryRepository.deleteAllByGroupIdAndUserId(groupId, userId);
+        groupMemberRepository.deleteAllByGroupIdAndUserId(groupId, userId);
+    }
+
     /**
      * 회원 탈퇴 정리. 내가 그룹장인 그룹은 해체하고, 그룹원으로 참여 중인 그룹에서는 내 흔적만 지운다.
      */
