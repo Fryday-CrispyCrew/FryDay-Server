@@ -9,10 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
 
     boolean existsByGroupIdAndUserId(Long groupId, Long userId);
+
+    Optional<GroupMember> findByGroupIdAndUserId(Long groupId, Long userId);
 
     long countByGroupId(Long groupId);
 

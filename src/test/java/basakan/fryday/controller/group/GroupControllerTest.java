@@ -7,6 +7,7 @@ import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
+import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
@@ -15,12 +16,14 @@ import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
+import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.FryGroup;
+import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupRole;
 import basakan.fryday.service.group.GroupService;
 import basakan.fryday.service.group.dto.GroupMemberDto;
@@ -383,6 +386,76 @@ class GroupControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("그룹 알림 설정 조회 API")
+    void getNotificationSetting() throws Exception {
+        // given
+        given(groupService.getNotificationSetting(anyLong(), anyLong()))
+                .willReturn(GroupNotificationSettingResponse.from(member(true)));
+
+        // when & then
+        mockMvc.perform(get("/api/groups/{groupId}/members/me/notification", GROUP_ID))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(true))
+                .andDo(document("group-notification-setting",
+                        pathParameters(
+                                parameterWithName("groupId").description("알림 설정을 조회할 그룹 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.groupId").type(JsonFieldType.NUMBER).description("그룹 ID"),
+                                fieldWithPath("data.enabled").type(JsonFieldType.BOOLEAN)
+                                        .description("이 그룹의 알림 수신 여부 (참여 시 기본값 true)"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("그룹 알림 설정 변경 API")
+    void updateNotificationSetting() throws Exception {
+        // given
+        given(groupService.updateNotificationSetting(anyLong(), anyLong(), any(GroupNotificationSettingRequest.class)))
+                .willReturn(GroupNotificationSettingResponse.from(member(false)));
+
+        // when & then
+        mockMvc.perform(patch("/api/groups/{groupId}/members/me/notification", GROUP_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupNotificationSettingRequest(false))))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.enabled").value(false))
+                .andDo(document("group-notification-setting-update",
+                        pathParameters(
+                                parameterWithName("groupId").description("알림 설정을 변경할 그룹 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("enabled").type(JsonFieldType.BOOLEAN)
+                                        .description("이 그룹의 알림 수신 여부")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.groupId").type(JsonFieldType.NUMBER).description("그룹 ID"),
+                                fieldWithPath("data.enabled").type(JsonFieldType.BOOLEAN)
+                                        .description("변경 후 알림 수신 여부"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("알림 수신 여부가 없으면 알림 설정을 바꿀 수 없다")
+    void updateNotificationSettingWithoutEnabledFails() throws Exception {
+        mockMvc.perform(patch("/api/groups/{groupId}/members/me/notification", GROUP_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("공개 카테고리 조회 API")
     void getPublicCategories() throws Exception {
         // given
@@ -469,6 +542,12 @@ class GroupControllerTest extends RestDocsSupport {
                                 new GroupPublicCategoryUpdateRequest(List.of()))))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
+    }
+
+    private GroupMember member(boolean notificationEnabled) {
+        GroupMember member = GroupMember.builder().groupId(GROUP_ID).userId(MEMBER_ID).build();
+        member.updateNotificationEnabled(notificationEnabled);
+        return member;
     }
 
     private FryGroup group() {

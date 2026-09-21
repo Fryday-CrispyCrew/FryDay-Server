@@ -5,6 +5,7 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
+import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
@@ -13,6 +14,7 @@ import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
+import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
@@ -195,6 +197,25 @@ public class GroupService {
 
         groupPublicCategoryRepository.deleteAllByGroupIdAndUserId(groupId, userId);
         groupMemberRepository.deleteAllByGroupIdAndUserId(groupId, userId);
+    }
+
+    public GroupNotificationSettingResponse getNotificationSetting(Long groupId, Long userId) {
+        return GroupNotificationSettingResponse.from(findMembership(groupId, userId));
+    }
+
+    @Transactional
+    public GroupNotificationSettingResponse updateNotificationSetting(Long groupId, Long userId,
+                                                                      GroupNotificationSettingRequest request) {
+        GroupMember member = findMembership(groupId, userId);
+
+        member.updateNotificationEnabled(request.getEnabled());
+
+        return GroupNotificationSettingResponse.from(member);
+    }
+
+    private GroupMember findMembership(Long groupId, Long userId) {
+        return groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUP_NOT_FOUND));
     }
 
     /**

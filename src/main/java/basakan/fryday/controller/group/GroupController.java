@@ -4,6 +4,7 @@ import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
+import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
@@ -11,6 +12,7 @@ import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
 import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
+import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.service.group.GroupService;
 import jakarta.validation.Valid;
@@ -86,6 +88,22 @@ public class GroupController {
                                         @AuthenticationPrincipal Long userId) {
         groupService.leaveGroup(groupId, userId);
         return ApiResponse.success(null, "그룹에서 탈퇴했습니다.");
+    }
+
+    @GetMapping("/{groupId}/members/me/notification")
+    public ApiResponse<GroupNotificationSettingResponse> getNotificationSetting(@PathVariable Long groupId,
+                                                                               @AuthenticationPrincipal Long userId) {
+        GroupNotificationSettingResponse response = groupService.getNotificationSetting(groupId, userId);
+        return ApiResponse.success(response);
+    }
+
+    @PatchMapping("/{groupId}/members/me/notification")
+    public ApiResponse<GroupNotificationSettingResponse> updateNotificationSetting(
+            @PathVariable Long groupId,
+            @Valid @RequestBody GroupNotificationSettingRequest request,
+            @AuthenticationPrincipal Long userId) {
+        GroupNotificationSettingResponse response = groupService.updateNotificationSetting(groupId, userId, request);
+        return ApiResponse.success(response, "그룹 알림 설정이 변경되었습니다.");
     }
 
     @GetMapping("/{groupId}/public-categories")
