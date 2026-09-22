@@ -41,6 +41,9 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
             "ORDER BY gm.createdAt DESC, gm.id DESC")
     List<GroupSummaryDto> findMyGroups(@Param("userId") Long userId);
 
+    @Query("SELECT gm.groupId FROM GroupMember gm WHERE gm.userId = :userId")
+    List<Long> findGroupIdsByUserId(@Param("userId") Long userId);
+
     @Query("SELECT gm.userId FROM GroupMember gm " +
             "JOIN User u ON u.id = gm.userId AND u.accountStatus = 'ACTIVE' " +
             "WHERE gm.groupId = :groupId AND gm.notificationEnabled = true AND gm.userId <> :excludeUserId")
