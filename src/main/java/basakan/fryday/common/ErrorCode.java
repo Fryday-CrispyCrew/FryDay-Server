@@ -66,6 +66,9 @@ public enum ErrorCode {
     GROUP_ALREADY_JOINED(HttpStatus.CONFLICT, "이미 참여 중인 그룹입니다."),
     GROUP_FULL(HttpStatus.CONFLICT, "그룹 정원이 가득 차 참여할 수 없습니다."),
     GROUP_OWNER_CANNOT_LEAVE(HttpStatus.FORBIDDEN, "그룹장은 탈퇴할 수 없습니다. 그룹을 해체해주세요."),
+    INTERACTION_SELF_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신에게는 상호작용을 보낼 수 없습니다."),
+    INTERACTION_STATUS_MISMATCH(HttpStatus.CONFLICT, "그룹원의 영업 상태가 바뀌었습니다. 화면을 새로고침해주세요."),
+    INTERACTION_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 다시 보낼 수 있습니다."),
 
     // System
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서버 점검 중입니다. 잠시 후 다시 시도해주세요.");
