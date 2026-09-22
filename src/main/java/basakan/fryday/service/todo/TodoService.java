@@ -58,6 +58,7 @@ public class TodoService {
         todo.updateDisplayOrder(nextOrder);
 
         Todo savedTodo = todoRepository.save(todo);
+        publishProgressChanged(userId);
 
         return TodoResponse.from(savedTodo);
     }
@@ -73,9 +74,7 @@ public class TodoService {
         }
 
         todo.toggleCompletion();
-        if (todo.isCompleted()) {
-            publishProgressChanged(userId);
-        }
+        publishProgressChanged(userId);
 
         return TodoResponse.from(todo);
     }
@@ -148,7 +147,9 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        return moveOrCopyTodoToDate(todo, LocalDate.now(), userId);
+        TodoResponse response = moveOrCopyTodoToDate(todo, LocalDate.now(), userId);
+        publishProgressChanged(userId);
+        return response;
     }
 
     private void publishProgressChanged(Long userId) {

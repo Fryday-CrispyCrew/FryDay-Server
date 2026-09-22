@@ -13,6 +13,7 @@ import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import basakan.fryday.service.user.UserReadService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +58,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         RecurrenceOccurrenceCalculator.class,
         UserReadService.class
 })
+@RecordApplicationEvents
 @DisplayName("RecurrenceService 통합")
 class RecurrenceServiceIntegrationTest {
 
@@ -119,6 +123,34 @@ class RecurrenceServiceIntegrationTest {
         assertThat(materialized.getDate()).isEqualTo(ANCHOR);
         assertThat(materialized.getRecurrenceId()).isEqualTo(recurrenceId);
         assertThat(todoRepository.findAllByUserIdAndDate(userId, ANCHOR)).hasSize(1);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("반복 규칙을 생성하면 그룹 진행 상태 이벤트를 발행한다")
+    void createRecurrence_publishesProgressChangedEvent(ApplicationEvents events) {
+        User user = userJpaRepository.save(User.createNewUser(AuthProvider.APPLE, "dev-sub-evt", "evt@t.com"));
+        Long userId = user.getId();
+
+        Category category = categoryRepository.save(
+                Category.builder().name("운동").color(CategoryColor.BR).userId(userId).displayOrder(1L).build()
+        );
+
+        Todo anchorTodo = todoRepository.save(
+                Todo.builder().description("반복 E").category(category).date(ANCHOR).displayOrder(1L).build()
+        );
+
+        RecurrenceCreateRequest createRequest = new RecurrenceCreateRequest();
+        ReflectionTestUtils.setField(createRequest, "todoId", anchorTodo.getId());
+        ReflectionTestUtils.setField(createRequest, "type", RecurrenceType.DAILY);
+        ReflectionTestUtils.setField(createRequest, "startDate", ANCHOR);
+        ReflectionTestUtils.setField(createRequest, "endDate", RANGE_END);
+        ReflectionTestUtils.setField(createRequest, "notificationTime", null);
+
+        recurrenceService.createRecurrence(userId, createRequest);
+
+        assertThat(events.stream(GroupProgressChangedEvent.class))
+                .containsExactly(new GroupProgressChangedEvent(userId));
     }
 
     @Test

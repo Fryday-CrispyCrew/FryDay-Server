@@ -64,6 +64,7 @@ public class RecurrenceService {
 
         Todo todo = todoRepository.findById(request.getTodoId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
         return TodoResponse.from(todo);
     }
 
