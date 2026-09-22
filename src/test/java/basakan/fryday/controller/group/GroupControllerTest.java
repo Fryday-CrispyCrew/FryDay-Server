@@ -302,6 +302,12 @@ class GroupControllerTest extends RestDocsSupport {
                                         .description("공개된 카테고리 기준 오늘 전체 투두 개수"),
                                 fieldWithPath("data.members[].completedCount").type(JsonFieldType.NUMBER)
                                         .description("공개된 카테고리 기준 오늘 완료한 투두 개수"),
+                                fieldWithPath("data.members[].status").type(JsonFieldType.STRING)
+                                        .description("영업 상태 (BEFORE_OPEN: 영업 전, PREPARING: 영업 준비, "
+                                                + "FRYING: 튀김 조리 중, CLOSED: 영업 종료)"),
+                                fieldWithPath("data.members[].availableInteraction").type(JsonFieldType.STRING)
+                                        .description("지금 이 그룹원에게 보낼 수 있는 상호작용 (KNOCK: 똑똑똑, ORDER: 주문이요, "
+                                                + "DELICIOUS: 맛있어요, APPLAUSE: 박수)"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));

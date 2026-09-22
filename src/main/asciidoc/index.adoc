@@ -975,6 +975,33 @@ include::{snippets}/group-join/response-fields.adoc[]
 그룹원마다 자신이 이 그룹에 공개한 카테고리 기준으로 오늘의 전체 투두 수와 완료 수를 함께 내려줍니다.
 그룹장은 항상 목록의 첫 번째이며, 나머지 그룹원은 참여한 순서대로 정렬됩니다.
 
+그룹원마다 오늘의 영업 상태(`status`)와 지금 보낼 수 있는 상호작용(`availableInteraction`)도 함께 내려줍니다.
+앱은 이 값을 그대로 화면에 반영하면 됩니다.
+
+|===
+| `status` | 상태 | 조건 | `availableInteraction`
+
+| `BEFORE_OPEN`
+| 영업 전
+| 공개 카테고리의 오늘 투두가 0개
+| `KNOCK` (똑똑똑)
+
+| `PREPARING`
+| 영업 준비
+| 투두가 1개 이상 있고, 완료한 투두는 0개
+| `ORDER` (주문이요)
+
+| `FRYING`
+| 튀김 조리 중
+| 1개 이상 완료, 전부 완료는 아님
+| `DELICIOUS` (맛있어요)
+
+| `CLOSED`
+| 영업 종료
+| 전부 완료
+| `APPLAUSE` (박수)
+|===
+
 ==== 경로 파라미터
 include::{snippets}/group-detail/path-parameters.adoc[]
 ==== HTTP 요청 예시
