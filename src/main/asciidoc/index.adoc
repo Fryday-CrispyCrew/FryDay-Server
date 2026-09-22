@@ -975,6 +975,33 @@ include::{snippets}/group-join/response-fields.adoc[]
 그룹원마다 자신이 이 그룹에 공개한 카테고리 기준으로 오늘의 전체 투두 수와 완료 수를 함께 내려줍니다.
 그룹장은 항상 목록의 첫 번째이며, 나머지 그룹원은 참여한 순서대로 정렬됩니다.
 
+그룹원마다 오늘의 영업 상태(`status`)와 지금 보낼 수 있는 상호작용(`availableInteraction`)도 함께 내려줍니다.
+앱은 이 값을 그대로 화면에 반영하면 됩니다.
+
+|===
+| `status` | 상태 | 조건 | `availableInteraction`
+
+| `BEFORE_OPEN`
+| 영업 전
+| 공개 카테고리의 오늘 투두가 0개
+| `KNOCK` (똑똑똑)
+
+| `PREPARING`
+| 영업 준비
+| 투두가 1개 이상 있고, 완료한 투두는 0개
+| `ORDER` (주문이요)
+
+| `FRYING`
+| 튀김 조리 중
+| 1개 이상 완료, 전부 완료는 아님
+| `DELICIOUS` (맛있어요)
+
+| `CLOSED`
+| 영업 종료
+| 전부 완료
+| `APPLAUSE` (박수)
+|===
+
 ==== 경로 파라미터
 include::{snippets}/group-detail/path-parameters.adoc[]
 ==== HTTP 요청 예시
@@ -1067,6 +1094,42 @@ include::{snippets}/group-notification-setting-update/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/group-notification-setting-update/response-fields.adoc[]
 
+=== 그룹 상호작용
+`POST /api/groups/{groupId}/members/{targetUserId}/interactions`
+
+다른 그룹원에게 상호작용(똑똑똑, 주문이요, 맛있어요, 박수)을 보내고, 받는 사람에게 푸시 알림을 보냅니다.
+보낼 수 있는 상호작용은 받는 사람의 영업 상태에 따라 하나로 정해지며, 그룹 조회 응답의 `availableInteraction` 값을 그대로 보내면 됩니다.
+
+같은 그룹원에게 같은 상호작용은 30초에 한 번만 보낼 수 있습니다. 다른 상호작용이나 다른 그룹원에게는 바로 보낼 수 있습니다.
+받는 사람이 이 그룹의 알림을 껐다면 요청은 성공하지만 알림은 가지 않습니다.
+
+|===
+| 상황 | 상태 코드
+
+| 자신에게 보냄
+| 400
+
+| 보내는 사람이나 받는 사람이 그룹원이 아님
+| 404
+
+| 받는 사람의 영업 상태가 바뀌어 상호작용이 맞지 않음 (화면을 새로고침해 최신 상태를 받아야 합니다)
+| 409
+
+| 30초가 지나지 않음
+| 429
+|===
+
+==== 경로 파라미터
+include::{snippets}/group-interaction/path-parameters.adoc[]
+==== 요청 필드
+include::{snippets}/group-interaction/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-interaction/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-interaction/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-interaction/response-fields.adoc[]
+
 === 그룹 푸시 알림
 
 그룹에서 일어난 일을 그룹원에게 FCM 푸시로 알립니다. 행동한 본인, 이 그룹의 알림을 끈 그룹원, 기기의 앱 알림을 끈 사용자에게는 보내지 않습니다.
@@ -1082,6 +1145,9 @@ FCM 규격상 `data` 의 키와 값은 모두 문자열입니다.
 
 | `groupId`
 | 관련 그룹 ID. 해당 그룹이 남아 있는 알림에만 들어갑니다
+
+| `interactionType`
+| 상호작용 종류(`KNOCK`, `ORDER`, `DELICIOUS`, `APPLAUSE`). `GROUP_INTERACTION` 알림에만 들어갑니다
 |===
 
 |===
@@ -1116,6 +1182,14 @@ FCM 규격상 `data` 의 키와 값은 모두 문자열입니다.
 | 완료한 그룹원을 뺀 그룹원
 | 그룹명
 | `[닉네임]님이 튀김을 다 튀겼습니다!`
+| 있음
+| 그룹 상세
+
+| `GROUP_INTERACTION`
+| 다른 그룹원이 상호작용을 보냄
+| 상호작용을 받은 그룹원 한 명
+| 그룹명
+| 똑똑똑 `[닉네임]님이 똑똑똑 두드렸어요!`, 주문이요 `[닉네임]님이 주문을 넣었어요!`, 맛있어요 `[닉네임]님이 맛있대요!`, 박수 `[닉네임]님이 박수를 보냈어요!`
 | 있음
 | 그룹 상세
 |===

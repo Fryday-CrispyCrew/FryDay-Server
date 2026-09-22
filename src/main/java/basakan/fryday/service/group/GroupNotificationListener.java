@@ -1,7 +1,9 @@
 package basakan.fryday.service.group;
 
+import basakan.fryday.domain.group.GroupInteractionType;
 import basakan.fryday.domain.group.GroupPushType;
 import basakan.fryday.service.group.event.GroupDisbandedEvent;
+import basakan.fryday.service.group.event.GroupInteractionEvent;
 import basakan.fryday.service.group.event.GroupJoinedEvent;
 import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -17,8 +20,10 @@ import java.util.Map;
 public class GroupNotificationListener {
 
     private static final String UNKNOWN_NICKNAME = "새 그룹원";
+    private static final String GROUP_MEMBER_NICKNAME = "그룹원";
     private static final String TYPE_KEY = "type";
     private static final String GROUP_ID_KEY = "groupId";
+    private static final String INTERACTION_TYPE_KEY = "interactionType";
 
     private final GroupPushSender groupPushSender;
     private final GroupProgressNotifier groupProgressNotifier;
@@ -44,6 +49,26 @@ public class GroupNotificationListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onGroupProgressChanged(GroupProgressChangedEvent event) {
         groupProgressNotifier.notifyProgress(event.userId());
+    }
+
+    @Async("pushAsyncExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onGroupInteraction(GroupInteractionEvent event) {
+        String nickname = event.senderNickname() != null ? event.senderNickname() : GROUP_MEMBER_NICKNAME;
+        groupPushSender.send(List.of(event.targetUserId()), event.groupName(),
+                nickname + interactionMessage(event.type()),
+                Map.of(TYPE_KEY, GroupPushType.GROUP_INTERACTION.name(),
+                        GROUP_ID_KEY, String.valueOf(event.groupId()),
+                        INTERACTION_TYPE_KEY, event.type().name()));
+    }
+
+    private static String interactionMessage(GroupInteractionType type) {
+        return switch (type) {
+            case KNOCK -> "님이 똑똑똑 두드렸어요!";
+            case ORDER -> "님이 주문을 넣었어요!";
+            case DELICIOUS -> "님이 맛있대요!";
+            case APPLAUSE -> "님이 박수를 보냈어요!";
+        };
     }
 
     static String subjectParticle(String word) {

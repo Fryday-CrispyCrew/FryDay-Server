@@ -2,6 +2,7 @@ package basakan.fryday.controller.group;
 
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
+import basakan.fryday.controller.group.request.GroupInteractionRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
@@ -14,6 +15,7 @@ import basakan.fryday.controller.group.response.GroupListResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
+import basakan.fryday.service.group.GroupInteractionService;
 import basakan.fryday.service.group.GroupService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class GroupController {
 
     private final GroupService groupService;
+    private final GroupInteractionService groupInteractionService;
 
     @PostMapping
     public ApiResponse<GroupCreateResponse> createGroup(@Valid @RequestBody GroupCreateRequest request,
@@ -104,6 +107,15 @@ public class GroupController {
             @AuthenticationPrincipal Long userId) {
         GroupNotificationSettingResponse response = groupService.updateNotificationSetting(groupId, userId, request);
         return ApiResponse.success(response, "그룹 알림 설정이 변경되었습니다.");
+    }
+
+    @PostMapping("/{groupId}/members/{targetUserId}/interactions")
+    public ApiResponse<Void> interact(@PathVariable Long groupId,
+                                      @PathVariable Long targetUserId,
+                                      @Valid @RequestBody GroupInteractionRequest request,
+                                      @AuthenticationPrincipal Long userId) {
+        groupInteractionService.interact(groupId, targetUserId, request, userId);
+        return ApiResponse.success(null, "상호작용을 보냈습니다.");
     }
 
     @GetMapping("/{groupId}/public-categories")

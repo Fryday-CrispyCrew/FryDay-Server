@@ -43,11 +43,13 @@ class GroupMigrationSchemaTest {
 
     private static final List<Path> MIGRATIONS = List.of(
             Path.of("db/2026-09-15_create_group_tables.sql"),
-            Path.of("db/2026-09-21_create_group_push_history.sql"));
+            Path.of("db/2026-09-21_create_group_push_history.sql"),
+            Path.of("db/2026-09-22_create_group_interaction.sql"));
     private static final String HIBERNATE_SCHEMA = "fryday_group_schema";
     private static final String MIGRATION_SCHEMA = "fryday_migration_check";
     private static final List<String> GROUP_TABLES =
-            List.of("fry_group", "group_member", "group_public_category", "group_push_history");
+            List.of("fry_group", "group_member", "group_public_category", "group_push_history",
+                    "group_interaction");
 
     @Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")

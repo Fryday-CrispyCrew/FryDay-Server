@@ -4,7 +4,10 @@ import basakan.fryday.RestDocsSupport;
 import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
+import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
+import basakan.fryday.controller.group.request.GroupInteractionRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
@@ -23,8 +26,10 @@ import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.FryGroup;
+import basakan.fryday.domain.group.GroupInteractionType;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupRole;
+import basakan.fryday.service.group.GroupInteractionService;
 import basakan.fryday.service.group.GroupService;
 import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
@@ -50,6 +55,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
@@ -79,6 +85,7 @@ class GroupControllerTest extends RestDocsSupport {
     private static final Long MEMBER_ID = 2L;
 
     @MockitoBean private GroupService groupService;
+    @MockitoBean private GroupInteractionService groupInteractionService;
     @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockitoBean private JwtTokenProvider jwtTokenProvider;
 
@@ -302,6 +309,12 @@ class GroupControllerTest extends RestDocsSupport {
                                         .description("공개된 카테고리 기준 오늘 전체 투두 개수"),
                                 fieldWithPath("data.members[].completedCount").type(JsonFieldType.NUMBER)
                                         .description("공개된 카테고리 기준 오늘 완료한 투두 개수"),
+                                fieldWithPath("data.members[].status").type(JsonFieldType.STRING)
+                                        .description("영업 상태 (BEFORE_OPEN: 영업 전, PREPARING: 영업 준비, "
+                                                + "FRYING: 튀김 조리 중, CLOSED: 영업 종료)"),
+                                fieldWithPath("data.members[].availableInteraction").type(JsonFieldType.STRING)
+                                        .description("지금 이 그룹원에게 보낼 수 있는 상호작용 (KNOCK: 똑똑똑, ORDER: 주문이요, "
+                                                + "DELICIOUS: 맛있어요, APPLAUSE: 박수)"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
@@ -453,6 +466,63 @@ class GroupControllerTest extends RestDocsSupport {
                         .content("{}"))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("그룹 상호작용 API")
+    void interact() throws Exception {
+        // given
+        willDoNothing().given(groupInteractionService)
+                .interact(anyLong(), anyLong(), any(GroupInteractionRequest.class), anyLong());
+
+        // when & then
+        mockMvc.perform(post("/api/groups/{groupId}/members/{targetUserId}/interactions", GROUP_ID, MEMBER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupInteractionRequest(GroupInteractionType.ORDER))))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("group-interaction",
+                        pathParameters(
+                                parameterWithName("groupId").description("그룹 ID"),
+                                parameterWithName("targetUserId").description("상호작용을 받을 그룹원의 사용자 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("type").type(JsonFieldType.STRING)
+                                        .description("상호작용 종류. 그룹 조회 응답의 해당 그룹원 `availableInteraction` 값을 보낸다 "
+                                                + "(KNOCK, ORDER, DELICIOUS, APPLAUSE)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("상호작용 종류가 없으면 보낼 수 없다")
+    void interactWithoutTypeFails() throws Exception {
+        mockMvc.perform(post("/api/groups/{groupId}/members/{targetUserId}/interactions", GROUP_ID, MEMBER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("쿨다운 중이면 429 로 응답한다")
+    void interactDuringCooldownReturns429() throws Exception {
+        // given
+        willThrow(new BusinessException(ErrorCode.INTERACTION_COOLDOWN)).given(groupInteractionService)
+                .interact(anyLong(), anyLong(), any(GroupInteractionRequest.class), anyLong());
+
+        // when & then
+        mockMvc.perform(post("/api/groups/{groupId}/members/{targetUserId}/interactions", GROUP_ID, MEMBER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new GroupInteractionRequest(GroupInteractionType.KNOCK))))
+                .andDo(print())
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value(ErrorCode.INTERACTION_COOLDOWN.getMessage()));
     }
 
     @Test

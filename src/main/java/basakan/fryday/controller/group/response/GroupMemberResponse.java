@@ -1,5 +1,7 @@
 package basakan.fryday.controller.group.response;
 
+import basakan.fryday.domain.group.GroupInteractionType;
+import basakan.fryday.domain.group.GroupMemberStatus;
 import basakan.fryday.domain.group.GroupRole;
 import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
@@ -14,6 +16,8 @@ public class GroupMemberResponse {
     private final GroupRole role;
     private final int totalCount;
     private final int completedCount;
+    private final GroupMemberStatus status;
+    private final GroupInteractionType availableInteraction;
 
     private GroupMemberResponse(GroupMemberDto member, GroupRole role, GroupMemberTodoCountDto todoCount) {
         this.userId = member.getUserId();
@@ -21,6 +25,8 @@ public class GroupMemberResponse {
         this.role = role;
         this.totalCount = (todoCount == null) ? 0 : todoCount.getTotalCount();
         this.completedCount = (todoCount == null) ? 0 : todoCount.getCompletedCount();
+        this.status = GroupMemberStatus.of(totalCount, completedCount);
+        this.availableInteraction = status.getAvailableInteraction();
     }
 
     /** todoCount 가 null 이면 오늘 공개된 투두가 하나도 없는 그룹원이다. */

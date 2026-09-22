@@ -10,7 +10,9 @@ import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
+import basakan.fryday.domain.group.GroupInteractionType;
 import basakan.fryday.domain.group.GroupMember;
+import basakan.fryday.domain.group.GroupMemberStatus;
 import basakan.fryday.domain.group.GroupRole;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.user.AuthProvider;
@@ -118,10 +120,14 @@ class GroupReadIntegrationTest {
         assertThat(response.getMembers())
                 .extracting(GroupMemberResponse::getNickname,
                         GroupMemberResponse::getTotalCount,
-                        GroupMemberResponse::getCompletedCount)
+                        GroupMemberResponse::getCompletedCount,
+                        GroupMemberResponse::getStatus,
+                        GroupMemberResponse::getAvailableInteraction)
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple("연우", 3, 1),
-                        org.assertj.core.groups.Tuple.tuple("수정", 1, 1));
+                        org.assertj.core.groups.Tuple.tuple("연우", 3, 1,
+                                GroupMemberStatus.FRYING, GroupInteractionType.DELICIOUS),
+                        org.assertj.core.groups.Tuple.tuple("수정", 1, 1,
+                                GroupMemberStatus.CLOSED, GroupInteractionType.APPLAUSE));
     }
 
     @Test
