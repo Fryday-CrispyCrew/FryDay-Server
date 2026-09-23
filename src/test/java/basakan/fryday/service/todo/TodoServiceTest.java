@@ -8,6 +8,7 @@ import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.controller.todo.request.MemoRequest;
+import basakan.fryday.controller.todo.request.TodoSaveRequest;
 import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
@@ -33,7 +34,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class TodoServiceTest {
@@ -97,6 +97,26 @@ class TodoServiceTest {
     }
 
     @Nested
+    @DisplayName("saveTodo")
+    class SaveTodo {
+
+        @Test
+        @DisplayName("저장하면 그룹 진행 상태 이벤트를 발행한다")
+        void 저장_이벤트_발행() {
+            // given
+            given(categoryRepository.findById(CATEGORY_ID)).willReturn(Optional.of(category));
+            given(todoRepository.findMaxDisplayOrder(USER_ID, today)).willReturn(null);
+            given(todoRepository.save(any(Todo.class))).willReturn(inProgressTodo);
+
+            // when
+            todoService.saveTodo(new TodoSaveRequest("스쿼트 100개", CATEGORY_ID, today), USER_ID);
+
+            // then
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
+        }
+    }
+
+    @Nested
     @DisplayName("toggleTodoCompletion")
     class ToggleTodoCompletion {
 
@@ -116,8 +136,8 @@ class TodoServiceTest {
         }
 
         @Test
-        @DisplayName("완료를 취소하면 그룹 진행 상태 이벤트를 발행하지 않는다")
-        void 완료_취소_이벤트_없음() {
+        @DisplayName("완료를 취소해도 그룹 진행 상태 이벤트를 발행한다")
+        void 완료_취소_이벤트_발행() {
             // given
             given(todoRepository.findById(TODO_ID + 1)).willReturn(Optional.of(completedTodo));
 
@@ -126,7 +146,7 @@ class TodoServiceTest {
 
             // then
             assertThat(completedTodo.isCompleted()).isFalse();
-            then(eventPublisher).should(never()).publishEvent(any());
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
         }
 
         @Test
@@ -345,6 +365,7 @@ class TodoServiceTest {
             assertThat(result.getId()).isEqualTo(TODO_ID);
             assertThat(result.getDate()).isEqualTo(today);
             assertThat(futureTodo.getDate()).isEqualTo(today);
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
         }
 
         @Test
