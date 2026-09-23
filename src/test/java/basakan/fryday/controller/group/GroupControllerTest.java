@@ -304,7 +304,7 @@ class GroupControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.members[].nickname").type(JsonFieldType.STRING)
                                         .description("그룹원 닉네임. 온보딩 중 닉네임 미설정 계정이면 null").optional(),
                                 fieldWithPath("data.members[].role").type(JsonFieldType.STRING)
-                                        .description("그룹원 권한 (OWNER: 그룹장, MEMBER: 그룹원). 그룹장이 항상 첫 번째"),
+                                        .description("그룹원 권한 (OWNER: 그룹장, MEMBER: 그룹원). 정렬은 나 → 그룹장 → 나머지 참여 순서"),
                                 fieldWithPath("data.members[].totalCount").type(JsonFieldType.NUMBER)
                                         .description("공개된 카테고리 기준 오늘 전체 투두 개수"),
                                 fieldWithPath("data.members[].completedCount").type(JsonFieldType.NUMBER)
