@@ -153,9 +153,75 @@ class GroupReadIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("나중에 참여한 그룹장이라도 목록 맨 앞에 온다")
-    void ownerIsAlwaysFirst() {
+    @DisplayName("나중에 참여한 그룹장이라도 나 바로 다음에 온다")
+    void ownerIsAlwaysRightAfterViewer() {
         // given — 그룹장보다 memberId 가 먼저 참여한 상황을 만든다
+        saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+        groupMemberRepository.deleteAll();
+        join(groupId, memberId);
+        join(groupId, strangerId);
+        join(groupId, ownerId);
+
+        // when
+        GroupDetailResponse response = groupService.getGroup(groupId, strangerId);
+
+        // then
+        assertThat(response.getMembers())
+                .extracting(GroupMemberResponse::getNickname)
+                .containsExactly("낯선이", "연우", "수정");
+        assertThat(response.getMembers().get(0).getRole()).isEqualTo(GroupRole.MEMBER);
+        assertThat(response.getMembers().get(1).getRole()).isEqualTo(GroupRole.OWNER);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("그룹원이 조회하면 나, 그룹장, 나머지 그룹원 참여 순서로 온다")
+    void viewerIsFirstThenOwner() {
+        // given — 참여 순서는 연우(그룹장), 수정, 낯선이
+        saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+        join(groupId, memberId);
+        join(groupId, strangerId);
+
+        // when — 마지막에 참여한 낯선이가 조회한다
+        GroupDetailResponse response = groupService.getGroup(groupId, strangerId);
+
+        // then
+        assertThat(response.getMembers())
+                .extracting(GroupMemberResponse::getNickname)
+                .containsExactly("낯선이", "연우", "수정");
+        assertThat(response.getMembers().get(1).getRole()).isEqualTo(GroupRole.OWNER);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("나와 그룹장을 뺀 나머지 그룹원은 참여 순서를 그대로 유지한다")
+    void remainingMembersKeepJoinOrder() {
+        // given — 참여 순서는 연우(그룹장), 수정, 낯선이, 넷째, 다섯째
+        saveCategory(ownerId, "운동");
+        Long fourthId = saveUser("fourth", "넷째");
+        Long fifthId = saveUser("fifth", "다섯째");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+        join(groupId, memberId);
+        join(groupId, strangerId);
+        join(groupId, fourthId);
+        join(groupId, fifthId);
+
+        // when — 마지막에 참여한 다섯째가 조회한다
+        GroupDetailResponse response = groupService.getGroup(groupId, fifthId);
+
+        // then — 나머지 3명(수정, 낯선이, 넷째)의 참여 순서가 뒤집히지 않는다
+        assertThat(response.getMembers())
+                .extracting(GroupMemberResponse::getNickname)
+                .containsExactly("다섯째", "연우", "수정", "낯선이", "넷째");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("내가 그룹장이면 나와 그룹장 자리가 겹쳐도 한 번만 나온다")
+    void ownerViewingOwnGroupAppearsOnce() {
+        // given — 그룹장이 가장 늦게 참여해 두 순위 조건에 모두 해당하는 상황
         saveCategory(ownerId, "운동");
         Long groupId = createGroup("바삭한 사람들", ownerId);
         groupMemberRepository.deleteAll();
@@ -170,8 +236,7 @@ class GroupReadIntegrationTest {
         assertThat(response.getMembers())
                 .extracting(GroupMemberResponse::getNickname)
                 .containsExactly("연우", "수정", "낯선이");
-        assertThat(response.getMembers().get(0).getRole()).isEqualTo(GroupRole.OWNER);
-        assertThat(response.getMembers().get(1).getRole()).isEqualTo(GroupRole.MEMBER);
+        assertThat(response.getMemberCount()).isEqualTo(3);
     }
 
     @Test

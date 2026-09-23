@@ -58,6 +58,9 @@ public class GroupService {
 
     private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
     private static final int MAX_CREATE_ATTEMPTS = 5;
+    private static final int VIEWER_RANK = 0;
+    private static final int OWNER_RANK = 1;
+    private static final int MEMBER_RANK = 2;
 
     private final FryGroupRepository fryGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
@@ -157,22 +160,30 @@ public class GroupService {
         FryGroup group = findGroupJoinedBy(groupId, userId);
         LocalDate date = LocalDate.now(KOREA_ZONE);
 
-        List<GroupMemberResponse> members = buildMemberResponses(group, date);
+        List<GroupMemberResponse> members = buildMemberResponses(group, userId, date);
         int myPublicCategoryCount = (int) groupPublicCategoryRepository.countByGroupIdAndUserId(groupId, userId);
 
         return GroupDetailResponse.of(group, GroupRole.of(group, userId), myPublicCategoryCount, date, members);
     }
 
-    /** 그룹장을 맨 앞에 두고, 나머지는 참여 순서를 유지한다. */
-    private List<GroupMemberResponse> buildMemberResponses(FryGroup group, LocalDate date) {
+    /** 조회한 본인을 맨 앞에, 그 다음 그룹장을 두고, 나머지는 참여 순서를 유지한다. */
+    private List<GroupMemberResponse> buildMemberResponses(FryGroup group, Long userId, LocalDate date) {
         Map<Long, GroupMemberTodoCountDto> todoCountsByUserId =
                 groupPublicCategoryRepository.findTodoCountsByGroupAndDate(group.getId(), date).stream()
                         .collect(Collectors.toMap(GroupMemberTodoCountDto::getUserId, Function.identity()));
 
         return groupMemberRepository.findMembersWithNickname(group.getId()).stream()
+                .sorted(Comparator.comparingInt(member -> memberRank(group, userId, member)))
                 .map(member -> toMemberResponse(group, member, todoCountsByUserId))
-                .sorted(Comparator.comparing(GroupMemberResponse::isOwner).reversed())
                 .toList();
+    }
+
+    /** 같은 순위끼리는 조회 쿼리의 참여 순서가 그대로 유지된다. */
+    private int memberRank(FryGroup group, Long userId, GroupMemberDto member) {
+        if (member.getUserId().equals(userId)) {
+            return VIEWER_RANK;
+        }
+        return group.isOwner(member.getUserId()) ? OWNER_RANK : MEMBER_RANK;
     }
 
     private GroupMemberResponse toMemberResponse(FryGroup group, GroupMemberDto member,
