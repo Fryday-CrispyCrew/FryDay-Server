@@ -54,7 +54,7 @@ public class GroupNotificationListener {
     @Async("pushAsyncExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onGroupInteraction(GroupInteractionEvent event) {
-        String nickname = event.senderNickname() != null ? event.senderNickname() : GROUP_MEMBER_NICKNAME;
+        String nickname = event.targetNickname() != null ? event.targetNickname() : GROUP_MEMBER_NICKNAME;
         groupPushSender.send(List.of(event.targetUserId()), event.groupName(),
                 nickname + interactionMessage(event.type()),
                 Map.of(TYPE_KEY, GroupPushType.GROUP_INTERACTION.name(),
