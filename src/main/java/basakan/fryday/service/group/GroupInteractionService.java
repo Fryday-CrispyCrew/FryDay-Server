@@ -67,8 +67,8 @@ public class GroupInteractionService {
             eventPublisher.publishEvent(new GroupInteractionEvent(
                     groupId,
                     group.getName(),
-                    userJpaRepository.findById(senderId).map(User::getNickname).orElse(null),
                     targetUserId,
+                    userJpaRepository.findById(targetUserId).map(User::getNickname).orElse(null),
                     type));
         }
     }

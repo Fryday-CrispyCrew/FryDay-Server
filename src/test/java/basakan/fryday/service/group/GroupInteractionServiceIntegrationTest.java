@@ -128,7 +128,7 @@ class GroupInteractionServiceIntegrationTest {
                 .extracting(GroupInteraction::getSenderId, GroupInteraction::getTargetId, GroupInteraction::getType)
                 .containsExactly(org.assertj.core.groups.Tuple.tuple(senderId, targetId, ORDER));
         assertThat(events.stream(GroupInteractionEvent.class))
-                .containsExactly(new GroupInteractionEvent(groupId, "바삭한 사람들", "연우", targetId, ORDER));
+                .containsExactly(new GroupInteractionEvent(groupId, "바삭한 사람들", targetId, "수정", ORDER));
     }
 
     @Test

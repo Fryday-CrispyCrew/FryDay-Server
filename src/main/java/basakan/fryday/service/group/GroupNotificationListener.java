@@ -54,7 +54,7 @@ public class GroupNotificationListener {
     @Async("pushAsyncExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onGroupInteraction(GroupInteractionEvent event) {
-        String nickname = event.senderNickname() != null ? event.senderNickname() : GROUP_MEMBER_NICKNAME;
+        String nickname = event.targetNickname() != null ? event.targetNickname() : GROUP_MEMBER_NICKNAME;
         groupPushSender.send(List.of(event.targetUserId()), event.groupName(),
                 nickname + interactionMessage(event.type()),
                 Map.of(TYPE_KEY, GroupPushType.GROUP_INTERACTION.name(),
@@ -64,10 +64,10 @@ public class GroupNotificationListener {
 
     private static String interactionMessage(GroupInteractionType type) {
         return switch (type) {
-            case KNOCK -> "님이 똑똑똑 두드렸어요!";
-            case ORDER -> "님이 주문을 넣었어요!";
-            case DELICIOUS -> "님이 맛있대요!";
-            case APPLAUSE -> "님이 박수를 보냈어요!";
+            case KNOCK -> "님, 손님 왔어요!";
+            case ORDER -> "님, 주문이요!";
+            case DELICIOUS -> "님, 추가 주문할게요!";
+            case APPLAUSE -> "님, 별점 5점 드릴게요!";
         };
     }
 
