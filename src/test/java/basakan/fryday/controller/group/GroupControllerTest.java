@@ -26,12 +26,14 @@ import basakan.fryday.controller.group.response.GroupNotificationSettingResponse
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
+import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupInteractionType;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupRole;
+import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.service.group.GroupInteractionService;
 import basakan.fryday.service.group.GroupService;
@@ -628,6 +630,7 @@ class GroupControllerTest extends RestDocsSupport {
         mockMvc.perform(get("/api/groups/{groupId}/members/{targetUserId}/todos", GROUP_ID, MEMBER_ID))
                 .andDo(print())
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.characterStatus.status").value("CASE_C"))
                 .andExpect(jsonPath("$.data.categories[0].todos[0].description").value("러닝 5km"))
                 .andExpect(jsonPath("$.data.categories[1].todos").isEmpty())
                 .andDo(document("group-member-todos",
@@ -641,6 +644,12 @@ class GroupControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.userId").type(JsonFieldType.NUMBER).description("그룹원 ID"),
                                 fieldWithPath("data.date").type(JsonFieldType.STRING)
                                         .description("조회 기준 날짜 (Asia/Seoul 기준 오늘)"),
+                                fieldWithPath("data.characterStatus.status").type(JsonFieldType.STRING)
+                                        .description("튀김 캐릭터 상태. 공개 카테고리의 오늘 투두만으로 판별하며 값은 투두 캐릭터 상태 조회와 같다"),
+                                fieldWithPath("data.characterStatus.imageCode").type(JsonFieldType.STRING)
+                                        .description("이미지 매핑 코드"),
+                                fieldWithPath("data.characterStatus.description").type(JsonFieldType.STRING)
+                                        .description("상태 설명"),
                                 fieldWithPath("data.categories[].categoryId").type(JsonFieldType.NUMBER)
                                         .description("공개 카테고리 ID"),
                                 fieldWithPath("data.categories[].name").type(JsonFieldType.STRING)
@@ -723,7 +732,8 @@ class GroupControllerTest extends RestDocsSupport {
     private GroupMemberTodoListResponse memberTodos() {
         Category workout = category(10L, "운동", CategoryColor.OR, 1L);
         Category study = category(11L, "공부", CategoryColor.BR, 2L);
-        return GroupMemberTodoListResponse.of(MEMBER_ID, LocalDate.of(2026, 9, 15), List.of(
+        return GroupMemberTodoListResponse.of(MEMBER_ID, LocalDate.of(2026, 9, 15),
+                CharacterStatusResponse.from(CharacterStatus.CASE_C), List.of(
                 GroupMemberCategoryTodosResponse.of(workout, List.of(
                         GroupMemberTodoResponse.from(todo(100L, "러닝 5km", workout, 1L)),
                         GroupMemberTodoResponse.from(todo(101L, "스쿼트 50개", workout, 2L)))),

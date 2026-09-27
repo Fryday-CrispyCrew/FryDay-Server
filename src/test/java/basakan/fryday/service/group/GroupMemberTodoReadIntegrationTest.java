@@ -12,6 +12,7 @@ import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupPublicCategory;
+import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.domain.user.User;
@@ -207,6 +208,45 @@ class GroupMemberTodoReadIntegrationTest {
 
         // then
         assertThat(allDescriptions(response)).containsExactly("오늘 할 일");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("캐릭터 상태는 공개 카테고리의 투두만으로 정해져, 비공개 투두가 남아 있어도 공개 투두를 다 끝내면 완료 상태다")
+    void characterStatusIgnoresPrivateTodos() {
+        // given
+        Category publicCategory = saveCategory(memberId, "공부", 1L);
+        Category privateCategory = saveCategory(memberId, "일기", 2L);
+        publish(groupId, memberId, publicCategory);
+
+        Todo done = saveTodo(publicCategory, "영단어 외우기", today());
+        done.toggleCompletion();
+        todoRepository.saveAndFlush(done);
+        saveTodo(privateCategory, "비밀 일기 쓰기", today());
+
+        // when
+        GroupMemberTodoListResponse response = groupService.getMemberTodos(groupId, memberId, ownerId);
+
+        // then
+        assertThat(response.getCharacterStatus().getStatus()).isEqualTo(CharacterStatus.CASE_G);
+        assertThat(response.getCharacterStatus().getImageCode()).isEqualTo(CharacterStatus.CASE_G.getImageCode());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("비공개 카테고리에만 투두가 있으면 캐릭터 상태는 투두 없음이다")
+    void characterStatusIsEmptyWhenOnlyPrivateTodosExist() {
+        // given
+        Category publicCategory = saveCategory(memberId, "공부", 1L);
+        Category privateCategory = saveCategory(memberId, "일기", 2L);
+        publish(groupId, memberId, publicCategory);
+        saveTodo(privateCategory, "비밀 일기 쓰기", today());
+
+        // when
+        GroupMemberTodoListResponse response = groupService.getMemberTodos(groupId, memberId, ownerId);
+
+        // then
+        assertThat(response.getCharacterStatus().getStatus()).isEqualTo(CharacterStatus.CASE_A);
     }
 
     @Test
