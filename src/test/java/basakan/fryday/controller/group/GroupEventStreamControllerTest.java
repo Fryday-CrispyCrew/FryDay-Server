@@ -35,6 +35,7 @@ import static org.springframework.restdocs.request.RequestDocumentation.paramete
 import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,6 +76,7 @@ class GroupEventStreamControllerTest extends RestDocsSupport {
                 .andExpect(status().isOk())
                 .andExpect(request().asyncStarted())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(header().string("X-Accel-Buffering", "no"))
                 .andDo(document("group-events",
                         pathParameters(parameterWithName("groupId").description("그룹 ID"))))
                 .andReturn();
