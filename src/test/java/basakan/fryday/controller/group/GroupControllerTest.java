@@ -17,7 +17,10 @@ import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
 import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
+import basakan.fryday.controller.group.response.GroupMemberCategoryTodosResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
+import basakan.fryday.controller.group.response.GroupMemberTodoListResponse;
+import basakan.fryday.controller.group.response.GroupMemberTodoResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
@@ -29,6 +32,7 @@ import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupInteractionType;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupRole;
+import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.service.group.GroupInteractionService;
 import basakan.fryday.service.group.GroupService;
 import basakan.fryday.service.group.dto.GroupMemberDto;
@@ -614,6 +618,68 @@ class GroupControllerTest extends RestDocsSupport {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    @DisplayName("그룹원 공개 투두 조회 API")
+    void getMemberTodos() throws Exception {
+        // given
+        given(groupService.getMemberTodos(anyLong(), anyLong(), anyLong())).willReturn(memberTodos());
+
+        // when & then
+        mockMvc.perform(get("/api/groups/{groupId}/members/{targetUserId}/todos", GROUP_ID, MEMBER_ID))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.categories[0].todos[0].description").value("러닝 5km"))
+                .andExpect(jsonPath("$.data.categories[1].todos").isEmpty())
+                .andDo(document("group-member-todos",
+                        pathParameters(
+                                parameterWithName("groupId").description("조회할 그룹 ID"),
+                                parameterWithName("targetUserId").description("투두를 조회할 그룹원 ID")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("data.userId").type(JsonFieldType.NUMBER).description("그룹원 ID"),
+                                fieldWithPath("data.date").type(JsonFieldType.STRING)
+                                        .description("조회 기준 날짜 (Asia/Seoul 기준 오늘)"),
+                                fieldWithPath("data.categories[].categoryId").type(JsonFieldType.NUMBER)
+                                        .description("공개 카테고리 ID"),
+                                fieldWithPath("data.categories[].name").type(JsonFieldType.STRING)
+                                        .description("카테고리 이름"),
+                                fieldWithPath("data.categories[].colorCode").type(JsonFieldType.STRING)
+                                        .description("카테고리 색상 코드"),
+                                fieldWithPath("data.categories[].colorHex").type(JsonFieldType.STRING)
+                                        .description("카테고리 색상 헥사 코드"),
+                                fieldWithPath("data.categories[].todos[]").type(JsonFieldType.ARRAY)
+                                        .description("카테고리의 오늘 투두 목록. 없으면 빈 배열"),
+                                fieldWithPath("data.categories[].todos[].todoId").type(JsonFieldType.NUMBER)
+                                        .description("투두 ID"),
+                                fieldWithPath("data.categories[].todos[].description").type(JsonFieldType.STRING)
+                                        .description("투두 제목"),
+                                fieldWithPath("data.categories[].todos[].status").type(JsonFieldType.STRING)
+                                        .description("투두 상태 (IN_PROGRESS, COMPLETED)"),
+                                fieldWithPath("data.categories[].todos[].displayOrder").type(JsonFieldType.NUMBER)
+                                        .description("투두 노출 순서"),
+                                fieldWithPath("data.categories[].todos[].recurrenceId").type(JsonFieldType.NUMBER)
+                                        .description("반복 투두 ID (일반 투두는 null)").optional(),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+    }
+
+    @Test
+    @DisplayName("그룹원이 아닌 사용자의 투두를 조회하면 404 로 응답한다")
+    void getMemberTodosOfNonMemberReturns404() throws Exception {
+        // given
+        given(groupService.getMemberTodos(anyLong(), anyLong(), anyLong()))
+                .willThrow(new BusinessException(ErrorCode.GROUP_NOT_FOUND));
+
+        // when & then
+        mockMvc.perform(get("/api/groups/{groupId}/members/{targetUserId}/todos", GROUP_ID, MEMBER_ID))
+                .andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(ErrorCode.GROUP_NOT_FOUND.getMessage()));
+    }
+
     private GroupMember member(boolean notificationEnabled) {
         GroupMember member = GroupMember.builder().groupId(GROUP_ID).userId(MEMBER_ID).build();
         member.updateNotificationEnabled(notificationEnabled);
@@ -652,6 +718,24 @@ class GroupControllerTest extends RestDocsSupport {
         return GroupPublicCategoryListResponse.from(List.of(
                 GroupPublicCategoryResponse.of(category(10L, "운동", CategoryColor.OR, 1L), true),
                 GroupPublicCategoryResponse.of(category(11L, "공부", CategoryColor.BR, 2L), false)));
+    }
+
+    private GroupMemberTodoListResponse memberTodos() {
+        Category workout = category(10L, "운동", CategoryColor.OR, 1L);
+        Category study = category(11L, "공부", CategoryColor.BR, 2L);
+        return GroupMemberTodoListResponse.of(MEMBER_ID, LocalDate.of(2026, 9, 15), List.of(
+                GroupMemberCategoryTodosResponse.of(workout, List.of(
+                        GroupMemberTodoResponse.from(todo(100L, "러닝 5km", workout, 1L)),
+                        GroupMemberTodoResponse.from(todo(101L, "스쿼트 50개", workout, 2L)))),
+                GroupMemberCategoryTodosResponse.of(study, List.of())));
+    }
+
+    private Todo todo(Long id, String description, Category category, Long displayOrder) {
+        Todo todo = Todo.builder()
+                .description(description).category(category)
+                .date(LocalDate.of(2026, 9, 15)).displayOrder(displayOrder).build();
+        setField(todo, "id", id);
+        return todo;
     }
 
     private Category category(Long id, String name, CategoryColor color, Long displayOrder) {

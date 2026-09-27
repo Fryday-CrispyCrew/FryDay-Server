@@ -12,6 +12,7 @@ import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
 import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
+import basakan.fryday.controller.group.response.GroupMemberTodoListResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
@@ -116,6 +117,14 @@ public class GroupController {
                                       @AuthenticationPrincipal Long userId) {
         groupInteractionService.interact(groupId, targetUserId, request, userId);
         return ApiResponse.success(null, "상호작용을 보냈습니다.");
+    }
+
+    @GetMapping("/{groupId}/members/{targetUserId}/todos")
+    public ApiResponse<GroupMemberTodoListResponse> getMemberTodos(@PathVariable Long groupId,
+                                                                   @PathVariable Long targetUserId,
+                                                                   @AuthenticationPrincipal Long userId) {
+        GroupMemberTodoListResponse response = groupService.getMemberTodos(groupId, targetUserId, userId);
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/{groupId}/public-categories")
