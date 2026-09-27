@@ -26,6 +26,16 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             "ORDER BY t.displayOrder ASC")
     List<Todo> findAllByCategoryIdAndDate(@Param("categoryId") Long categoryId, @Param("userId") Long userId, @Param("date") LocalDate date);
 
+    /** 사용자가 이 그룹에 공개한 카테고리의 투두만 조회한다. 비공개 투두가 새지 않도록 공개 여부를 조인으로 거른다. */
+    @Query("SELECT t FROM Todo t " +
+            "JOIN GroupPublicCategory gpc ON gpc.categoryId = t.category.id " +
+            "WHERE gpc.groupId = :groupId AND gpc.userId = :userId AND t.category.userId = :userId " +
+            "AND t.category.deletedAt IS NULL AND t.date = :date AND t.deletedAt IS NULL " +
+            "ORDER BY t.displayOrder ASC")
+    List<Todo> findAllPublicInGroupByUserIdAndDate(@Param("groupId") Long groupId,
+                                                   @Param("userId") Long userId,
+                                                   @Param("date") LocalDate date);
+
     @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
             "WHERE t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
     List<Long> findUserIdsWithTodosByDateAndStatus(@Param("date") LocalDate date, @Param("status") Todo.Status status);

@@ -12,7 +12,10 @@ import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
 import basakan.fryday.controller.group.response.GroupJoinResponse;
 import basakan.fryday.controller.group.response.GroupListResponse;
+import basakan.fryday.controller.group.response.GroupMemberCategoryTodosResponse;
 import basakan.fryday.controller.group.response.GroupMemberResponse;
+import basakan.fryday.controller.group.response.GroupMemberTodoListResponse;
+import basakan.fryday.controller.group.response.GroupMemberTodoResponse;
 import basakan.fryday.controller.group.response.GroupNameResponse;
 import basakan.fryday.controller.group.response.GroupNotificationSettingResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
@@ -29,6 +32,7 @@ import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.group.FryGroupRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
+import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
 import basakan.fryday.service.group.event.GroupDisbandedEvent;
@@ -67,6 +71,7 @@ public class GroupService {
     private final GroupPublicCategoryRepository groupPublicCategoryRepository;
     private final CategoryRepository categoryRepository;
     private final UserJpaRepository userJpaRepository;
+    private final TodoRepository todoRepository;
     private final GroupCreator groupCreator;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -272,6 +277,31 @@ public class GroupService {
                         .toList();
 
         return GroupPublicCategoryListResponse.from(categories);
+    }
+
+    /** 그룹원이 이 그룹에 공개한 카테고리의 오늘 투두를 카테고리별로 묶어 내려준다. 투두가 없는 공개 카테고리도 포함한다. */
+    public GroupMemberTodoListResponse getMemberTodos(Long groupId, Long targetUserId, Long userId) {
+        findGroupJoinedBy(groupId, userId);
+        if (!groupMemberRepository.existsByGroupIdAndUserId(groupId, targetUserId)) {
+            throw new BusinessException(ErrorCode.GROUP_NOT_FOUND);
+        }
+        LocalDate date = LocalDate.now(KOREA_ZONE);
+
+        Map<Long, List<GroupMemberTodoResponse>> todosByCategoryId =
+                todoRepository.findAllPublicInGroupByUserIdAndDate(groupId, targetUserId, date).stream()
+                        .collect(Collectors.groupingBy(
+                                todo -> todo.getCategory().getId(),
+                                Collectors.mapping(GroupMemberTodoResponse::from, Collectors.toList())));
+
+        Set<Long> publicCategoryIds = publicCategoryIds(groupId, targetUserId);
+        List<GroupMemberCategoryTodosResponse> categories =
+                categoryRepository.findAllByUserIdAndDeletedAtIsNullOrderByDisplayOrderAsc(targetUserId).stream()
+                        .filter(category -> publicCategoryIds.contains(category.getId()))
+                        .map(category -> GroupMemberCategoryTodosResponse.of(
+                                category, todosByCategoryId.getOrDefault(category.getId(), List.of())))
+                        .toList();
+
+        return GroupMemberTodoListResponse.of(targetUserId, date, categories);
     }
 
     /**
