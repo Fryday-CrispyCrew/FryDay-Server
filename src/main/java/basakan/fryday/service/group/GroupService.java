@@ -21,11 +21,14 @@ import basakan.fryday.controller.group.response.GroupNotificationSettingResponse
 import basakan.fryday.controller.group.response.GroupPublicCategoryListResponse;
 import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
+import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupPublicCategory;
 import basakan.fryday.domain.group.GroupRole;
+import basakan.fryday.domain.todo.CharacterStatus;
+import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
@@ -46,6 +49,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
@@ -287,11 +291,11 @@ public class GroupService {
         }
         LocalDate date = LocalDate.now(KOREA_ZONE);
 
-        Map<Long, List<GroupMemberTodoResponse>> todosByCategoryId =
-                todoRepository.findAllPublicInGroupByUserIdAndDate(groupId, targetUserId, date).stream()
-                        .collect(Collectors.groupingBy(
-                                todo -> todo.getCategory().getId(),
-                                Collectors.mapping(GroupMemberTodoResponse::from, Collectors.toList())));
+        List<Todo> publicTodos = todoRepository.findAllPublicInGroupByUserIdAndDate(groupId, targetUserId, date);
+        Map<Long, List<GroupMemberTodoResponse>> todosByCategoryId = publicTodos.stream()
+                .collect(Collectors.groupingBy(
+                        todo -> todo.getCategory().getId(),
+                        Collectors.mapping(GroupMemberTodoResponse::from, Collectors.toList())));
 
         Set<Long> publicCategoryIds = publicCategoryIds(groupId, targetUserId);
         List<GroupMemberCategoryTodosResponse> categories =
@@ -301,7 +305,15 @@ public class GroupService {
                                 category, todosByCategoryId.getOrDefault(category.getId(), List.of())))
                         .toList();
 
-        return GroupMemberTodoListResponse.of(targetUserId, date, categories);
+        return GroupMemberTodoListResponse.of(targetUserId, date, characterStatusOf(publicTodos, date), categories);
+    }
+
+    /** 목록과 어긋나지 않고 비공개 진행 상황이 드러나지 않도록, 캐릭터도 공개 투두만으로 정한다. */
+    private CharacterStatusResponse characterStatusOf(List<Todo> publicTodos, LocalDate date) {
+        int completedCount = (int) publicTodos.stream().filter(Todo::isCompleted).count();
+        CharacterStatus status = CharacterStatus.determine(
+                publicTodos.size(), completedCount, date, LocalDateTime.now(KOREA_ZONE));
+        return CharacterStatusResponse.from(status);
     }
 
     /**
