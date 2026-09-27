@@ -1273,3 +1273,22 @@ include::{snippets}/group-public-categories-update/http-request.adoc[]
 include::{snippets}/group-public-categories-update/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/group-public-categories-update/response-fields.adoc[]
+
+=== 그룹원 공개 투두 조회
+`GET /api/groups/{groupId}/members/{targetUserId}/todos`
+
+그룹원이 이 그룹에 공개한 카테고리의 오늘(Asia/Seoul 기준) 투두를 카테고리별로 조회합니다.
+
+* 공개하지 않은 카테고리와 그 투두는 내려가지 않습니다. 공개 설정은 그룹마다 다르므로 같은 그룹원이라도 그룹에 따라 결과가 다릅니다.
+* 투두가 없는 공개 카테고리도 `todos` 가 빈 배열인 채로 포함됩니다. 카테고리는 그룹원의 카테고리 순서대로 정렬됩니다.
+* 투두 메모는 내려가지 않습니다.
+* 조회하는 사람이나 조회 대상이 이 그룹의 그룹원이 아니면 `404 GROUP_NOT_FOUND` 로 응답합니다. 본인을 조회할 수도 있습니다.
+
+==== 경로 파라미터
+include::{snippets}/group-member-todos/path-parameters.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-member-todos/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-member-todos/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-member-todos/response-fields.adoc[]
