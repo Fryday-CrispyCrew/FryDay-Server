@@ -16,6 +16,7 @@ public class GroupInvitePreviewResponse {
     private final int maxMemberCount;
     private final boolean full;
     private final boolean alreadyJoined;
+    private final String imageCode;
 
     private GroupInvitePreviewResponse(FryGroup group, int memberCount, boolean alreadyJoined) {
         this.groupId = group.getId();
@@ -24,6 +25,7 @@ public class GroupInvitePreviewResponse {
         this.maxMemberCount = FryGroup.MAX_MEMBER_COUNT;
         this.full = memberCount >= FryGroup.MAX_MEMBER_COUNT;
         this.alreadyJoined = alreadyJoined;
+        this.imageCode = group.getImageCode();
     }
 
     public static GroupInvitePreviewResponse of(FryGroup group, int memberCount, boolean alreadyJoined) {

@@ -78,7 +78,7 @@ class GroupCreateRetryIntegrationTest {
 
         // 이미 쓰이고 있는 초대 코드를 하나 심어 둔다
         fryGroupRepository.saveAndFlush(FryGroup.builder()
-                .name("선점한 그룹").inviteCode(TAKEN_CODE).ownerId(99L).build());
+                .name("선점한 그룹").inviteCode(TAKEN_CODE).ownerId(99L).imageCode("01").build());
     }
 
     @Test

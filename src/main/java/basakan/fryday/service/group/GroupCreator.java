@@ -2,6 +2,7 @@ package basakan.fryday.service.group;
 
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.domain.group.FryGroup;
+import basakan.fryday.domain.group.GroupImageCode;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupPublicCategory;
 import basakan.fryday.repository.CategoryRepository;
@@ -36,6 +37,7 @@ public class GroupCreator {
                 .name(name)
                 .inviteCode(inviteCodeGenerator.generate())
                 .ownerId(userId)
+                .imageCode(GroupImageCode.random())
                 .build());
 
         groupMemberRepository.save(GroupMember.builder()

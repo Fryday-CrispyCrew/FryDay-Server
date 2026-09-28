@@ -15,6 +15,7 @@ public class GroupDetailResponse {
     private final String inviteCode;
     private final int memberCount;
     private final int maxMemberCount;
+    private final String imageCode;
     private final GroupRole myRole;
     private final int myPublicCategoryCount;
 
@@ -30,6 +31,7 @@ public class GroupDetailResponse {
         this.inviteCode = group.getInviteCode();
         this.memberCount = members.size();
         this.maxMemberCount = FryGroup.MAX_MEMBER_COUNT;
+        this.imageCode = group.getImageCode();
         this.myRole = myRole;
         this.myPublicCategoryCount = myPublicCategoryCount;
         this.date = date;

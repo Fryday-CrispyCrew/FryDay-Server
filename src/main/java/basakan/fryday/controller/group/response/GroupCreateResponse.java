@@ -14,6 +14,7 @@ public class GroupCreateResponse {
     private final String inviteCode;
     private final int memberCount;
     private final int maxMemberCount;
+    private final String imageCode;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private final LocalDateTime createdAt;
@@ -24,6 +25,7 @@ public class GroupCreateResponse {
         this.inviteCode = group.getInviteCode();
         this.memberCount = 1;
         this.maxMemberCount = FryGroup.MAX_MEMBER_COUNT;
+        this.imageCode = group.getImageCode();
         this.createdAt = group.getCreatedAt();
     }
 

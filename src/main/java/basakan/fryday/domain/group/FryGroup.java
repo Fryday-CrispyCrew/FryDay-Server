@@ -31,6 +31,7 @@ public class FryGroup extends BaseEntity {
     public static final int MAX_MEMBER_COUNT = 10;
     public static final int MAX_NAME_LENGTH = 10;
     public static final int INVITE_CODE_LENGTH = 6;
+    public static final int IMAGE_CODE_LENGTH = 2;
 
     @Column(nullable = false, length = MAX_NAME_LENGTH)
     private String name;
@@ -41,11 +42,15 @@ public class FryGroup extends BaseEntity {
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
+    @Column(name = "image_code", nullable = false, length = IMAGE_CODE_LENGTH)
+    private String imageCode;
+
     @Builder
-    public FryGroup(String name, String inviteCode, Long ownerId) {
+    public FryGroup(String name, String inviteCode, Long ownerId, String imageCode) {
         this.name = name;
         this.inviteCode = inviteCode;
         this.ownerId = ownerId;
+        this.imageCode = imageCode;
     }
 
     public void updateName(String name) {

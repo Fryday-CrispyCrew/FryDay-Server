@@ -133,6 +133,8 @@ class GroupControllerTest extends RestDocsSupport {
                                         .description("현재 그룹원 수 (생성 직후에는 그룹장 1명)"),
                                 fieldWithPath("data.maxMemberCount").type(JsonFieldType.NUMBER)
                                         .description("최대 그룹원 수"),
+                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING)
+                                        .description("그룹 그래픽 코드 (01, 02, 03 중 하나). 그룹 생성 시 무작위로 배정되고 이후 바뀌지 않는다"),
                                 fieldWithPath("data.createdAt").type(JsonFieldType.STRING).description("그룹 생성 일시"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
@@ -176,6 +178,8 @@ class GroupControllerTest extends RestDocsSupport {
                                         .description("최대 그룹원 수"),
                                 fieldWithPath("data.groups[].myRole").type(JsonFieldType.STRING)
                                         .description("내 권한 (OWNER: 그룹장, MEMBER: 그룹원)"),
+                                fieldWithPath("data.groups[].imageCode").type(JsonFieldType.STRING)
+                                        .description("그룹 그래픽 코드 (01, 02, 03 중 하나). 그룹 생성 시 무작위로 배정되고 이후 바뀌지 않는다"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
@@ -212,6 +216,8 @@ class GroupControllerTest extends RestDocsSupport {
                                         .description("정원이 가득 찼는지 여부. true 면 참여 버튼을 막아야 한다"),
                                 fieldWithPath("data.alreadyJoined").type(JsonFieldType.BOOLEAN)
                                         .description("이미 참여 중인 그룹인지 여부"),
+                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING)
+                                        .description("그룹 그래픽 코드 (01, 02, 03 중 하나). 그룹 생성 시 무작위로 배정되고 이후 바뀌지 않는다"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
@@ -249,6 +255,8 @@ class GroupControllerTest extends RestDocsSupport {
                                         .description("참여 후 그룹원 수"),
                                 fieldWithPath("data.maxMemberCount").type(JsonFieldType.NUMBER)
                                         .description("최대 그룹원 수"),
+                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING)
+                                        .description("그룹 그래픽 코드 (01, 02, 03 중 하나). 그룹 생성 시 무작위로 배정되고 이후 바뀌지 않는다"),
                                 fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
                         )
                 ));
@@ -299,6 +307,8 @@ class GroupControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.inviteCode").type(JsonFieldType.STRING).description("그룹 초대 코드"),
                                 fieldWithPath("data.memberCount").type(JsonFieldType.NUMBER).description("현재 그룹원 수"),
                                 fieldWithPath("data.maxMemberCount").type(JsonFieldType.NUMBER).description("최대 그룹원 수"),
+                                fieldWithPath("data.imageCode").type(JsonFieldType.STRING)
+                                        .description("그룹 그래픽 코드 (01, 02, 03 중 하나). 그룹 생성 시 무작위로 배정되고 이후 바뀌지 않는다"),
                                 fieldWithPath("data.myRole").type(JsonFieldType.STRING)
                                         .description("내 권한 (OWNER: 그룹장, MEMBER: 그룹원)"),
                                 fieldWithPath("data.myPublicCategoryCount").type(JsonFieldType.NUMBER)
@@ -697,7 +707,7 @@ class GroupControllerTest extends RestDocsSupport {
 
     private FryGroup group() {
         FryGroup group = FryGroup.builder()
-                .name("바삭한 사람들").inviteCode("FRY123").ownerId(OWNER_ID).build();
+                .name("바삭한 사람들").inviteCode("FRY123").ownerId(OWNER_ID).imageCode("02").build();
         setField(group, "id", GROUP_ID);
         setField(group, "createdAt", LocalDateTime.of(2026, 9, 15, 12, 0, 0));
         return group;
@@ -719,8 +729,8 @@ class GroupControllerTest extends RestDocsSupport {
 
     private GroupListResponse groupList() {
         return GroupListResponse.from(List.of(
-                GroupSummaryResponse.of(new GroupSummaryDto(GROUP_ID, "바삭한 사람들", OWNER_ID, 3), OWNER_ID),
-                GroupSummaryResponse.of(new GroupSummaryDto(2L, "눅눅한 사람들", MEMBER_ID, 5), OWNER_ID)));
+                GroupSummaryResponse.of(new GroupSummaryDto(GROUP_ID, "바삭한 사람들", OWNER_ID, 3, "02"), OWNER_ID),
+                GroupSummaryResponse.of(new GroupSummaryDto(2L, "눅눅한 사람들", MEMBER_ID, 5, "01"), OWNER_ID)));
     }
 
     private GroupPublicCategoryListResponse publicCategories() {

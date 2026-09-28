@@ -253,6 +253,7 @@ class GroupAggregationQueryTest {
                 .name("바삭한 사람들")
                 .inviteCode(randomCode())
                 .ownerId(owner)
+                .imageCode("01")
                 .build());
         return group.getId();
     }

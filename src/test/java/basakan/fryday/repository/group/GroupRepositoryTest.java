@@ -51,7 +51,7 @@ class GroupRepositoryTest {
     @DisplayName("그룹을 저장하면 생성/수정 시각이 자동으로 채워진다")
     void saveGroupFillsAuditingFields() {
         // given
-        FryGroup group = FryGroup.builder().name("바삭한 사람들").inviteCode("FRY123").ownerId(OWNER_ID).build();
+        FryGroup group = FryGroup.builder().name("바삭한 사람들").inviteCode("FRY123").ownerId(OWNER_ID).imageCode("01").build();
 
         // when
         FryGroup saved = fryGroupRepository.saveAndFlush(group);
@@ -67,11 +67,11 @@ class GroupRepositoryTest {
     void duplicateInviteCodeIsRejected() {
         // given
         fryGroupRepository.saveAndFlush(
-                FryGroup.builder().name("그룹A").inviteCode("FRY123").ownerId(OWNER_ID).build());
+                FryGroup.builder().name("그룹A").inviteCode("FRY123").ownerId(OWNER_ID).imageCode("01").build());
 
         // when & then
         assertThatThrownBy(() -> fryGroupRepository.saveAndFlush(
-                FryGroup.builder().name("그룹B").inviteCode("FRY123").ownerId(OTHER_USER_ID).build()))
+                FryGroup.builder().name("그룹B").inviteCode("FRY123").ownerId(OTHER_USER_ID).imageCode("02").build()))
                 .isInstanceOf(Exception.class);
     }
 
@@ -80,7 +80,7 @@ class GroupRepositoryTest {
     void existsByInviteCode() {
         // given
         fryGroupRepository.saveAndFlush(
-                FryGroup.builder().name("그룹A").inviteCode("FRY123").ownerId(OWNER_ID).build());
+                FryGroup.builder().name("그룹A").inviteCode("FRY123").ownerId(OWNER_ID).imageCode("01").build());
 
         // when & then
         assertThat(fryGroupRepository.existsByInviteCode("FRY123")).isTrue();
@@ -176,7 +176,7 @@ class GroupRepositoryTest {
 
     private FryGroup saveGroupWithOwner() {
         FryGroup group = fryGroupRepository.saveAndFlush(
-                FryGroup.builder().name("바삭한 사람들").inviteCode("FRY123").ownerId(OWNER_ID).build());
+                FryGroup.builder().name("바삭한 사람들").inviteCode("FRY123").ownerId(OWNER_ID).imageCode("01").build());
         groupMemberRepository.saveAndFlush(
                 GroupMember.builder().groupId(group.getId()).userId(OWNER_ID).build());
         return group;
