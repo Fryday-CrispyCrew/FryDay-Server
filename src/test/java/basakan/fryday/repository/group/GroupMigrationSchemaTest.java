@@ -21,7 +21,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +43,8 @@ class GroupMigrationSchemaTest {
     private static final List<Path> MIGRATIONS = List.of(
             Path.of("db/2026-09-15_create_group_tables.sql"),
             Path.of("db/2026-09-21_create_group_push_history.sql"),
-            Path.of("db/2026-09-22_create_group_interaction.sql"));
+            Path.of("db/2026-09-22_create_group_interaction.sql"),
+            Path.of("db/2026-09-28_add_group_image_code.sql"));
     private static final String HIBERNATE_SCHEMA = "fryday_group_schema";
     private static final String MIGRATION_SCHEMA = "fryday_migration_check";
     private static final List<String> GROUP_TABLES =
@@ -91,22 +91,34 @@ class GroupMigrationSchemaTest {
         }
     }
 
+    /**
+     * 스키마를 바꾸는 문장만 파일에 적힌 순서대로 모은다.
+     * 컬럼 추가는 CREATE TABLE 이 아니라 ALTER TABLE 로 들어오므로 둘 다 실행해야 한다.
+     * 확인용 SELECT 나 기존 행 백필 UPDATE 는 스키마에 영향이 없어 건너뛴다.
+     */
     private void applyMigrationToSeparateSchema(Connection connection) throws IOException, SQLException {
-        List<String> createTables = new ArrayList<>();
+        List<String> schemaStatements = new ArrayList<>();
+        int createTableCount = 0;
+
         for (Path migration : MIGRATIONS) {
-            Arrays.stream(Files.readString(migration).split(";"))
-                    .map(GroupMigrationSchemaTest::stripComments)
-                    .filter(statement -> statement.toUpperCase().startsWith("CREATE TABLE"))
-                    .forEach(createTables::add);
+            for (String rawStatement : Files.readString(migration).split(";")) {
+                String ddl = stripComments(rawStatement);
+                boolean createsTable = ddl.toUpperCase().startsWith("CREATE TABLE");
+
+                if (createsTable || ddl.toUpperCase().startsWith("ALTER TABLE")) {
+                    schemaStatements.add(ddl);
+                    createTableCount += createsTable ? 1 : 0;
+                }
+            }
         }
-        assertThat(createTables).as("마이그레이션 파일의 CREATE TABLE 문").hasSize(GROUP_TABLES.size());
+        assertThat(createTableCount).as("마이그레이션 파일의 CREATE TABLE 문").isEqualTo(GROUP_TABLES.size());
 
         try (Statement statement = connection.createStatement()) {
             statement.execute("DROP DATABASE IF EXISTS " + MIGRATION_SCHEMA);
             statement.execute("CREATE DATABASE " + MIGRATION_SCHEMA);
             statement.execute("USE " + MIGRATION_SCHEMA);
-            for (String createTable : createTables) {
-                statement.execute(createTable);
+            for (String ddl : schemaStatements) {
+                statement.execute(ddl);
             }
             statement.execute("USE " + HIBERNATE_SCHEMA);
         }
