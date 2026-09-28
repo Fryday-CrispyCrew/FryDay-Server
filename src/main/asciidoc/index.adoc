@@ -922,6 +922,8 @@ include::{snippets}/group-list/response-fields.adoc[]
 
 그룹을 만들고 초대 코드를 즉시 발급합니다.
 그룹을 만든 사용자가 그룹장이 되며, 만든 사람의 카테고리는 모두 공개 상태로 등록됩니다.
+그룹 그래픽 코드(`imageCode`)는 생성 시 01, 02, 03 중 하나가 무작위로 배정되며 이후 바뀌지 않습니다.
+그룹이 등장하는 모든 응답(목록, 상세, 초대 코드 조회, 참여)에서 같은 값을 내려줍니다.
 
 ==== 요청 필드
 include::{snippets}/group-create/request-fields.adoc[]

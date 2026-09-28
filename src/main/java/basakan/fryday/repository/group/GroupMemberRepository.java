@@ -34,7 +34,8 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     /** 내가 참여 중인 그룹을 최근 가입순으로 조회한다. 인원수는 그룹별 서브쿼리로 한 번에 센다. */
     @Query("SELECT new basakan.fryday.service.group.dto.GroupSummaryDto(" +
             "g.id, g.name, g.ownerId, " +
-            "(SELECT COUNT(gm2) FROM GroupMember gm2 WHERE gm2.groupId = g.id)) " +
+            "(SELECT COUNT(gm2) FROM GroupMember gm2 WHERE gm2.groupId = g.id), " +
+            "g.imageCode) " +
             "FROM GroupMember gm " +
             "JOIN FryGroup g ON g.id = gm.groupId " +
             "WHERE gm.userId = :userId " +

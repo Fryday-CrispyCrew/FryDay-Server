@@ -11,4 +11,5 @@ public class GroupSummaryDto {
     private String name;
     private Long ownerId;
     private long memberCount;
+    private String imageCode;
 }

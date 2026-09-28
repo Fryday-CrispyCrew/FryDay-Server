@@ -13,6 +13,7 @@ public class GroupSummaryResponse {
     private final int memberCount;
     private final int maxMemberCount;
     private final GroupRole myRole;
+    private final String imageCode;
 
     private GroupSummaryResponse(GroupSummaryDto group, Long userId) {
         this.groupId = group.getGroupId();
@@ -20,6 +21,7 @@ public class GroupSummaryResponse {
         this.memberCount = (int) group.getMemberCount();
         this.maxMemberCount = FryGroup.MAX_MEMBER_COUNT;
         this.myRole = group.getOwnerId().equals(userId) ? GroupRole.OWNER : GroupRole.MEMBER;
+        this.imageCode = group.getImageCode();
     }
 
     public static GroupSummaryResponse of(GroupSummaryDto group, Long userId) {
