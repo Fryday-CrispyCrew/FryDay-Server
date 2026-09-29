@@ -313,6 +313,8 @@ class GroupControllerTest extends RestDocsSupport {
                                         .description("내 권한 (OWNER: 그룹장, MEMBER: 그룹원)"),
                                 fieldWithPath("data.myPublicCategoryCount").type(JsonFieldType.NUMBER)
                                         .description("내가 이 그룹에 공개한 카테고리 수"),
+                                fieldWithPath("data.myReceivedInteractionCount").type(JsonFieldType.NUMBER)
+                                        .description("내가 오늘(Asia/Seoul) 이 그룹에서 받은 상호작용 수. 종류 구분 없이 합친 값"),
                                 fieldWithPath("data.date").type(JsonFieldType.STRING)
                                         .description("투두 집계 기준일 (Asia/Seoul 기준 오늘)"),
                                 fieldWithPath("data.members[].userId").type(JsonFieldType.NUMBER)
@@ -723,7 +725,7 @@ class GroupControllerTest extends RestDocsSupport {
                 GroupRole.MEMBER,
                 null);
 
-        return GroupDetailResponse.of(group(), GroupRole.OWNER, 2,
+        return GroupDetailResponse.of(group(), GroupRole.OWNER, 2, 3,
                 LocalDate.of(2026, 9, 15), List.of(owner, member));
     }
 

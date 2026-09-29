@@ -1005,6 +1005,10 @@ include::{snippets}/group-join/response-fields.adoc[]
 | `APPLAUSE` (박수)
 |===
 
+`myReceivedInteractionCount` 는 조회한 본인이 오늘(Asia/Seoul) 이 그룹에서 받은 상호작용 수입니다.
+똑똑똑, 주문이요, 맛있어요, 박수를 구분하지 않고 합친 값이며, 다른 그룹에서 받은 것은 세지 않습니다.
+이 그룹의 알림을 꺼둔 동안 받은 상호작용도 포함됩니다. 자정이 지나면 0부터 다시 셉니다.
+
 ==== 경로 파라미터
 include::{snippets}/group-detail/path-parameters.adoc[]
 ==== HTTP 요청 예시

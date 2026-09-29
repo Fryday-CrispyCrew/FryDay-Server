@@ -18,6 +18,7 @@ public class GroupDetailResponse {
     private final String imageCode;
     private final GroupRole myRole;
     private final int myPublicCategoryCount;
+    private final int myReceivedInteractionCount;
 
     /** 집계 기준일(Asia/Seoul). 앱이 자정 전환을 판단할 수 있도록 함께 내려준다. */
     private final LocalDate date;
@@ -25,7 +26,7 @@ public class GroupDetailResponse {
     private final List<GroupMemberResponse> members;
 
     private GroupDetailResponse(FryGroup group, GroupRole myRole, int myPublicCategoryCount,
-                                LocalDate date, List<GroupMemberResponse> members) {
+                                int myReceivedInteractionCount, LocalDate date, List<GroupMemberResponse> members) {
         this.groupId = group.getId();
         this.name = group.getName();
         this.inviteCode = group.getInviteCode();
@@ -34,12 +35,15 @@ public class GroupDetailResponse {
         this.imageCode = group.getImageCode();
         this.myRole = myRole;
         this.myPublicCategoryCount = myPublicCategoryCount;
+        this.myReceivedInteractionCount = myReceivedInteractionCount;
         this.date = date;
         this.members = members;
     }
 
     public static GroupDetailResponse of(FryGroup group, GroupRole myRole, int myPublicCategoryCount,
-                                         LocalDate date, List<GroupMemberResponse> members) {
-        return new GroupDetailResponse(group, myRole, myPublicCategoryCount, date, members);
+                                         int myReceivedInteractionCount, LocalDate date,
+                                         List<GroupMemberResponse> members) {
+        return new GroupDetailResponse(group, myRole, myPublicCategoryCount, myReceivedInteractionCount,
+                date, members);
     }
 }

@@ -10,6 +10,7 @@ import basakan.fryday.controller.group.response.GroupMemberResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
+import basakan.fryday.domain.group.GroupInteraction;
 import basakan.fryday.domain.group.GroupInteractionType;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupMemberStatus;
@@ -20,6 +21,7 @@ import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.group.FryGroupRepository;
+import basakan.fryday.repository.group.GroupInteractionRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -30,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Propagation;
@@ -69,6 +72,8 @@ class GroupReadIntegrationTest {
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private TodoRepository todoRepository;
     @Autowired private UserJpaRepository userJpaRepository;
+    @Autowired private GroupInteractionRepository groupInteractionRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     private Long ownerId;
     private Long memberId;
@@ -76,6 +81,7 @@ class GroupReadIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        groupInteractionRepository.deleteAll();
         todoRepository.deleteAll();
         groupPublicCategoryRepository.deleteAll();
         groupMemberRepository.deleteAll();
@@ -324,6 +330,37 @@ class GroupReadIntegrationTest {
 
         // then
         assertThat(response.getGroups()).isEmpty();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("내가 오늘 이 그룹에서 받은 상호작용만 센다")
+    void myReceivedInteractionCountCountsOnlyTodayInThisGroup() {
+        // given
+        saveCategory(ownerId, "운동");
+        Long groupId = createGroup("바삭한 사람들", ownerId);
+        Long otherGroupId = createGroup("눅눅한 사람들", ownerId);
+        join(groupId, memberId);
+        join(otherGroupId, memberId);
+
+        saveInteraction(groupId, memberId, ownerId, GroupInteractionType.KNOCK);
+        saveInteraction(groupId, memberId, ownerId, GroupInteractionType.APPLAUSE);
+        saveInteraction(otherGroupId, memberId, ownerId, GroupInteractionType.KNOCK);
+        saveInteraction(groupId, ownerId, memberId, GroupInteractionType.KNOCK);
+        Long yesterday = saveInteraction(groupId, memberId, ownerId, GroupInteractionType.KNOCK);
+        jdbcTemplate.update("UPDATE group_interaction SET created_at = ? WHERE id = ?",
+                LocalDate.now(KOREA_ZONE).minusDays(1).atTime(23, 59), yesterday);
+
+        // when
+        GroupDetailResponse response = groupService.getGroup(groupId, ownerId);
+
+        // then
+        assertThat(response.getMyReceivedInteractionCount()).isEqualTo(2);
+    }
+
+    private Long saveInteraction(Long groupId, Long senderId, Long targetId, GroupInteractionType type) {
+        return groupInteractionRepository.saveAndFlush(GroupInteraction.builder()
+                .groupId(groupId).senderId(senderId).targetId(targetId).type(type).build()).getId();
     }
 
     private Long createGroup(String name, Long userId) {
