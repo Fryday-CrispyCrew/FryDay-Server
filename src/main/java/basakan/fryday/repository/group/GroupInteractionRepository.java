@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 
 public interface GroupInteractionRepository extends JpaRepository<GroupInteraction, Long> {
 
+    long countByGroupIdAndTargetIdAndCreatedAtGreaterThanEqual(Long groupId, Long targetId, LocalDateTime from);
+
     @Modifying
     @Query("DELETE FROM GroupInteraction i WHERE i.createdAt < :threshold")
     int deleteAllByCreatedAtBefore(@Param("threshold") LocalDateTime threshold);

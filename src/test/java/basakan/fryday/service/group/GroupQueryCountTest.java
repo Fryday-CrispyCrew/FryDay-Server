@@ -98,7 +98,7 @@ class GroupQueryCountTest {
 
         // then
         assertThat(full).isEqualTo(small);
-        assertThat(full).isLessThanOrEqualTo(4);
+        assertThat(full).isLessThanOrEqualTo(5);
     }
 
     @Test

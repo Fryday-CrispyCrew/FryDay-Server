@@ -33,6 +33,7 @@ import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.group.FryGroupRepository;
+import basakan.fryday.repository.group.GroupInteractionRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -73,6 +74,7 @@ public class GroupService {
     private final FryGroupRepository fryGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final GroupPublicCategoryRepository groupPublicCategoryRepository;
+    private final GroupInteractionRepository groupInteractionRepository;
     private final CategoryRepository categoryRepository;
     private final UserJpaRepository userJpaRepository;
     private final TodoRepository todoRepository;
@@ -171,8 +173,11 @@ public class GroupService {
 
         List<GroupMemberResponse> members = buildMemberResponses(group, userId, date);
         int myPublicCategoryCount = (int) groupPublicCategoryRepository.countByGroupIdAndUserId(groupId, userId);
+        int myReceivedInteractionCount = (int) groupInteractionRepository
+                .countByGroupIdAndTargetIdAndCreatedAtGreaterThanEqual(groupId, userId, date.atStartOfDay());
 
-        return GroupDetailResponse.of(group, GroupRole.of(group, userId), myPublicCategoryCount, date, members);
+        return GroupDetailResponse.of(group, GroupRole.of(group, userId), myPublicCategoryCount,
+                myReceivedInteractionCount, date, members);
     }
 
     /** 조회한 본인을 맨 앞에, 그 다음 그룹장을 두고, 나머지는 참여 순서를 유지한다. */
