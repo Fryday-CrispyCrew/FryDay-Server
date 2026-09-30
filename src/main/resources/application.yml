@@ -2,6 +2,10 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  jpa:
+    # 켜두면 SSE 연결이 끊길 때까지 DB 커넥션을 반납하지 않아 풀이 고갈된다
+    open-in-view: false
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
