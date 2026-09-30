@@ -9,12 +9,15 @@ on:
       image-tag:
         required: true
         type: string
+      app-port:
+        required: true
+        type: string
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: read
@@ -25,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           sparse-checkout: deploy
 
@@ -43,18 +46,16 @@ jobs:
         run: scp "$COMPOSE_FILE_PATH" "$SERVER:$DEPLOY_DIR/compose.yml"
 
       # GHCR 로그인은 이 실행 동안만 유효한 GITHUB_TOKEN으로 하고, 끝나면 로그아웃해 서버에 자격 증명을 남기지 않는다.
+      # 토큰이 서버 프로세스 목록에 보이지 않도록 인자가 아닌 stdin으로 넘긴다.
       - name: Deploy
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTOR: ${{ github.actor }}
+          GHCR_USER: ${{ github.actor }}
           IMAGE_TAG: ${{ inputs.image-tag }}
+          APP_PORT: ${{ inputs.app-port }}
         run: |
-          ssh "$SERVER" bash -s <<EOF
-          set -euo pipefail
-          cd ~/$DEPLOY_DIR
-          trap 'docker logout ghcr.io >/dev/null' EXIT
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
-          export APP_TAG=$IMAGE_TAG
-          docker compose pull app
-          docker compose up -d app
-          EOF
+          {
+            printf 'export DEPLOY_DIR=%q IMAGE_TAG=%q APP_PORT=%q GHCR_USER=%q GHCR_TOKEN=%q\n' \
+              "$DEPLOY_DIR" "$IMAGE_TAG" "$APP_PORT" "$GHCR_USER" "$GHCR_TOKEN"
+            cat deploy/deploy.sh
+          } | ssh "$SERVER" bash -s
