@@ -80,4 +80,5 @@ jobs:
     with:
       environment: dev
       image-tag: ${{ needs.build.outputs.image-tag }}
+      app-port: "8081"
     secrets: inherit
