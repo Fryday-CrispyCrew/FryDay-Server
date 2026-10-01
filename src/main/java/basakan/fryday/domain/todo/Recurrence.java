@@ -11,6 +11,9 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -46,8 +49,11 @@ public class Recurrence extends BaseEntity {
 
     private LocalDate endDate;
 
+    // 운영 DB 는 VARCHAR 로 만들어져 있다. MySQL enum 으로 두면 값을 추가할 때마다 스키마를 바꿔야 한다
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @ColumnDefault("'NONE'")
+    @Column(nullable = false, length = 10)
     private EndType endType;
 
     private LocalTime notificationTime;
