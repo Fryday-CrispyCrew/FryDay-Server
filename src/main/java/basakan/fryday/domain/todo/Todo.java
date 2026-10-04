@@ -54,8 +54,11 @@ public class Todo extends BaseEntity {
     @Column(length = 300)
     private String overrideMemo;
 
+    // 운영 DB 컬럼 타입에 맞춘다
+    @Column(columnDefinition = "TINYINT(1)")
     private Boolean overrideIsAlarm;
 
+    @Column(columnDefinition = "TIME")
     private LocalTime overrideAlarmTime;
 
     @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
