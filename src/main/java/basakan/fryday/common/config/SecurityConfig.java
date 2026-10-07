@@ -1,6 +1,8 @@
 package basakan.fryday.common.config;
 
 import basakan.fryday.common.security.JwtAuthenticationFilter;
+import basakan.fryday.common.security.UserActivityFilter;
+import basakan.fryday.service.user.UserActivityRecorder;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -36,6 +38,7 @@ public class SecurityConfig {
     private static final String DOCS_ROLE = "DOCS";
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final UserActivityRecorder userActivityRecorder;
 
     @Bean
     @Order(1)
@@ -76,7 +79,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new UserActivityFilter(userActivityRecorder), JwtAuthenticationFilter.class);
 
         return http.build();
     }
