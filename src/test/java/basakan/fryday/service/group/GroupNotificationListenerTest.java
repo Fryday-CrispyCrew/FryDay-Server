@@ -76,12 +76,12 @@ class GroupNotificationListenerTest {
 
     @ParameterizedTest(name = "{0} → {1}")
     @CsvSource({
-            "KNOCK, '연우님, 손님 왔어요!'",
-            "ORDER, '연우님, 주문이요!'",
-            "DELICIOUS, '연우님, 추가 주문할게요!'",
-            "APPLAUSE, '연우님, 별점 5점 드릴게요!'"
+            "KNOCK, '연우님이 노크 중이에요!'",
+            "ORDER, '연우님이 주문했어요!'",
+            "DELICIOUS, '연우님이 주문이 밀렸대요!'",
+            "APPLAUSE, '연우님이, 별점 5점 드려요!'"
     })
-    @DisplayName("상호작용 알림은 받는 사람 한 명에게 버튼별 문구와 상호작용 종류를 담아 보낸다")
+    @DisplayName("상호작용 알림은 받는 사람 한 명에게 보낸 사람 닉네임과 버튼별 문구, 상호작용 종류를 담아 보낸다")
     void sendsInteractionNotification(GroupInteractionType type, String body) {
         // when
         listener.onGroupInteraction(new GroupInteractionEvent(GROUP_ID, "바삭한 사람들", 5L, "연우", type));
@@ -92,14 +92,14 @@ class GroupNotificationListenerTest {
     }
 
     @Test
-    @DisplayName("받는 사람 닉네임이 없으면 '그룹원'으로 표기한다")
+    @DisplayName("보낸 사람 닉네임이 없으면 '그룹원'으로 표기한다")
     void interactionUsesFallbackNickname() {
         // when
         listener.onGroupInteraction(new GroupInteractionEvent(
                 GROUP_ID, "바삭한 사람들", 5L, null, GroupInteractionType.KNOCK));
 
         // then
-        then(groupPushSender).should().send(List.of(5L), "바삭한 사람들", "그룹원님, 손님 왔어요!",
+        then(groupPushSender).should().send(List.of(5L), "바삭한 사람들", "그룹원님이 노크 중이에요!",
                 Map.of("type", "GROUP_INTERACTION", "groupId", "12", "interactionType", "KNOCK"));
     }
 
