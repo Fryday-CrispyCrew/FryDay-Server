@@ -67,7 +67,7 @@ public class GroupNotificationListener {
             case KNOCK -> "님이 노크 중이에요!";
             case ORDER -> "님이 주문했어요!";
             case DELICIOUS -> "님이 주문이 밀렸대요!";
-            case APPLAUSE -> "님이, 별점 5점 드려요!";
+            case APPLAUSE -> "님이, 별 5점 드려요!";
         };
     }
 

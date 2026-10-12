@@ -79,7 +79,7 @@ class GroupNotificationListenerTest {
             "KNOCK, '연우님이 노크 중이에요!'",
             "ORDER, '연우님이 주문했어요!'",
             "DELICIOUS, '연우님이 주문이 밀렸대요!'",
-            "APPLAUSE, '연우님이, 별점 5점 드려요!'"
+            "APPLAUSE, '연우님이, 별 5점 드려요!'"
     })
     @DisplayName("상호작용 알림은 받는 사람 한 명에게 보낸 사람 닉네임과 버튼별 문구, 상호작용 종류를 담아 보낸다")
     void sendsInteractionNotification(GroupInteractionType type, String body) {
