@@ -23,6 +23,7 @@ import basakan.fryday.controller.group.response.GroupPublicCategoryResponse;
 import basakan.fryday.controller.group.response.GroupSummaryResponse;
 import basakan.fryday.controller.todo.response.CharacterStatusResponse;
 import basakan.fryday.domain.category.Category;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupMember;
 import basakan.fryday.domain.group.GroupPublicCategory;
@@ -37,6 +38,7 @@ import basakan.fryday.repository.group.GroupInteractionRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.eventlog.UserEvent;
 import basakan.fryday.service.group.dto.GroupMemberDto;
 import basakan.fryday.service.group.dto.GroupMemberTodoCountDto;
 import basakan.fryday.service.group.event.GroupDisbandedEvent;
@@ -148,6 +150,7 @@ public class GroupService {
                 group.getName(),
                 userJpaRepository.findById(userId).map(User::getNickname).orElse(null),
                 groupMemberRepository.findNotifiableUserIds(group.getId(), userId)));
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.GROUP_JOINED, group.getId()));
 
         return GroupJoinResponse.of(group, (int) memberCount + 1);
     }
@@ -230,6 +233,7 @@ public class GroupService {
         groupPublicCategoryRepository.deleteAllByGroupId(group.getId());
         groupMemberRepository.deleteAllByGroupId(group.getId());
         fryGroupRepository.deleteGroupById(group.getId());
+        eventPublisher.publishEvent(UserEvent.of(group.getOwnerId(), EventType.GROUP_DISBANDED, group.getId()));
     }
 
     @Transactional
@@ -242,6 +246,7 @@ public class GroupService {
 
         groupPublicCategoryRepository.deleteAllByGroupIdAndUserId(groupId, userId);
         groupMemberRepository.deleteAllByGroupIdAndUserId(groupId, userId);
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.GROUP_LEFT, groupId));
     }
 
     public GroupNotificationSettingResponse getNotificationSetting(Long groupId, Long userId) {

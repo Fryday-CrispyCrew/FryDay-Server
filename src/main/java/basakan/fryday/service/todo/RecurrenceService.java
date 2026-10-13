@@ -5,11 +5,13 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.RecurrenceCreateRequest;
 import basakan.fryday.controller.todo.request.RecurrenceUpdateRequest;
 import basakan.fryday.controller.todo.response.TodoResponse;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.todo.EndType;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.eventlog.UserEvent;
 import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +68,8 @@ public class RecurrenceService {
         Todo todo = todoRepository.findById(request.getTodoId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
         eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.RECURRENCE_CREATED, savedRecurrence.getId(),
+                Map.of("type", request.getType().name())));
         return TodoResponse.from(todo);
     }
 
@@ -104,6 +109,7 @@ public class RecurrenceService {
 
         recurrenceRepository.delete(recurrence);
         eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.RECURRENCE_ENDED, recurrenceId));
     }
 
     @Transactional
@@ -122,6 +128,7 @@ public class RecurrenceService {
 
         recurrenceRepository.delete(recurrence);
         eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.RECURRENCE_ENDED, recurrenceId));
     }
 
     @Transactional

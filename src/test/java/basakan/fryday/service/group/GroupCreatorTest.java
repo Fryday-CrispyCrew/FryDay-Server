@@ -18,6 +18,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -39,6 +40,7 @@ class GroupCreatorTest {
     @Mock private GroupPublicCategoryRepository groupPublicCategoryRepository;
     @Mock private CategoryRepository categoryRepository;
     @Mock private InviteCodeGenerator inviteCodeGenerator;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks private GroupCreator groupCreator;
 

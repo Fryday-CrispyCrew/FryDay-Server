@@ -3,6 +3,7 @@ package basakan.fryday.service.todo;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.todo.request.InstanceEditRequest.Payload;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.todo.RecurrenceScope;
 import basakan.fryday.domain.todo.EndType;
 import basakan.fryday.domain.todo.Recurrence;
@@ -11,6 +12,7 @@ import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.eventlog.UserEvent;
 import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,6 +25,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -211,6 +214,8 @@ public class RecurrenceInstanceService {
         Todo instance = findActiveInstance(instanceId, userId);
         todoAlarmRepository.deleteByTodoId(instanceId);
         instance.delete();
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.TODO_DELETED, instanceId,
+                Map.of("recurring", true)));
     }
 
     /** spec 5.4: Master 종료 + T 이후 인스턴스 일괄 soft delete */
@@ -225,6 +230,7 @@ public class RecurrenceInstanceService {
 
         master.terminateAt(T);
         todoRepository.bulkSoftDeleteByRecurrenceIdAndDateGte(master.getId(), T, LocalDate.now());
+        publishRecurrenceEnded(userId, master.getId());
     }
 
     /** spec 5.5: Master soft delete + 연결된 모든 인스턴스 soft delete */
@@ -238,6 +244,7 @@ public class RecurrenceInstanceService {
 
         master.markDeleted();
         todoRepository.bulkSoftDeleteByRecurrenceId(master.getId(), LocalDate.now());
+        publishRecurrenceEnded(userId, master.getId());
     }
 
     // ── Cancel ─────────────────────────────────────────────────────────────────
@@ -290,6 +297,7 @@ public class RecurrenceInstanceService {
         todoRepository.findById(instanceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND))
                 .detachFromRecurrence();
+        publishRecurrenceEnded(userId, master.getId());
     }
 
     /** 선택 인스턴스 일반 Todo 전환 + 나머지 전체 soft delete + Master 물리 삭제 */
@@ -314,6 +322,7 @@ public class RecurrenceInstanceService {
         }
 
         recurrenceRepository.delete(recurrence);
+        publishRecurrenceEnded(userId, recurrenceId);
     }
 
     // ── realignInstances ───────────────────────────────────────────────────────
@@ -405,6 +414,10 @@ public class RecurrenceInstanceService {
         }
 
         return instance;
+    }
+
+    private void publishRecurrenceEnded(long userId, Long recurrenceId) {
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.RECURRENCE_ENDED, recurrenceId));
     }
 
     private Recurrence findMaster(Todo instance) {
