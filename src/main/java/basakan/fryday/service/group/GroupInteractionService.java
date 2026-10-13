@@ -3,6 +3,7 @@ package basakan.fryday.service.group;
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.group.request.GroupInteractionRequest;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupInteraction;
 import basakan.fryday.domain.group.GroupInteractionType;
@@ -14,6 +15,7 @@ import basakan.fryday.repository.group.FryGroupRepository;
 import basakan.fryday.repository.group.GroupInteractionRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
+import basakan.fryday.service.eventlog.UserEvent;
 import basakan.fryday.service.group.event.GroupInteractionEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -62,6 +65,8 @@ public class GroupInteractionService {
                 .targetId(targetUserId)
                 .type(type)
                 .build());
+        eventPublisher.publishEvent(UserEvent.of(senderId, EventType.GROUP_INTERACTION_SENT, groupId,
+                Map.of("type", type.name())));
 
         if (target.isNotificationEnabled()) {
             eventPublisher.publishEvent(new GroupInteractionEvent(

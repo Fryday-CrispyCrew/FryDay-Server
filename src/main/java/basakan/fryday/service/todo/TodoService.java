@@ -11,6 +11,7 @@ import basakan.fryday.controller.todo.response.TodoResponse;
 import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.controller.todo.response.TodoDetailResponse;
 import basakan.fryday.domain.category.Category;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.todo.TodoAlarm;
@@ -19,6 +20,7 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.service.eventlog.UserEvent;
 import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -59,6 +61,7 @@ public class TodoService {
 
         Todo savedTodo = todoRepository.save(todo);
         publishProgressChanged(userId);
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.TODO_CREATED, savedTodo.getId()));
 
         return TodoResponse.from(savedTodo);
     }
@@ -75,6 +78,7 @@ public class TodoService {
 
         todo.toggleCompletion();
         publishProgressChanged(userId);
+        publishTodoEvent(userId, todo.isCompleted() ? EventType.TODO_COMPLETED : EventType.TODO_UNCOMPLETED, todo);
 
         return TodoResponse.from(todo);
     }
@@ -118,6 +122,7 @@ public class TodoService {
         todoAlarmRepository.deleteByTodoId(todoId);
         todo.delete();
         publishProgressChanged(userId);
+        publishTodoEvent(userId, EventType.TODO_DELETED, todo);
     }
 
     @Transactional
@@ -154,6 +159,11 @@ public class TodoService {
 
     private void publishProgressChanged(Long userId) {
         eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
+    }
+
+    private void publishTodoEvent(Long userId, EventType type, Todo todo) {
+        eventPublisher.publishEvent(UserEvent.of(userId, type, todo.getId(),
+                Map.of("recurring", todo.getRecurrenceId() != null)));
     }
 
     private TodoResponse moveOrCopyTodoToDate(Todo todo, LocalDate targetDate, Long userId) {

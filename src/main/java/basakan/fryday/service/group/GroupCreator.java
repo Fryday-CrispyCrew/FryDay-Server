@@ -1,6 +1,7 @@
 package basakan.fryday.service.group;
 
 import basakan.fryday.controller.group.response.GroupCreateResponse;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.group.FryGroup;
 import basakan.fryday.domain.group.GroupImageCode;
 import basakan.fryday.domain.group.GroupMember;
@@ -9,7 +10,9 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.group.FryGroupRepository;
 import basakan.fryday.repository.group.GroupMemberRepository;
 import basakan.fryday.repository.group.GroupPublicCategoryRepository;
+import basakan.fryday.service.eventlog.UserEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +32,7 @@ public class GroupCreator {
     private final GroupPublicCategoryRepository groupPublicCategoryRepository;
     private final CategoryRepository categoryRepository;
     private final InviteCodeGenerator inviteCodeGenerator;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public GroupCreateResponse create(String name, Long userId) {
@@ -46,6 +50,7 @@ public class GroupCreator {
                 .build());
 
         publishAllOwnedCategories(group.getId(), userId);
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.GROUP_CREATED, group.getId()));
 
         return GroupCreateResponse.from(group);
     }
