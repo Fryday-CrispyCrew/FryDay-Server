@@ -82,3 +82,13 @@ jobs:
       image-tag: ${{ needs.build.outputs.image-tag }}
       app-port: "8081"
     secrets: inherit
+
+  deploy-prod:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: prod
+      image-tag: ${{ needs.build.outputs.image-tag }}
+      app-port: "8080"
+    secrets: inherit
