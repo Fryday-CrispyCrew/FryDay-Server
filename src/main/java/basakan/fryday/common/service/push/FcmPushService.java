@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -37,6 +38,12 @@ public class FcmPushService implements PushService {
     @Override
     @Transactional(readOnly = true)
     public void sendToUser(User user, String title, String body) {
+        sendToUser(user, title, body, Map.of());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void sendToUser(User user, String title, String body, Map<String, String> data) {
         if (!fcmEnabled) {
             log.warn("FCM is disabled. Skipping push notification for userId={}", user.getId());
             return;
@@ -53,7 +60,7 @@ public class FcmPushService implements PushService {
         for (UserDevice device : devices) {
             String token = device.getFcmToken();
             if (token != null && !token.isBlank() && sentTokens.add(token)) {
-                sendToTokenInternal(device.getId(), token, device.getDeviceId(), title, body);
+                sendToTokenInternal(device.getId(), token, device.getDeviceId(), title, body, data);
             }
         }
     }
@@ -71,7 +78,7 @@ public class FcmPushService implements PushService {
         }
 
         try {
-            Message message = buildMessage(fcmToken, title, body);
+            Message message = buildMessage(fcmToken, title, body, Map.of());
 
             String response = FirebaseMessaging.getInstance().send(message);
             log.info("Push notification sent successfully: response={}", response);
@@ -81,9 +88,10 @@ public class FcmPushService implements PushService {
         }
     }
 
-    private void sendToTokenInternal(Long deviceId, String fcmToken, String physicalDeviceId, String title, String body) {
+    private void sendToTokenInternal(Long deviceId, String fcmToken, String physicalDeviceId, String title, String body,
+                                     Map<String, String> data) {
         try {
-            Message message = buildMessage(fcmToken, title, body);
+            Message message = buildMessage(fcmToken, title, body, data);
 
             String response = FirebaseMessaging.getInstance().send(message);
             log.info("Push notification sent successfully: response={}, deviceId={}", response, physicalDeviceId);
@@ -95,9 +103,10 @@ public class FcmPushService implements PushService {
         }
     }
 
-    private Message buildMessage(String fcmToken, String title, String body) {
+    private Message buildMessage(String fcmToken, String title, String body, Map<String, String> data) {
         return Message.builder()
                 .setToken(fcmToken)
+                .putAllData(data)
                 .setNotification(Notification.builder()
                         .setTitle(title)
                         .setBody(body)

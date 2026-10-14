@@ -11,11 +11,15 @@ import basakan.fryday.repository.auth.AgreementJpaRepository;
 import basakan.fryday.repository.auth.UserDeviceRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.common.security.RefreshTokenRepository;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.repository.auth.client.SocialUserInfo;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.eventlog.UserEvent;
+import basakan.fryday.service.group.GroupService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +37,8 @@ public class UserWriteService {
     private final CategoryRepository categoryRepository;
     private final DailyResultRepository dailyResultRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final GroupService groupService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public void agreeConsent(User user, Agreement agreement, boolean termsAgreed, boolean privacyAgreed, boolean marketingAgreed) {
         agreement.updateConsent(termsAgreed, privacyAgreed, marketingAgreed);
@@ -84,10 +90,12 @@ public class UserWriteService {
         dailyResultRepository.deleteAllByUserId(userId);
         userDeviceRepository.deleteAllByUserId(userId);
         agreementRepository.deleteByUser(user);
+        groupService.leaveAllGroups(userId);
 
         // 계정 상태 변경 (7일 후 스케줄러가 User 삭제)
         user.withdraw();
         userJpaRepository.save(user);
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.USER_WITHDREW));
     }
 
 
@@ -109,7 +117,9 @@ public class UserWriteService {
                 socialUserInfo.providerUserId(),
                 socialUserInfo.email()
         );
-        return userJpaRepository.save(newUser);
+        User savedUser = userJpaRepository.save(newUser);
+        eventPublisher.publishEvent(UserEvent.of(savedUser.getId(), EventType.USER_SIGNED_UP));
+        return savedUser;
     }
 
     public void updateEmailIfAbsent(User user, String email) {

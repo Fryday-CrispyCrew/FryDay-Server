@@ -11,6 +11,7 @@ import basakan.fryday.controller.todo.response.TodoResponse;
 import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.controller.todo.response.TodoDetailResponse;
 import basakan.fryday.domain.category.Category;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.todo.CharacterStatus;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.todo.TodoAlarm;
@@ -19,10 +20,11 @@ import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
+import basakan.fryday.service.eventlog.UserEvent;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -30,7 +32,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TodoService {
@@ -40,6 +41,7 @@ public class TodoService {
     private final TodoAlarmRepository todoAlarmRepository;
     private final RecurrenceRepository recurrenceRepository;
     private final RecurrenceOccurrenceMaterializeService materializeService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public TodoResponse saveTodo(TodoSaveRequest request, Long userId) {
@@ -58,6 +60,8 @@ public class TodoService {
         todo.updateDisplayOrder(nextOrder);
 
         Todo savedTodo = todoRepository.save(todo);
+        publishProgressChanged(userId);
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.TODO_CREATED, savedTodo.getId()));
 
         return TodoResponse.from(savedTodo);
     }
@@ -65,22 +69,44 @@ public class TodoService {
     @Transactional
     public TodoResponse toggleTodoCompletion(Long todoId, Long userId) {
         Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
 
+        if (!todo.getCategory().getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
+        }
+
         todo.toggleCompletion();
+        publishProgressChanged(userId);
+        publishTodoEvent(userId, todo.isCompleted() ? EventType.TODO_COMPLETED : EventType.TODO_UNCOMPLETED, todo);
 
         return TodoResponse.from(todo);
     }
 
     @Transactional
     public MemoResponse updateMemo(Long todoId, Long userId, MemoRequest request) {
-        int updated = todoRepository.updateMemoByIdAndUserId(todoId, userId, request.getMemo());
-        if (updated == 0) {
+        Todo todo = todoRepository.findById(todoId)
+                .filter(t -> !t.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+
+        if (!todo.getCategory().getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
-        Todo todo = todoRepository.findById(todoId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
-        return MemoResponse.from(todo.getId(), todo.getMemo());
+
+        if (todo.getRecurrenceId() != null) {
+            // 반복 인스턴스: base memo를 직접 덮어쓰면 상속 메모가 오염되고, 마스터 전체 수정 시
+            // 재상속되므로 개별 override로 기록한다.
+            todo.applyMemoOverride(request.getMemo());
+        } else {
+            todo.updateMemo(request.getMemo());
+        }
+
+        return MemoResponse.from(todo.getId(), resolveEffectiveMemo(todo));
+    }
+
+    private String resolveEffectiveMemo(Todo todo) {
+        return todo.isOverridden() && todo.getOverrideMemo() != null
+                ? todo.getOverrideMemo() : todo.getMemo();
     }
 
     @Transactional
@@ -95,6 +121,8 @@ public class TodoService {
 
         todoAlarmRepository.deleteByTodoId(todoId);
         todo.delete();
+        publishProgressChanged(userId);
+        publishTodoEvent(userId, EventType.TODO_DELETED, todo);
     }
 
     @Transactional
@@ -110,7 +138,9 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_TODAY);
         }
 
-        return moveOrCopyTodoToDate(todo, LocalDate.now().plusDays(1), userId);
+        TodoResponse response = moveOrCopyTodoToDate(todo, LocalDate.now().plusDays(1), userId);
+        publishProgressChanged(userId);
+        return response;
     }
 
     @Transactional
@@ -122,7 +152,18 @@ public class TodoService {
             throw new BusinessException(ErrorCode.TODO_NOT_FOUND);
         }
 
-        return moveOrCopyTodoToDate(todo, LocalDate.now(), userId);
+        TodoResponse response = moveOrCopyTodoToDate(todo, LocalDate.now(), userId);
+        publishProgressChanged(userId);
+        return response;
+    }
+
+    private void publishProgressChanged(Long userId) {
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
+    }
+
+    private void publishTodoEvent(Long userId, EventType type, Todo todo) {
+        eventPublisher.publishEvent(UserEvent.of(userId, type, todo.getId(),
+                Map.of("recurring", todo.getRecurrenceId() != null)));
     }
 
     private TodoResponse moveOrCopyTodoToDate(Todo todo, LocalDate targetDate, Long userId) {
@@ -168,6 +209,7 @@ public class TodoService {
         if (updated > 0) {
             Todo todo = todoRepository.findById(todoId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+            publishProgressChanged(userId);
             return TodoResponse.from(todo);
         }
 
@@ -191,6 +233,7 @@ public class TodoService {
 
         // recurrence에서 분리 (독립 투두로 변환)
         todo.setRecurrenceId(null);
+        publishProgressChanged(userId);
 
         return TodoResponse.from(todo);
     }
@@ -210,6 +253,7 @@ public class TodoService {
         }
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TODO_NOT_FOUND));
+        publishProgressChanged(userId);
         return TodoResponse.from(todo);
     }
 
@@ -226,31 +270,6 @@ public class TodoService {
             Todo todo = todoMap.get(idList.get(i));
             if (todo != null) {
                 todo.updateDisplayOrder((long) (i + 1));
-            }
-        }
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void materializeRecurrenceOccurrences(Long userId, LocalDate date, Long categoryId) {
-        List<Recurrence> recurrences = recurrenceRepository.findByUserIdAndDateRange(userId, date);
-
-        if (categoryId != null) {
-            recurrences = recurrences.stream()
-                    .filter(r -> r.getCategoryId() == categoryId)
-                    .collect(Collectors.toList());
-        }
-
-        for (Recurrence recurrence : recurrences) {
-            try {
-                materializeService.materializeOccurrenceIfNotExists(userId, recurrence.getId(), date);
-            } catch (BusinessException e) {
-                if (e.getErrorCode() == ErrorCode.INVALID_INPUT_VALUE) {
-                    continue;
-                }
-                throw e;
-            } catch (Exception e) {
-                log.error("반복 투두 materialize 중 예상치 못한 예외 발생 - recurrenceId: {}, date: {}. 스킵하고 계속 진행",
-                        recurrence.getId(), date, e);
             }
         }
     }
@@ -274,7 +293,7 @@ public class TodoService {
     }
 
     public List<TodoListResponse> getTodoList(Long userId, LocalDate date, Long categoryId) {
-        materializeRecurrenceOccurrences(userId, date, categoryId);
+        materializeService.materializeOccurrencesForDate(userId, date, categoryId);
         return getTodoListInternal(userId, date, categoryId);
     }
 

@@ -1,68 +1,61 @@
-name: Build & Deploy to OCI
+name: Deploy
 
 on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+      app-port:
+        required: true
+        type: string
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SERVER: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
+      DEPLOY_DIR: fryday-${{ inputs.environment }}
+      COMPOSE_FILE_PATH: deploy/${{ inputs.environment }}/compose.yml
 
     steps:
-      # 1) 코드 체크아웃
       - name: Checkout
-        uses: actions/checkout@v4
-
-      # 2) JDK 세팅 (Java 21)
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/checkout@v7
         with:
-          distribution: temurin
-          java-version: "21"
+          sparse-checkout: deploy
 
-      # 3) Gradle 캐시
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      # 4) JAR 빌드 (테스트는 스킵)
-      - name: Build with Gradle
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST_KEY: ${{ secrets.SERVER_HOST_KEY }}
         run: |
-          chmod +x ./gradlew
-          ./gradlew clean bootJar -x test
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$HOST_KEY" > ~/.ssh/known_hosts
 
-      # 5) Docker Hub 로그인
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Copy compose file
+        run: scp "$COMPOSE_FILE_PATH" "$SERVER:$DEPLOY_DIR/compose.yml"
 
-      # 6) Docker 이미지 빌드
-      - name: Build Docker image
+      # GHCR 로그인은 이 실행 동안만 유효한 GITHUB_TOKEN으로 하고, 끝나면 로그아웃해 서버에 자격 증명을 남기지 않는다.
+      # 토큰이 서버 프로세스 목록에 보이지 않도록 인자가 아닌 stdin으로 넘긴다.
+      - name: Deploy
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE_TAG: ${{ inputs.image-tag }}
+          APP_PORT: ${{ inputs.app-port }}
         run: |
-          docker build -t yeongo05/fry_day:latest .
-
-      # 7) Docker 이미지 푸시
-      - name: Push Docker image
-        run: |
-          docker push yeongo05/fry_day:latest
-
-      # 8) 서버에 SSH 접속해서 pull + 재기동
-      - name: Deploy to OCI server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd ~/apps/fryday
-            docker-compose pull
-            docker-compose up -d
+          {
+            printf 'export DEPLOY_DIR=%q IMAGE_TAG=%q APP_PORT=%q GHCR_USER=%q GHCR_TOKEN=%q\n' \
+              "$DEPLOY_DIR" "$IMAGE_TAG" "$APP_PORT" "$GHCR_USER" "$GHCR_TOKEN"
+            cat deploy/deploy.sh
+          } | ssh "$SERVER" bash -s

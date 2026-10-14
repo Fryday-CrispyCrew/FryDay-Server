@@ -26,6 +26,16 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             "ORDER BY t.displayOrder ASC")
     List<Todo> findAllByCategoryIdAndDate(@Param("categoryId") Long categoryId, @Param("userId") Long userId, @Param("date") LocalDate date);
 
+    /** 사용자가 이 그룹에 공개한 카테고리의 투두만 조회한다. 비공개 투두가 새지 않도록 공개 여부를 조인으로 거른다. */
+    @Query("SELECT t FROM Todo t " +
+            "JOIN GroupPublicCategory gpc ON gpc.categoryId = t.category.id " +
+            "WHERE gpc.groupId = :groupId AND gpc.userId = :userId AND t.category.userId = :userId " +
+            "AND t.category.deletedAt IS NULL AND t.date = :date AND t.deletedAt IS NULL " +
+            "ORDER BY t.displayOrder ASC")
+    List<Todo> findAllPublicInGroupByUserIdAndDate(@Param("groupId") Long groupId,
+                                                   @Param("userId") Long userId,
+                                                   @Param("date") LocalDate date);
+
     @Query("SELECT DISTINCT c.userId FROM Todo t JOIN t.category c " +
             "WHERE t.date = :date AND t.status = :status AND t.deletedAt IS NULL")
     List<Long> findUserIdsWithTodosByDateAndStatus(@Param("date") LocalDate date, @Param("status") Todo.Status status);
@@ -39,9 +49,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate AND t.deletedAt IS NULL")
     List<Todo> findAllByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate);
-
-    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN TRUE ELSE FALSE END FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date = :date")
-    boolean existsByRecurrenceIdAndDate(@Param("recurrenceId") Long recurrenceId, @Param("date") LocalDate date);
 
     @Query("SELECT t FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date = :date")
     java.util.Optional<Todo> findByRecurrenceIdAndDate(@Param("recurrenceId") Long recurrenceId, @Param("date") LocalDate date);
@@ -101,10 +108,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     int updateDescriptionByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("description") String description);
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE Todo t SET t.memo = :memo WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
-    int updateMemoByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("memo") String memo);
-
-    @Modifying(clearAutomatically = true)
     @Query("UPDATE Todo t SET t.date = :date WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.recurrenceId IS NULL AND t.category.userId = :userId")
     int updateDateByIdAndUserIdForNonRecurring(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("date") LocalDate date);
 
@@ -116,17 +119,25 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     @Query("UPDATE Todo t SET t.recurrenceId = :recurrenceId WHERE t.id = :todoId AND t.deletedAt IS NULL AND t.category.userId = :userId")
     int updateRecurrenceIdByIdAndUserId(@Param("todoId") Long todoId, @Param("userId") Long userId, @Param("recurrenceId") Long recurrenceId);
 
-    @Modifying(clearAutomatically = true)
+    // flushAutomatically: editAll에서 직전 master.updateContent(dirty)가 clear로 유실되지 않도록 벌크 실행 전 flush
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Todo t SET t.description = :description WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
     int bulkUpdateDescriptionByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("description") String description);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE Todo t SET t.memo = :memo WHERE t.recurrenceId = :recurrenceId AND t.isOverridden = false AND t.deletedAt IS NULL")
     int bulkUpdateMemoByRecurrenceId(@Param("recurrenceId") Long recurrenceId, @Param("memo") String memo);
 
+    /** 규칙 분기(fork) 시 살아남은 인스턴스를 새 Master로 옮긴다. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("DELETE FROM Todo t WHERE t.recurrenceId = :recurrenceId AND t.date >= :fromDate")
-    int hardDeleteByRecurrenceIdAndDateGte(@Param("recurrenceId") Long recurrenceId, @Param("fromDate") LocalDate fromDate);
+    @Query("UPDATE Todo t SET t.recurrenceId = :newRecurrenceId " +
+            "WHERE t.id IN :ids")
+    int reassignRecurrenceId(@Param("ids") List<Long> ids, @Param("newRecurrenceId") Long newRecurrenceId);
+
+    /** 규칙에서 벗어난 인스턴스를 일괄 soft delete 한다. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE Todo t SET t.deletedAt = :now WHERE t.id IN :ids AND t.deletedAt IS NULL")
+    int softDeleteByIds(@Param("ids") List<Long> ids, @Param("now") LocalDate now);
 
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Todo t WHERE t.category.id IN " +

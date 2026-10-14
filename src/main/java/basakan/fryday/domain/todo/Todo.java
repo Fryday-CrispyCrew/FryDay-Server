@@ -14,6 +14,10 @@ import java.time.LocalTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "todo", indexes = {
+        @Index(name = "idx_todo_category_date", columnList = "category_id, date, deleted_at, display_order"),
+        @Index(name = "idx_todo_recurrence_date", columnList = "recurrence_id, date")
+})
 public class Todo extends BaseEntity {
 
     @Column(nullable = false)
@@ -50,8 +54,11 @@ public class Todo extends BaseEntity {
     @Column(length = 300)
     private String overrideMemo;
 
+    // 운영 DB 컬럼 타입에 맞춘다
+    @Column(columnDefinition = "TINYINT(1)")
     private Boolean overrideIsAlarm;
 
+    @Column(columnDefinition = "TIME")
     private LocalTime overrideAlarmTime;
 
     @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
@@ -119,12 +126,45 @@ public class Todo extends BaseEntity {
         this.description = description;
     }
 
+    /**
+     * 반복 인스턴스의 메모만 개별 수정(override)한다.
+     * 삭제/빈 값은 빈 문자열 override로 남겨, 마스터 메모를 다시 상속하지 않도록 한다.
+     */
+    public void applyMemoOverride(String memo) {
+        this.overrideMemo = (memo != null) ? memo : "";
+        this.isOverridden = true;
+    }
+
+    /**
+     * 반복 인스턴스를 개별 수정(override)한다. 각 인자는 부분 수정 규약을 따른다.
+     *   - null: 해당 필드를 변경하지 않음(기존 override/상속 값 유지)
+     *   - 빈 문자열(title/memo): 값을 삭제. 빈 override 로 남겨 마스터 값을 다시 상속하지 않음
+     *   - 알림은 isAlarm 기준 3-state: null=상속 유지, true=개별 알림(alarmTime), false=알림 사용 안 함
+     */
     public void applyOverride(String title, String memo, Boolean isAlarm, LocalTime alarmTime) {
         if (title != null) this.overrideTitle = title;
         if (memo != null) this.overrideMemo = memo;
-        if (isAlarm != null) this.overrideIsAlarm = isAlarm;
-        if (alarmTime != null) this.overrideAlarmTime = alarmTime;
-        this.isOverridden = true;
+        if (isAlarm != null) {
+            this.overrideIsAlarm = isAlarm;
+            this.overrideAlarmTime = isAlarm ? alarmTime : null;
+        }
+        this.isOverridden = hasAnyOverride();
+    }
+
+    private boolean hasAnyOverride() {
+        return overrideTitle != null || overrideMemo != null || overrideIsAlarm != null;
+    }
+
+    public boolean inheritsAlarm() {
+        return overrideIsAlarm == null;
+    }
+
+    /** 이 회차의 유효 알림 시각. null이면 알림이 없다. */
+    public LocalTime resolveEffectiveAlarmTime(LocalTime masterNotificationTime) {
+        if (overrideIsAlarm == null) {
+            return masterNotificationTime;
+        }
+        return overrideIsAlarm ? overrideAlarmTime : null;
     }
 
     /** override 값을 base 필드에 이관하고 반복 연결을 끊어 독립 Todo로 전환 */

@@ -49,6 +49,11 @@ public class TodoAlarmService {
                             todoAlarmRepository.save(newAlarm);
                         }
                 );
+
+        // 반복 인스턴스라면 이 경로도 개별 알림 설정이므로 override 상태를 함께 기록한다
+        if (todo.getRecurrenceId() != null) {
+            todo.applyOverride(null, null, true, notifyAt.toLocalTime());
+        }
     }
 
     public void deleteTodoAlarm(Long todoId, Long userId) {
@@ -60,5 +65,10 @@ public class TodoAlarmService {
         }
 
         todoAlarmRepository.deleteByTodoId(todoId);
+
+        // 반복 인스턴스의 개별 알림 삭제는 Master 복귀가 아닌 '사용 안 함'으로 남긴다 (spec 4.2.2)
+        if (todo.getRecurrenceId() != null) {
+            todo.applyOverride(null, null, false, null);
+        }
     }
 }

@@ -7,10 +7,14 @@ import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.todo.Recurrence;
 import basakan.fryday.domain.todo.RecurrenceType;
 import basakan.fryday.domain.todo.Todo;
+import basakan.fryday.controller.todo.request.MemoRequest;
+import basakan.fryday.controller.todo.request.TodoSaveRequest;
+import basakan.fryday.controller.todo.response.MemoResponse;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import basakan.fryday.repository.todo.TodoRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -47,6 +52,9 @@ class TodoServiceTest {
 
     @Mock
     private RecurrenceOccurrenceMaterializeService materializeService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private TodoService todoService;
@@ -86,6 +94,106 @@ class TodoServiceTest {
                 .build();
         ReflectionTestUtils.setField(completedTodo, "id", TODO_ID + 1);
         completedTodo.toggleCompletion();
+    }
+
+    @Nested
+    @DisplayName("saveTodo")
+    class SaveTodo {
+
+        @Test
+        @DisplayName("저장하면 그룹 진행 상태 이벤트를 발행한다")
+        void 저장_이벤트_발행() {
+            // given
+            given(categoryRepository.findById(CATEGORY_ID)).willReturn(Optional.of(category));
+            given(todoRepository.findMaxDisplayOrder(USER_ID, today)).willReturn(null);
+            given(todoRepository.save(any(Todo.class))).willReturn(inProgressTodo);
+
+            // when
+            todoService.saveTodo(new TodoSaveRequest("스쿼트 100개", CATEGORY_ID, today), USER_ID);
+
+            // then
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
+        }
+    }
+
+    @Nested
+    @DisplayName("toggleTodoCompletion")
+    class ToggleTodoCompletion {
+
+        @Test
+        @DisplayName("미완료 투두를 완료로 바꾼다")
+        void 미완료_투두_완료() {
+            // given
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when
+            var result = todoService.toggleTodoCompletion(TODO_ID, USER_ID);
+
+            // then
+            assertThat(result.getStatus()).isEqualTo(Todo.Status.COMPLETED.name());
+            assertThat(inProgressTodo.isCompleted()).isTrue();
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
+        }
+
+        @Test
+        @DisplayName("완료를 취소해도 그룹 진행 상태 이벤트를 발행한다")
+        void 완료_취소_이벤트_발행() {
+            // given
+            given(todoRepository.findById(TODO_ID + 1)).willReturn(Optional.of(completedTodo));
+
+            // when
+            todoService.toggleTodoCompletion(TODO_ID + 1, USER_ID);
+
+            // then
+            assertThat(completedTodo.isCompleted()).isFalse();
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
+        }
+
+        @Test
+        @DisplayName("실패 - 다른 사용자의 투두")
+        void 실패_다른_사용자_투두() {
+            // given
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when & then
+            assertThatThrownBy(() -> todoService.toggleTodoCompletion(TODO_ID, 999L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TODO_NOT_FOUND);
+            assertThat(inProgressTodo.isCompleted()).isFalse();
+        }
+
+        @Test
+        @DisplayName("실패 - 삭제된 투두")
+        void 실패_삭제된_투두() {
+            // given
+            inProgressTodo.delete();
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when & then
+            assertThatThrownBy(() -> todoService.toggleTodoCompletion(TODO_ID, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TODO_NOT_FOUND);
+            assertThat(inProgressTodo.isCompleted()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteTodo")
+    class DeleteTodo {
+
+        @Test
+        @DisplayName("삭제하면 그룹 진행 상태 이벤트를 발행한다")
+        void 삭제_이벤트_발행() {
+            // given
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(inProgressTodo));
+
+            // when
+            todoService.deleteTodo(TODO_ID, USER_ID);
+
+            // then
+            assertThat(inProgressTodo.isDeleted()).isTrue();
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
+        }
     }
 
     @Nested
@@ -257,6 +365,7 @@ class TodoServiceTest {
             assertThat(result.getId()).isEqualTo(TODO_ID);
             assertThat(result.getDate()).isEqualTo(today);
             assertThat(futureTodo.getDate()).isEqualTo(today);
+            then(eventPublisher).should().publishEvent(new GroupProgressChangedEvent(USER_ID));
         }
 
         @Test
@@ -368,6 +477,85 @@ class TodoServiceTest {
             assertThatThrownBy(() -> todoService.moveToToday(TODO_ID, USER_ID))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.TODO_NOT_FOUND);
+        }
+    }
+
+    @Nested
+    @DisplayName("updateMemo")
+    class UpdateMemo {
+
+        @Test
+        @DisplayName("일반 투두 - base memo를 직접 갱신하고 override는 남기지 않는다")
+        void 일반투두_base_memo_갱신() {
+            // given
+            Todo todo = Todo.builder()
+                    .description("일반 할 일")
+                    .category(category)
+                    .date(today)
+                    .displayOrder(1L)
+                    .memo("기존 메모")
+                    .build();
+            ReflectionTestUtils.setField(todo, "id", TODO_ID);
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(todo));
+
+            // when
+            MemoResponse result = todoService.updateMemo(TODO_ID, USER_ID, new MemoRequest("새 메모"));
+
+            // then
+            assertThat(result.getMemo()).isEqualTo("새 메모");
+            assertThat(todo.getMemo()).isEqualTo("새 메모");
+            assertThat(todo.isOverridden()).isFalse();
+            assertThat(todo.getOverrideMemo()).isNull();
+        }
+
+        @Test
+        @DisplayName("반복 인스턴스 - base memo는 두고 override로 기록한다")
+        void 반복인스턴스_override_기록() {
+            // given - 상속받은 base memo를 가진 반복 인스턴스
+            Todo instance = Todo.builder()
+                    .description("반복 할 일")
+                    .category(category)
+                    .date(today)
+                    .displayOrder(1L)
+                    .recurrenceId(10L)
+                    .memo("마스터 메모")
+                    .build();
+            ReflectionTestUtils.setField(instance, "id", TODO_ID);
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(instance));
+
+            // when
+            MemoResponse result = todoService.updateMemo(TODO_ID, USER_ID, new MemoRequest("개별 메모"));
+
+            // then - override에만 저장, base(상속) memo는 보존
+            assertThat(result.getMemo()).isEqualTo("개별 메모");
+            assertThat(instance.getOverrideMemo()).isEqualTo("개별 메모");
+            assertThat(instance.isOverridden()).isTrue();
+            assertThat(instance.getMemo()).isEqualTo("마스터 메모");
+        }
+
+        @Test
+        @DisplayName("반복 인스턴스 - 메모 삭제(null)는 빈 override로 남겨 마스터 메모를 재상속하지 않는다")
+        void 반복인스턴스_삭제는_빈_override() {
+            // given
+            Todo instance = Todo.builder()
+                    .description("반복 할 일")
+                    .category(category)
+                    .date(today)
+                    .displayOrder(1L)
+                    .recurrenceId(10L)
+                    .memo("마스터 메모")
+                    .build();
+            ReflectionTestUtils.setField(instance, "id", TODO_ID);
+            given(todoRepository.findById(TODO_ID)).willReturn(Optional.of(instance));
+
+            // when - memo=null (삭제 의도)
+            MemoResponse result = todoService.updateMemo(TODO_ID, USER_ID, new MemoRequest(null));
+
+            // then - 빈 문자열 override → 응답은 빈 값, 마스터 메모 재상속 안 함
+            assertThat(result.getMemo()).isEmpty();
+            assertThat(instance.getOverrideMemo()).isEmpty();
+            assertThat(instance.isOverridden()).isTrue();
+            assertThat(instance.getMemo()).isEqualTo("마스터 메모");
         }
     }
 }

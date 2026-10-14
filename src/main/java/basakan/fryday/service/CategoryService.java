@@ -11,7 +11,10 @@ import basakan.fryday.domain.BaseEntity;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.repository.CategoryRepository;
+import basakan.fryday.repository.group.GroupPublicCategoryRepository;
+import basakan.fryday.service.group.event.GroupProgressChangedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +28,9 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private static final int MAX_CATEGORIES_COUNT = 6;
+    private final GroupPublicCategoryRepository groupPublicCategoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private static final int MAX_CATEGORIES_COUNT = Category.MAX_COUNT_PER_USER;
 
     @Transactional
     public CategoryResponse createCategory(CategoryCreateRequest request, Long userId) {
@@ -66,6 +71,10 @@ public class CategoryService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
 
         category.delete();
+
+        // 삭제된 카테고리는 공개 중이던 그룹에서도 함께 제거한다.
+        groupPublicCategoryRepository.deleteAllByCategoryId(categoryId);
+        eventPublisher.publishEvent(new GroupProgressChangedEvent(userId));
     }
 
     @Transactional

@@ -41,6 +41,8 @@ dependencies {
 
 	// Database
 	runtimeOnly 'com.mysql:mysql-connector-j:9.5.0'
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-mysql'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
@@ -76,6 +78,8 @@ ext {
 
 test {
 	outputs.dir snippetsDir
+	// GroupMigrationSchemaTest 가 db/*.sql 원본을 읽으므로, 마이그레이션이 바뀌면 테스트도 다시 돌아야 한다.
+	inputs.dir file('db')
 	useJUnitPlatform()
 	testLogging {
 		showStandardStreams = true
@@ -94,6 +98,6 @@ asciidoctor {
 bootJar {
 	dependsOn asciidoctor
 	from ("build/docs/asciidoc") {
-		into 'static/docs'
+		into 'BOOT-INF/classes/static/docs'
 	}
 }

@@ -1,6 +1,8 @@
 package basakan.fryday.common.config;
 
 import basakan.fryday.common.security.JwtAuthenticationFilter;
+import basakan.fryday.common.security.UserActivityFilter;
+import basakan.fryday.service.user.UserActivityRecorder;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -36,6 +38,7 @@ public class SecurityConfig {
     private static final String DOCS_ROLE = "DOCS";
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final UserActivityRecorder userActivityRecorder;
 
     @Bean
     @Order(1)
@@ -65,7 +68,9 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        // ASYNC는 SSE 응답이 완료·타임아웃될 때 컨테이너가 태우는 내부 dispatch다.
+                        // JWT 필터가 건너뛰어 인증이 없는 상태이지만, 최초 REQUEST에서 이미 인가가 끝났으므로 허용한다.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/api/users/social/login").permitAll()
                         .requestMatchers("/api/users/apple/login").permitAll()
                         .requestMatchers("/api/users/token/refresh").permitAll()
@@ -74,7 +79,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new UserActivityFilter(userActivityRecorder), JwtAuthenticationFilter.class);
 
         return http.build();
     }

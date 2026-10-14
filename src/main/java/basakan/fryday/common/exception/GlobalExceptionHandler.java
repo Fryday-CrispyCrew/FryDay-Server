@@ -17,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
@@ -260,7 +261,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(errorCode.getMessage(), errorCode.name()));
     }
 
-    // 13. 그 외 모든 예외 처리
+    // 13. 이미 끊긴 클라이언트
+    // SSE 연결이 끊긴 뒤 하트비트나 이벤트를 쓰려 할 때 생기는 정상 흐름이다. 응답을 쓸 곳도 없으므로 에러로 남기지 않는다.
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    protected void handleAsyncRequestNotUsable(AsyncRequestNotUsableException e, HttpServletRequest request) {
+        log.debug("끊긴 클라이언트 [{} {}]: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+    }
+
+    // 14. 그 외 모든 예외 처리
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<ApiResponse<Void>> handleException(Exception e, HttpServletRequest request) {
         log.error("ERROR [{} {}] 예외타입: {} 메시지: {}", request.getMethod(), request.getRequestURI(),

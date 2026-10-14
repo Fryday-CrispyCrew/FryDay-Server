@@ -24,4 +24,8 @@
 ### Architecture
 <img width="1541" height="839" alt="FryDay excalidraw" src="https://github.com/user-attachments/assets/9f99b231-cc09-4a0f-aaf5-83e3ff54fbfc" />
 
+### ERD
+<img width="2083" alt="fryday-erd" src="https://github.com/user-attachments/assets/f211080d-5736-491f-9dca-97276fc30523" />
+
+
 

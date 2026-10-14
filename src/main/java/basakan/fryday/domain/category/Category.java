@@ -12,7 +12,12 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "category", indexes = {
+        @Index(name = "idx_category_user", columnList = "user_id")
+})
 public class Category extends BaseEntity {
+
+    public static final int MAX_COUNT_PER_USER = 6;
 
     @Column(nullable = false)
     private String name;

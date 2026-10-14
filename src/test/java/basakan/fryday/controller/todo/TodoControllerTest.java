@@ -264,7 +264,8 @@ class TodoControllerTest extends RestDocsSupport {
                                 parameterWithName("todoId").description("메모를 수정할 투두 ID")
                         ),
                         requestFields(
-                                fieldWithPath("memo").type(JsonFieldType.STRING).description("수정할 메모 내용")
+                                fieldWithPath("memo").type(JsonFieldType.STRING)
+                                        .description("설정할 메모 전체 값. null/빈 문자열이면 비움")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -1169,6 +1170,7 @@ class TodoControllerTest extends RestDocsSupport {
                 .categoryId(1L)
                 .memo("꼼꼼하게 확인 필요")
                 .date(LocalDate.of(2026, 1, 8))
+                .alarmSource(TodoDetailResponse.AlarmSource.INHERIT)
                 .alarm(alarmInfo)
                 .recurrence(recurrenceInfo)
                 .build();
@@ -1198,8 +1200,9 @@ class TodoControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.memo").type(JsonFieldType.STRING).description("메모 (override 적용 값)").optional(),
                                 fieldWithPath("data.date").type(JsonFieldType.STRING).description("날짜"),
                                 fieldWithPath("data.overridden").type(JsonFieldType.BOOLEAN).description("이번 인스턴스만 개별 수정된 경우 true"),
-                                fieldWithPath("data.overrideIsAlarm").type(JsonFieldType.BOOLEAN).description("인스턴스 알람 활성화 override 값 (isOverridden=false이면 null)").optional(),
-                                fieldWithPath("data.overrideAlarmTime").type(JsonFieldType.STRING).description("인스턴스 알람 시간 override 값 (isOverridden=false이면 null)").optional(),
+                                fieldWithPath("data.overrideIsAlarm").type(JsonFieldType.BOOLEAN).description("인스턴스 알람 override 상태 (null: Master 상속 / true: 개별 알림 / false: 알림 사용 안 함)").optional(),
+                                fieldWithPath("data.overrideAlarmTime").type(JsonFieldType.STRING).description("개별 알림 시각 (overrideIsAlarm=true일 때만 값 존재)").optional(),
+                                fieldWithPath("data.alarmSource").type(JsonFieldType.STRING).description("반복 인스턴스의 알림 적용 상태 (INHERIT: 반복 알림 적용 중 / OVERRIDE: 개별 알림 적용 중 / NONE: 알림 없음). 비반복 투두는 null").optional(),
 
                                 // 알림 정보 (Optional)
                                 fieldWithPath("data.alarm").type(JsonFieldType.OBJECT).description("알림 설정 정보").optional(),
