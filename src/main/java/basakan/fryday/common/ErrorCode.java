@@ -53,7 +53,9 @@ public enum ErrorCode {
     INVALID_REPORT_PERIOD(HttpStatus.BAD_REQUEST, "조회할 수 없는 기간입니다."),
 
     // Admin
-    ADMIN_KEY_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않은 Admin Key입니다."),
+    ADMIN_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "어드민 인증이 필요합니다."),
+    ADMIN_LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다."),
+    ADMIN_LOGIN_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요."),
 
     // Group
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "그룹을 찾을 수 없습니다."),
