@@ -51,3 +51,6 @@ docs:
 
 admin:
   api-key: test-admin-key
+  jwt:
+    secret-key: test-admin-secret-key-for-testing-purposes-at-least-32-characters
+    access-token-expiration: 43200000

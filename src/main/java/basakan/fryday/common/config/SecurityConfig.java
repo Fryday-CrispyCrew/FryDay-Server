@@ -1,14 +1,23 @@
 package basakan.fryday.common.config;
 
+import basakan.fryday.common.ErrorCode;
+import basakan.fryday.common.response.ApiResponse;
+import basakan.fryday.common.security.AdminApiKeyAuthenticationFilter;
+import basakan.fryday.common.security.AdminJwtAuthenticationFilter;
+import basakan.fryday.common.security.AdminJwtTokenProvider;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.UserActivityFilter;
+import basakan.fryday.repository.admin.AdminAccountRepository;
 import basakan.fryday.service.user.UserActivityRecorder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -19,6 +28,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.util.StringUtils;
@@ -26,6 +36,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Configuration
@@ -36,9 +47,16 @@ public class SecurityConfig {
 
     private static final String DOCS_PATH_PATTERN = "/docs/**";
     private static final String DOCS_ROLE = "DOCS";
+    private static final String ADMIN_PATH_PATTERN = "/api/admin/**";
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserActivityRecorder userActivityRecorder;
+    private final AdminJwtTokenProvider adminJwtTokenProvider;
+    private final AdminAccountRepository adminAccountRepository;
+    private final ObjectMapper objectMapper;
+
+    @Value("${admin.api-key:#{null}}")
+    private String adminApiKey;
 
     @Bean
     @Order(1)
@@ -58,8 +76,45 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // 앱 유저 체인과 분리해서, 앱 토큰 인증과 일별 활동 기록이 어드민 요청에 끼어들지 않게 한다
     @Bean
     @Order(2)
+    public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher(ADMIN_PATH_PATTERN)
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers("/api/admin/auth/login").permitAll()
+                        .anyRequest().hasRole("ADMIN")
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(adminAuthenticationEntryPoint())
+                )
+                .addFilterBefore(new AdminJwtAuthenticationFilter(adminJwtTokenProvider, adminAccountRepository),
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new AdminApiKeyAuthenticationFilter(adminApiKey), AdminJwtAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    // 웹이 401 을 받으면 로그인 화면으로 보낼 수 있도록 공통 응답 형식으로 내려준다
+    private AuthenticationEntryPoint adminAuthenticationEntryPoint() {
+        return (request, response, authException) -> {
+            ErrorCode errorCode = ErrorCode.ADMIN_UNAUTHORIZED;
+            response.setStatus(errorCode.getStatus().value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            objectMapper.writeValue(response.getWriter(), ApiResponse.fail(errorCode.getMessage()));
+        };
+    }
+
+    @Bean
+    @Order(3)
     public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -75,7 +130,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/apple/login").permitAll()
                         .requestMatchers("/api/users/token/refresh").permitAll()
                         .requestMatchers("/api/users/nickname/check").permitAll()
-                        .requestMatchers("/api/admin/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )

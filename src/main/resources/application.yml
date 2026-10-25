@@ -47,3 +47,6 @@ docs:
 
 admin:
   api-key: ${ADMIN_API_KEY:#{null}}
+  jwt:
+    secret-key: ${ADMIN_JWT_SECRET_KEY}
+    access-token-expiration: ${ADMIN_JWT_ACCESS_TOKEN_EXPIRATION:43200000}
