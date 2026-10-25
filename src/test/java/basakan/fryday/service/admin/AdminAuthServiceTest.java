@@ -116,6 +116,17 @@ class AdminAuthServiceTest {
         verify(adminAccountRepository, never()).findByLoginId(anyString());
     }
 
+    @Test
+    @DisplayName("영문 소문자, 숫자, . _ - 이외의 문자가 들어간 아이디는 조회하지 않고 로그인 실패 에러를 던진다")
+    void rejectsInvalidLoginId() {
+        // when & then
+        assertThatThrownBy(() -> adminAuthService.login("ádmin", "password"))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ADMIN_LOGIN_FAILED);
+        verify(adminLoginAttemptRepository, never()).tryAcquire(anyString());
+        verify(adminAccountRepository, never()).findByLoginId(anyString());
+    }
+
     private AdminAccount admin(String loginId, String rawPassword) {
         AdminAccount admin = AdminAccount.builder()
                 .loginId(loginId)
