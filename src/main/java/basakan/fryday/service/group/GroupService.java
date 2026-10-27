@@ -116,10 +116,13 @@ public class GroupService {
         FryGroup group = fryGroupRepository.findByInviteCode(normalizeInviteCode(rawInviteCode))
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVITE_CODE_NOT_FOUND));
 
-        return GroupInvitePreviewResponse.of(
+        GroupInvitePreviewResponse response = GroupInvitePreviewResponse.of(
                 group,
                 (int) groupMemberRepository.countByGroupId(group.getId()),
                 groupMemberRepository.existsByGroupIdAndUserId(group.getId(), userId));
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.INVITE_CODE_PREVIEWED, group.getId(),
+                Map.of("full", response.isFull(), "alreadyJoined", response.isAlreadyJoined())));
+        return response;
     }
 
     /**
@@ -257,8 +260,13 @@ public class GroupService {
     public GroupNotificationSettingResponse updateNotificationSetting(Long groupId, Long userId,
                                                                       GroupNotificationSettingRequest request) {
         GroupMember member = findMembership(groupId, userId);
+        boolean changed = member.isNotificationEnabled() != request.getEnabled();
 
         member.updateNotificationEnabled(request.getEnabled());
+        if (changed) {
+            eventPublisher.publishEvent(UserEvent.of(userId, EventType.GROUP_NOTIFICATION_TOGGLED, groupId,
+                    Map.of("enabled", request.getEnabled())));
+        }
 
         return GroupNotificationSettingResponse.from(member);
     }
