@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,5 +88,15 @@ class FcmPushServiceTest {
                 .deviceType("iOS")
                 .deviceName("Test Device")
                 .build();
+    }
+
+    @Test
+    @DisplayName("data 의 알림 종류를 analytics label 로 쓰고, 종류가 없거나 형식에 맞지 않으면 붙이지 않는다")
+    void analyticsLabel() {
+        assertThat(FcmPushService.analyticsLabel(Map.of("type", "GROUP_INTERACTION", "groupId", "1")))
+                .contains("GROUP_INTERACTION");
+        assertThat(FcmPushService.analyticsLabel(Map.of())).isEmpty();
+        assertThat(FcmPushService.analyticsLabel(Map.of("type", "그룹 알림"))).isEmpty();
+        assertThat(FcmPushService.analyticsLabel(Map.of("type", "A".repeat(51)))).isEmpty();
     }
 }

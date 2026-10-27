@@ -8,6 +8,7 @@ import com.google.firebase.messaging.AndroidConfig;
 import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.ApnsConfig;
 import com.google.firebase.messaging.Aps;
+import com.google.firebase.messaging.FcmOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -22,12 +23,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class FcmPushService implements PushService {
+
+    private static final String TYPE_KEY = "type";
+    // FCM 이 허용하는 analytics label 형식. 어기면 발송 자체가 실패하므로 맞는 경우에만 붙인다
+    private static final Pattern ANALYTICS_LABEL_PATTERN = Pattern.compile("[a-zA-Z0-9\\-_.~%]{1,50}");
 
     private final UserDeviceRepository userDeviceRepository;
     private final UserDeviceWriteService userDeviceWriteService;
@@ -104,7 +111,10 @@ public class FcmPushService implements PushService {
     }
 
     private Message buildMessage(String fcmToken, String title, String body, Map<String, String> data) {
-        return Message.builder()
+        Message.Builder builder = Message.builder();
+        analyticsLabel(data).ifPresent(label -> builder.setFcmOptions(FcmOptions.withAnalyticsLabel(label)));
+
+        return builder
                 .setToken(fcmToken)
                 .putAllData(data)
                 .setNotification(Notification.builder()
@@ -123,6 +133,12 @@ public class FcmPushService implements PushService {
                                 .build())
                         .build())
                 .build();
+    }
+
+    // data 의 알림 종류(type)를 analytics label 로 써서, Firebase 콘솔에서 종류별 수신과 오픈을 볼 수 있게 한다
+    static Optional<String> analyticsLabel(Map<String, String> data) {
+        return Optional.ofNullable(data.get(TYPE_KEY))
+                .filter(type -> ANALYTICS_LABEL_PATTERN.matcher(type).matches());
     }
 
     private void handleFcmException(FirebaseMessagingException e, String fcmToken, Long deviceId) {

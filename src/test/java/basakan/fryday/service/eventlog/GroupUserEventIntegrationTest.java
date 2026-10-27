@@ -5,6 +5,7 @@ import basakan.fryday.common.security.RefreshTokenRepository;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
 import basakan.fryday.controller.group.request.GroupInteractionRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
+import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.eventlog.EventType;
@@ -182,6 +183,45 @@ class GroupUserEventIntegrationTest {
         assertThat(sent.get(0).userId()).isEqualTo(ownerId);
         assertThat(sent.get(0).targetId()).isEqualTo(groupId);
         assertThat(sent.get(0).properties()).isEqualTo(Map.of("type", "KNOCK"));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("초대 코드로 그룹을 확인하면 참여 가능 여부와 함께 이벤트를 발행한다")
+    void previewPublishesInviteCodePreviewed() {
+        // given
+        Long groupId = createGroup();
+        String inviteCode = fryGroupRepository.findById(groupId).orElseThrow().getInviteCode();
+
+        // when
+        groupService.previewByInviteCode(inviteCode, memberId);
+        groupService.previewByInviteCode(inviteCode, ownerId);
+
+        // then
+        assertThat(eventsOf(EventType.INVITE_CODE_PREVIEWED))
+                .extracting(UserEvent::userId, UserEvent::targetId, UserEvent::properties)
+                .containsExactly(
+                        tuple(memberId, groupId, Map.of("full", false, "alreadyJoined", false)),
+                        tuple(ownerId, groupId, Map.of("full", false, "alreadyJoined", true)));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("그룹 알림 설정은 값이 바뀐 경우에만 이벤트를 발행한다")
+    void notificationTogglePublishesOnlyWhenChanged() {
+        // given
+        Long groupId = createGroup();
+        join(groupId, memberId);
+
+        // when
+        groupService.updateNotificationSetting(groupId, memberId, new GroupNotificationSettingRequest(true));
+        groupService.updateNotificationSetting(groupId, memberId, new GroupNotificationSettingRequest(false));
+        groupService.updateNotificationSetting(groupId, memberId, new GroupNotificationSettingRequest(false));
+
+        // then
+        assertThat(eventsOf(EventType.GROUP_NOTIFICATION_TOGGLED))
+                .extracting(UserEvent::userId, UserEvent::targetId, UserEvent::properties)
+                .containsExactly(tuple(memberId, groupId, Map.of("enabled", false)));
     }
 
     private List<UserEvent> eventsOf(EventType type) {
