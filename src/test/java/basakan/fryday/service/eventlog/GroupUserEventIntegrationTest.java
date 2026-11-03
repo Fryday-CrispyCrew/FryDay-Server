@@ -1,11 +1,14 @@
 package basakan.fryday.service.eventlog;
 
+import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.config.JpaConfig;
+import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.common.security.RefreshTokenRepository;
 import basakan.fryday.controller.group.request.GroupCreateRequest;
 import basakan.fryday.controller.group.request.GroupInteractionRequest;
 import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
+import basakan.fryday.controller.group.request.InviteShareRequest;
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.eventlog.EventType;
@@ -44,6 +47,7 @@ import java.util.Map;
 
 import static basakan.fryday.domain.group.GroupInteractionType.KNOCK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -222,6 +226,41 @@ class GroupUserEventIntegrationTest {
         assertThat(eventsOf(EventType.GROUP_NOTIFICATION_TOGGLED))
                 .extracting(UserEvent::userId, UserEvent::targetId, UserEvent::properties)
                 .containsExactly(tuple(memberId, groupId, Map.of("enabled", false)));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("그룹원이 초대를 공유하면 공유 위치와 결과를 함께 기록한다")
+    void inviteSharePublishesInviteShared() {
+        // given
+        Long groupId = createGroup();
+        join(groupId, memberId);
+
+        // when
+        groupService.recordInviteShare(groupId, ownerId, new InviteShareRequest("create_complete", "shared"));
+        groupService.recordInviteShare(groupId, memberId, new InviteShareRequest("group_setting", "unknown"));
+
+        // then
+        assertThat(eventsOf(EventType.INVITE_SHARED))
+                .extracting(UserEvent::userId, UserEvent::targetId, UserEvent::properties)
+                .containsExactly(
+                        tuple(ownerId, groupId, Map.of("source", "create_complete", "result", "shared")),
+                        tuple(memberId, groupId, Map.of("source", "group_setting", "result", "unknown")));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("그룹원이 아니면 초대 공유를 기록하지 않고 그룹을 찾을 수 없다고 응답한다")
+    void inviteShareByNonMemberFails() {
+        // given
+        Long groupId = createGroup();
+
+        // when & then
+        assertThatThrownBy(() -> groupService.recordInviteShare(groupId, memberId,
+                new InviteShareRequest("group_setting", "shared")))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.GROUP_NOT_FOUND);
+        assertThat(eventsOf(EventType.INVITE_SHARED)).isEmpty();
     }
 
     private List<UserEvent> eventsOf(EventType type) {

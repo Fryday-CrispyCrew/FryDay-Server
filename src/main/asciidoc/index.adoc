@@ -1299,3 +1299,61 @@ include::{snippets}/group-member-todos/http-request.adoc[]
 include::{snippets}/group-member-todos/http-response.adoc[]
 ==== 응답 필드
 include::{snippets}/group-member-todos/response-fields.adoc[]
+
+=== 초대 공유 기록
+`POST /api/groups/{groupId}/invite-shares`
+
+그룹 초대 공유 창을 열었다는 것을 서버에 기록합니다. 공유 창이 닫힌 뒤 결과와 함께 한 번 보내면 됩니다.
+
+* 기록 시각은 서버가 요청을 받은 시각입니다.
+* 응답 본문은 쓰지 않아도 됩니다. 실패해도 사용자 동작에는 영향을 주지 않도록 처리하면 됩니다.
+
+|===
+| 상황 | 상태 코드
+
+| `source`, `result` 가 없거나 허용하지 않는 값
+| 400
+
+| 그룹원이 아님
+| 404
+|===
+
+==== 경로 파라미터
+include::{snippets}/group-invite-share/path-parameters.adoc[]
+==== 요청 필드
+include::{snippets}/group-invite-share/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/group-invite-share/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/group-invite-share/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/group-invite-share/response-fields.adoc[]
+
+== 알림(Notification)
+
+=== 알림 오픈 기록
+`POST /api/notifications/opens`
+
+사용자가 푸시 알림을 눌러 앱을 열었다는 것을 서버에 기록합니다. 로그인한 상태에서만 보내면 됩니다.
+
+* 푸시 `data` 의 `type`, `groupId` 를 그대로 담아 보냅니다. 값이 없는 알림이면 해당 필드를 빼고 보냅니다.
+* `type` 은 정해진 목록으로 검사하지 않으므로, 알림 종류가 늘어나도 앱이 그대로 보내면 됩니다.
+* 해체된 그룹의 알림도 열 수 있으므로 그룹원인지 확인하지 않습니다.
+* 기록 시각은 서버가 요청을 받은 시각입니다.
+* 응답 본문은 쓰지 않아도 됩니다. 실패해도 사용자 동작에는 영향을 주지 않도록 처리하면 됩니다.
+
+|===
+| 상황 | 상태 코드
+
+| `trigger` 가 없거나 허용하지 않는 값, `type` 형식이 맞지 않음, `groupId` 가 양수인 숫자가 아님
+| 400
+|===
+
+==== 요청 필드
+include::{snippets}/notification-open/request-fields.adoc[]
+==== HTTP 요청 예시
+include::{snippets}/notification-open/http-request.adoc[]
+==== HTTP 응답 예시
+include::{snippets}/notification-open/http-response.adoc[]
+==== 응답 필드
+include::{snippets}/notification-open/response-fields.adoc[]

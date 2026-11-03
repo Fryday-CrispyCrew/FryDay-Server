@@ -7,6 +7,7 @@ import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
+import basakan.fryday.controller.group.request.InviteShareRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
@@ -269,6 +270,12 @@ public class GroupService {
         }
 
         return GroupNotificationSettingResponse.from(member);
+    }
+
+    public void recordInviteShare(Long groupId, Long userId, InviteShareRequest request) {
+        findGroupJoinedBy(groupId, userId);
+        eventPublisher.publishEvent(UserEvent.of(userId, EventType.INVITE_SHARED, groupId,
+                Map.of("source", request.getSource(), "result", request.getResult())));
     }
 
     private GroupMember findMembership(Long groupId, Long userId) {

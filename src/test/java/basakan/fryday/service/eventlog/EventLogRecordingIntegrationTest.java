@@ -83,6 +83,20 @@ class EventLogRecordingIntegrationTest {
         assertThat(waitForLogs(1)).extracting(EventLog::getEventType).containsExactly(EventType.USER_WITHDREW);
     }
 
+    @Test
+    @DisplayName("트랜잭션 밖에서 발행한 이벤트도 저장된다")
+    void recordsWithoutTransaction() throws InterruptedException {
+        // when
+        eventPublisher.publishEvent(UserEvent.of(1L, EventType.NOTIFICATION_OPENED, null, Map.of("trigger", "cold_start")));
+
+        // then
+        List<EventLog> logs = waitForLogs(1);
+        assertThat(logs).hasSize(1);
+        assertThat(logs.get(0).getEventType()).isEqualTo(EventType.NOTIFICATION_OPENED);
+        assertThat(logs.get(0).getTargetId()).isNull();
+        assertThat(logs.get(0).getProperties()).isEqualTo(Map.of("trigger", "cold_start"));
+    }
+
     private List<EventLog> waitForLogs(int expected) throws InterruptedException {
         long deadline = System.currentTimeMillis() + WAIT_MILLIS;
         while (eventLogRepository.count() < expected && System.currentTimeMillis() < deadline) {

@@ -10,6 +10,9 @@ import java.util.Map;
  */
 public interface PushService {
 
+    // data 의 type 이 따라야 하는 형식. FCM analytics label 로도 쓰이므로 그 형식과 같다
+    String PUSH_TYPE_REGEX = "[a-zA-Z0-9\\-_.~%]{1,50}";
+
     /**
      * 특정 사용자에게 푸시 알림 발송
      *
