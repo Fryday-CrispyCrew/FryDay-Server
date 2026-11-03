@@ -1331,6 +1331,41 @@ include::{snippets}/group-invite-share/response-fields.adoc[]
 
 == 알림(Notification)
 
+=== 푸시 알림 data
+
+모든 푸시의 FCM `data` 에는 알림 종류 `type` 이 들어갑니다. 키와 값은 모두 문자열입니다.
+
+* 그룹 푸시의 `type` 과 나머지 키는 <<_그룹_푸시_알림,그룹 푸시 알림>> 을 참고하세요. 그 밖의 푸시는 아래와 같습니다.
+
+|===
+| `type` | 보내는 때 | 받는 사람 | 추가 키
+
+| `TODO_ALARM`
+| 투두에 설정한 알람 시각
+| 알람을 설정한 사용자
+| `todoId`: 알람을 설정한 투두 ID
+
+| `TODO_DEADLINE`
+| 매일 22:00 (Asia/Seoul)
+| 오늘 완료하지 않은 투두가 있는 사용자
+| 없음
+
+| `TODO_BURNT`
+| 매일 00:05 (Asia/Seoul)
+| 어제 완료하지 않은 투두가 있는 사용자
+| 없음
+
+| `TODO_ENCOURAGE`
+| 매일 09:00 (Asia/Seoul)
+| 오늘 투두가 없는 사용자
+| 없음
+
+| `ADMIN_BROADCAST`
+| 운영자가 전체 공지를 보낼 때
+| 푸시 알림을 허용한 모든 기기
+| 없음
+|===
+
 === 알림 오픈 기록
 `POST /api/notifications/opens`
 

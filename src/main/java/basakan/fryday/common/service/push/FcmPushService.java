@@ -32,7 +32,6 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class FcmPushService implements PushService {
 
-    private static final String TYPE_KEY = "type";
     // FCM 이 허용하는 analytics label 형식. 어기면 발송 자체가 실패하므로 맞는 경우에만 붙인다
     private static final Pattern ANALYTICS_LABEL_PATTERN = Pattern.compile(PUSH_TYPE_REGEX);
 
@@ -41,12 +40,6 @@ public class FcmPushService implements PushService {
 
     @Value("${fcm.enabled:false}")
     private boolean fcmEnabled;
-
-    @Override
-    @Transactional(readOnly = true)
-    public void sendToUser(User user, String title, String body) {
-        sendToUser(user, title, body, Map.of());
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -73,7 +66,7 @@ public class FcmPushService implements PushService {
     }
 
     @Override
-    public void sendToToken(String fcmToken, String title, String body) {
+    public void sendToToken(String fcmToken, String title, String body, Map<String, String> data) {
         if (!fcmEnabled) {
             log.warn("FCM is disabled. Skipping push notification");
             return;
@@ -85,7 +78,7 @@ public class FcmPushService implements PushService {
         }
 
         try {
-            Message message = buildMessage(fcmToken, title, body, Map.of());
+            Message message = buildMessage(fcmToken, title, body, data);
 
             String response = FirebaseMessaging.getInstance().send(message);
             log.info("Push notification sent successfully: response={}", response);

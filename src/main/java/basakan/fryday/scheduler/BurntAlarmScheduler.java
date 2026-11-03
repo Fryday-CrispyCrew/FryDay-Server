@@ -1,6 +1,7 @@
 package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.common.service.push.PushType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.UserJpaRepository;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 실패 확정 알림 스케줄러 (Alarm-002)
@@ -51,7 +53,8 @@ public class BurntAlarmScheduler {
 
         for (User user : targetUsers) {
             try {
-                pushService.sendToUser(user, "튀김이 타버렸어요...", "새로운 계획을 세워요!");
+                pushService.sendToUser(user, "튀김이 타버렸어요...", "새로운 계획을 세워요!",
+                        Map.of(PushService.TYPE_KEY, PushType.TODO_BURNT.name()));
                 notificationCount++;
                 log.info("Burnt alarm sent: userId={}", user.getId());
             } catch (Exception e) {

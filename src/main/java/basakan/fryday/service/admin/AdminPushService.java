@@ -1,6 +1,7 @@
 package basakan.fryday.service.admin;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.common.service.push.PushType;
 import basakan.fryday.domain.user.UserDevice;
 import basakan.fryday.repository.auth.UserDeviceRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -25,6 +27,7 @@ public class AdminPushService {
 
     @Transactional(readOnly = true)
     public int broadcastPush(String title, String body) {
+        Map<String, String> data = Map.of(PushService.TYPE_KEY, PushType.ADMIN_BROADCAST.name());
         Set<String> sentTokens = new HashSet<>();
         int successCount = 0;
 
@@ -38,7 +41,7 @@ public class AdminPushService {
                     continue;
                 }
                 try {
-                    pushService.sendToToken(token, title, body);
+                    pushService.sendToToken(token, title, body, data);
                     successCount++;
                 } catch (Exception e) {
                     log.warn("전체 푸시 발송 실패: error={}", e.getMessage());

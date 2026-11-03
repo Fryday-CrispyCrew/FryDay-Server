@@ -1,6 +1,7 @@
 package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.common.service.push.PushType;
 import basakan.fryday.domain.todo.TodoAlarm;
 import basakan.fryday.repository.todo.TodoAlarmRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -63,7 +65,9 @@ public class NotificationScheduler {
                 String[] template = pickRandomTemplate();
                 String title = String.format(template[0], todoName);
                 String message = String.format(template[1], todoName);
-                pushService.sendToUser(alarm.getUser(), title, message);
+                pushService.sendToUser(alarm.getUser(), title, message, Map.of(
+                        PushService.TYPE_KEY, PushType.TODO_ALARM.name(),
+                        PushService.TODO_ID_KEY, String.valueOf(alarm.getTodo().getId())));
                 alarm.markAsSent();
                 log.info("Notification sent: todoId={}, userId={}", alarm.getTodo().getId(), alarm.getUser().getId());
             } catch (Exception e) {
