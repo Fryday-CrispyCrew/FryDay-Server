@@ -23,5 +23,8 @@ public enum EventType {
     GROUP_DISBANDED,
     GROUP_INTERACTION_SENT,
     // 값이 실제로 바뀐 경우만
-    GROUP_NOTIFICATION_TOGGLED
+    GROUP_NOTIFICATION_TOGGLED,
+
+    // 앱이 알려주는 이벤트. 발생 시각은 서버가 요청을 받은 시각이다
+    INVITE_SHARED
 }

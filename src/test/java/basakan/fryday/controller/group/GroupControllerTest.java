@@ -12,6 +12,7 @@ import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
+import basakan.fryday.controller.group.request.InviteShareRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
@@ -57,11 +58,15 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.delete;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
@@ -541,6 +546,77 @@ class GroupControllerTest extends RestDocsSupport {
                 .andDo(print())
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.message").value(ErrorCode.INTERACTION_COOLDOWN.getMessage()));
+    }
+
+    @Test
+    @DisplayName("초대 공유 기록 API")
+    void recordInviteShare() throws Exception {
+        // when & then
+        mockMvc.perform(post("/api/groups/{groupId}/invite-shares", GROUP_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new InviteShareRequest("create_complete", "shared"))))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(document("group-invite-share",
+                        pathParameters(
+                                parameterWithName("groupId").description("공유한 그룹 ID")
+                        ),
+                        requestFields(
+                                fieldWithPath("source").type(JsonFieldType.STRING)
+                                        .description("공유한 화면. `create_complete`(그룹 생성 완료), `group_setting`(그룹 설정)"),
+                                fieldWithPath("result").type(JsonFieldType.STRING)
+                                        .description("공유 창의 결과. `shared`(공유함), `dismissed`(닫음), "
+                                                + "`unknown`(알 수 없음. Android 는 항상 이 값)")
+                        ),
+                        responseFields(
+                                fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
+                                fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                                fieldWithPath("timestamp").type(JsonFieldType.STRING).description("응답 시간")
+                        )
+                ));
+
+        then(groupService).should().recordInviteShare(eq(GROUP_ID), eq(OWNER_ID), any(InviteShareRequest.class));
+    }
+
+    @Test
+    @DisplayName("초대 공유 기록에 허용하지 않는 값이 오면 어떤 필드가 틀렸는지 400 으로 응답한다")
+    void recordInviteShareWithUnsupportedValuesFails() throws Exception {
+        mockMvc.perform(post("/api/groups/{groupId}/invite-shares", GROUP_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new InviteShareRequest("home", "SHARED"))))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(ErrorCode.INVALID_INPUT_VALUE.getMessage()))
+                .andExpect(jsonPath("$.errors[*].field").value(containsInAnyOrder("source", "result")));
+
+        then(groupService).should(never()).recordInviteShare(anyLong(), anyLong(), any(InviteShareRequest.class));
+    }
+
+    @Test
+    @DisplayName("초대 공유 기록에 공유 위치나 결과가 없으면 400 으로 응답한다")
+    void recordInviteShareWithoutValuesFails() throws Exception {
+        mockMvc.perform(post("/api/groups/{groupId}/invite-shares", GROUP_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[*].field").value(containsInAnyOrder("source", "result")));
+    }
+
+    @Test
+    @DisplayName("그룹원이 아닌 사용자가 초대 공유를 기록하면 404 로 응답한다")
+    void recordInviteShareOfNonMemberReturns404() throws Exception {
+        // given
+        willThrow(new BusinessException(ErrorCode.GROUP_NOT_FOUND)).given(groupService)
+                .recordInviteShare(anyLong(), anyLong(), any(InviteShareRequest.class));
+
+        // when & then
+        mockMvc.perform(post("/api/groups/{groupId}/invite-shares", GROUP_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new InviteShareRequest("group_setting", "unknown"))))
+                .andDo(print())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(ErrorCode.GROUP_NOT_FOUND.getMessage()));
     }
 
     @Test
