@@ -114,8 +114,8 @@ class AdminPushServiceTest {
     }
 
     @Test
-    @DisplayName("모든 기기에 어드민 발송 종류를 담아 보낸다")
-    void broadcastWithType() {
+    @DisplayName("모든 기기에 어드민 발송 종류와, 이번 발송에서 하나만 만든 pushId 를 담아 보낸다")
+    void broadcastWithTypeAndSharedPushId() {
         // given
         UserDevice device1 = createDevice("token-1");
         UserDevice device2 = createDeviceWithUserId(2L, "token-2");
@@ -128,7 +128,11 @@ class AdminPushServiceTest {
         // then
         ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
         then(pushService).should(times(2)).sendToToken(anyString(), anyString(), anyString(), captor.capture());
-        assertThat(captor.getAllValues()).allSatisfy(data -> assertThat(data).containsEntry("type", "ADMIN_BROADCAST"));
+        List<Map<String, String>> sentData = captor.getAllValues();
+        assertThat(sentData).allSatisfy(data -> assertThat(data)
+                .containsEntry("type", "ADMIN_BROADCAST")
+                .containsKey("pushId"));
+        assertThat(sentData.get(0).get("pushId")).isEqualTo(sentData.get(1).get("pushId"));
     }
 
     private UserDevice createDevice(String fcmToken) {

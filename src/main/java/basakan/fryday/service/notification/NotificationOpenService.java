@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -22,6 +23,10 @@ public class NotificationOpenService {
         properties.put("trigger", request.getTrigger());
         if (request.getType() != null) {
             properties.put("type", request.getType());
+        }
+        if (request.getPushId() != null) {
+            // 서버는 소문자로 발급하므로, 대문자로 바꿔 보내도 발송 기록과 이어지게 맞춘다
+            properties.put("pushId", request.getPushId().toLowerCase(Locale.ROOT));
         }
 
         eventPublisher.publishEvent(UserEvent.of(userId, EventType.NOTIFICATION_OPENED, request.getGroupId(), properties));

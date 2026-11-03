@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -27,7 +28,10 @@ public class AdminPushService {
 
     @Transactional(readOnly = true)
     public int broadcastPush(String title, String body) {
-        Map<String, String> data = Map.of(PushService.TYPE_KEY, PushType.ADMIN_BROADCAST.name());
+        // 거의 쓰지 않는 기능이라 유저 단위 발송 기록 없이, 발송 한 번에 pushId 하나만 붙인다
+        Map<String, String> data = Map.of(
+                PushService.TYPE_KEY, PushType.ADMIN_BROADCAST.name(),
+                PushService.PUSH_ID_KEY, UUID.randomUUID().toString());
         Set<String> sentTokens = new HashSet<>();
         int successCount = 0;
 
