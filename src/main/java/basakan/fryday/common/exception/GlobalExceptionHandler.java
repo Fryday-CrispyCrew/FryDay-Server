@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.CannotCreateTransactionException;
@@ -112,6 +113,21 @@ public class GlobalExceptionHandler {
 
         String message = String.format("요청한 경로를 찾을 수 없습니다. (경로: %s %s)", 
                 e.getHttpMethod(), e.getRequestURL());
+
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.fail(message));
+    }
+
+    // 7-1. 없는 정적 리소스 (404 Not Found)
+    // 매핑되지 않은 경로는 정적 리소스 처리로 넘어가 이 예외가 난다. 따로 잡지 않으면 맨 아래 처리로 빠져 500 이 된다
+    @ExceptionHandler(NoResourceFoundException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("No Resource Found: {} /{}", e.getHttpMethod(), e.getResourcePath());
+        ErrorCode errorCode = ErrorCode.NOT_FOUND;
+
+        String message = String.format("요청한 경로를 찾을 수 없습니다. (경로: %s /%s)",
+                e.getHttpMethod(), e.getResourcePath());
 
         return ResponseEntity
                 .status(errorCode.getStatus())
