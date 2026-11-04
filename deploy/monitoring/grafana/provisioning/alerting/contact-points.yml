@@ -1,0 +1,14 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: fryday-discord
+    receivers:
+      - uid: fryday-discord
+        type: discord
+        settings:
+          # 웹훅 URL 은 서버 .env 에만 둔다
+          url: $DISCORD_WEBHOOK_URL
+          use_discord_username: false
+          title: '{{ template "fryday.title" . }}'
+          message: '{{ template "fryday.message" . }}'

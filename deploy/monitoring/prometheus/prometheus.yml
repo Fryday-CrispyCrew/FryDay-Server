@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+
+# job 이름은 Grafana 알림 규칙에서 쓰므로 바꾸지 않는다.
+# 수집 대상 주소는 공개 레포에 두지 않고 서버의 prometheus/targets/ 에만 둔다 (targets.example/ 참고)
+scrape_configs:
+  - job_name: fryday-prod
+    metrics_path: /actuator/prometheus
+    scheme: https
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/fryday-prod.yml
+
+  - job_name: fryday-dev
+    metrics_path: /actuator/prometheus
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/fryday-dev.yml
+
+  - job_name: node-exporter-prod
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/node-exporter-prod.yml

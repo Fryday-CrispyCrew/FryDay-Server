@@ -1,0 +1,31 @@
+apiVersion: 1
+
+# Discord 메시지 형식. 알림 규칙의 annotations(value, description)와 대시보드 링크를 쓴다
+templates:
+  - orgId: 1
+    name: fryday-discord
+    template: |
+      {{ define "fryday.time" }}{{ . | tz "Asia/Seoul" | date "2006-01-02 15:04" }} (KST){{ end }}
+
+      {{ define "fryday.title" -}}
+      {{ if gt (len .Alerts.Firing) 0 }}🚨 [발생]{{ else }}✅ [해결]{{ end }} {{ with .CommonLabels.alertname }}{{ . }}{{ else }}알림 {{ len $.Alerts }}건{{ end }}
+      {{- end }}
+
+      {{ define "fryday.message" -}}
+      {{ range .Alerts.Firing -}}
+      {{ if gt (len $.Alerts) 1 }}🚨 [발생] {{ .Labels.alertname }}
+      {{ end -}}
+      현재 값: {{ .Annotations.value }}
+      {{ .Annotations.description }}
+      시각: {{ template "fryday.time" .StartsAt }}
+      {{ if .DashboardURL }}대시보드: {{ .DashboardURL }}
+      {{ end }}
+      {{ end -}}
+      {{ range .Alerts.Resolved -}}
+      {{ if gt (len $.Alerts) 1 }}✅ [해결] {{ .Labels.alertname }}
+      {{ end -}}
+      해결 시각: {{ template "fryday.time" .EndsAt }}
+      (지속 {{ printf "%.0f" (.EndsAt.Sub .StartsAt).Minutes }}분)
+
+      {{ end -}}
+      {{- end }}
