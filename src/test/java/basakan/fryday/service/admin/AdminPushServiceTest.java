@@ -6,6 +6,7 @@ import basakan.fryday.repository.auth.UserDeviceRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -14,10 +15,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -48,8 +52,8 @@ class AdminPushServiceTest {
         int count = adminPushService.broadcastPush("공지", "서버 점검입니다");
 
         // then
-        then(pushService).should(times(1)).sendToToken("token-1", "공지", "서버 점검입니다");
-        then(pushService).should(times(1)).sendToToken("token-2", "공지", "서버 점검입니다");
+        then(pushService).should(times(1)).sendToToken(eq("token-1"), eq("공지"), eq("서버 점검입니다"), anyMap());
+        then(pushService).should(times(1)).sendToToken(eq("token-2"), eq("공지"), eq("서버 점검입니다"), anyMap());
         assertThat(count).isEqualTo(2);
     }
 
@@ -64,7 +68,7 @@ class AdminPushServiceTest {
         int count = adminPushService.broadcastPush("공지", "내용");
 
         // then
-        then(pushService).should(never()).sendToToken(anyString(), anyString(), anyString());
+        then(pushService).should(never()).sendToToken(anyString(), anyString(), anyString(), anyMap());
         assertThat(count).isEqualTo(0);
     }
 
@@ -78,15 +82,15 @@ class AdminPushServiceTest {
         given(userDeviceRepository.findAllByIsActiveTrueAndPushNotificationAgreedTrueAndFcmTokenIsNotNull(any(Pageable.class)))
                 .willReturn(new SliceImpl<>(List.of(device1, device2, device3), PageRequest.of(0, 500), false));
         org.mockito.Mockito.lenient().doThrow(new RuntimeException("FCM error"))
-                .when(pushService).sendToToken("token-2", "공지", "내용");
+                .when(pushService).sendToToken(eq("token-2"), eq("공지"), eq("내용"), anyMap());
 
         // when
         int count = adminPushService.broadcastPush("공지", "내용");
 
         // then
-        then(pushService).should().sendToToken("token-1", "공지", "내용");
-        then(pushService).should().sendToToken("token-2", "공지", "내용");
-        then(pushService).should().sendToToken("token-3", "공지", "내용");
+        then(pushService).should().sendToToken(eq("token-1"), eq("공지"), eq("내용"), anyMap());
+        then(pushService).should().sendToToken(eq("token-2"), eq("공지"), eq("내용"), anyMap());
+        then(pushService).should().sendToToken(eq("token-3"), eq("공지"), eq("내용"), anyMap());
         assertThat(count).isEqualTo(2);
     }
 
@@ -104,9 +108,31 @@ class AdminPushServiceTest {
         int count = adminPushService.broadcastPush("공지", "내용");
 
         // then
-        then(pushService).should(times(1)).sendToToken("token-dup", "공지", "내용");
-        then(pushService).should(times(1)).sendToToken("token-unique", "공지", "내용");
+        then(pushService).should(times(1)).sendToToken(eq("token-dup"), eq("공지"), eq("내용"), anyMap());
+        then(pushService).should(times(1)).sendToToken(eq("token-unique"), eq("공지"), eq("내용"), anyMap());
         assertThat(count).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("모든 기기에 어드민 발송 종류와, 이번 발송에서 하나만 만든 pushId 를 담아 보낸다")
+    void broadcastWithTypeAndSharedPushId() {
+        // given
+        UserDevice device1 = createDevice("token-1");
+        UserDevice device2 = createDeviceWithUserId(2L, "token-2");
+        given(userDeviceRepository.findAllByIsActiveTrueAndPushNotificationAgreedTrueAndFcmTokenIsNotNull(any(Pageable.class)))
+                .willReturn(new SliceImpl<>(List.of(device1, device2), PageRequest.of(0, 500), false));
+
+        // when
+        adminPushService.broadcastPush("공지", "내용");
+
+        // then
+        ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass(Map.class);
+        then(pushService).should(times(2)).sendToToken(anyString(), anyString(), anyString(), captor.capture());
+        List<Map<String, String>> sentData = captor.getAllValues();
+        assertThat(sentData).allSatisfy(data -> assertThat(data)
+                .containsEntry("type", "ADMIN_BROADCAST")
+                .containsKey("pushId"));
+        assertThat(sentData.get(0).get("pushId")).isEqualTo(sentData.get(1).get("pushId"));
     }
 
     private UserDevice createDevice(String fcmToken) {

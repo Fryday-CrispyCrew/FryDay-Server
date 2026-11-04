@@ -27,5 +27,8 @@ public enum EventType {
 
     // 앱이 알려주는 이벤트. 발생 시각은 서버가 요청을 받은 시각이다
     INVITE_SHARED,
-    NOTIFICATION_OPENED
+    NOTIFICATION_OPENED,
+
+    // 유저 단위. 기기가 여러 대여도 한 건이고, 한 대도 보내지 못하면 남기지 않는다
+    PUSH_SENT
 }

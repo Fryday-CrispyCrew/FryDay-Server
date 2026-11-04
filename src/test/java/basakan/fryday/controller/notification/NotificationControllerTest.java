@@ -49,6 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NotificationControllerTest extends RestDocsSupport {
 
     private static final Long USER_ID = 1L;
+    private static final String PUSH_ID = "3f2b8c1e-7a4d-4e9b-9c2f-1a6d5e8b0c47";
 
     @MockitoBean private NotificationOpenService notificationOpenService;
     @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -67,7 +68,7 @@ class NotificationControllerTest extends RestDocsSupport {
         mockMvc.perform(post("/api/notifications/opens")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new NotificationOpenRequest("background", "GROUP_JOINED", 12L))))
+                                new NotificationOpenRequest("background", "GROUP_JOINED", 12L, PUSH_ID))))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andDo(document("notification-open",
@@ -79,7 +80,9 @@ class NotificationControllerTest extends RestDocsSupport {
                                         .description("푸시 `data` 의 `type` 값. 없으면 보내지 않는다. "
                                                 + "영문, 숫자, `-_.~%` 만 쓸 수 있고 50자 이하"),
                                 fieldWithPath("groupId").type(JsonFieldType.NUMBER).optional()
-                                        .description("푸시 `data` 의 `groupId` 값. 없으면 보내지 않는다. 문자열(\"12\")로 보내도 된다")
+                                        .description("푸시 `data` 의 `groupId` 값. 없으면 보내지 않는다. 문자열(\"12\")로 보내도 된다"),
+                                fieldWithPath("pushId").type(JsonFieldType.STRING).optional()
+                                        .description("푸시 `data` 의 `pushId` 값(UUID). 없으면 보내지 않는다")
                         ),
                         responseFields(
                                 fieldWithPath("success").type(JsonFieldType.BOOLEAN).description("성공 여부"),
@@ -104,6 +107,7 @@ class NotificationControllerTest extends RestDocsSupport {
         assertThat(request.getTrigger()).isEqualTo("cold_start");
         assertThat(request.getType()).isNull();
         assertThat(request.getGroupId()).isNull();
+        assertThat(request.getPushId()).isNull();
     }
 
     @Test
@@ -175,6 +179,22 @@ class NotificationControllerTest extends RestDocsSupport {
                 .andDo(print())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("groupId"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"trigger\":\"background\",\"pushId\":\"\"}",
+            "{\"trigger\":\"background\",\"pushId\":\"push-1\"}",
+            "{\"trigger\":\"background\",\"pushId\":\"3f2b8c1e7a4d4e9b9c2f1a6d5e8b0c47\"}"
+    })
+    @DisplayName("pushId 가 UUID 형식이 아니면 400 으로 응답한다")
+    void recordOpenWithInvalidPushIdFails(String body) throws Exception {
+        mockMvc.perform(post("/api/notifications/opens")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("pushId"));
     }
 
     private NotificationOpenRequest captureRequest() {

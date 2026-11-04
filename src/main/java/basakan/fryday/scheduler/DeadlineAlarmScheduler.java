@@ -1,6 +1,7 @@
 package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.common.service.push.PushType;
 import basakan.fryday.domain.todo.Todo.Status;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.UserJpaRepository;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -63,7 +65,8 @@ public class DeadlineAlarmScheduler {
         for (User user : targetUsers) {
             try {
                 String message = pickRandomMessage();
-                pushService.sendToUser(user, "튀김이 타기전에 완료하세요!", message);
+                pushService.sendToUser(user, "튀김이 타기전에 완료하세요!", message,
+                        Map.of(PushService.TYPE_KEY, PushType.TODO_DEADLINE.name()));
                 notificationCount++;
                 log.info("Deadline alarm sent: userId={}", user.getId());
             } catch (Exception e) {

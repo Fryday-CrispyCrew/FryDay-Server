@@ -22,9 +22,14 @@ public class NotificationOpenRequest {
     @Positive(message = "그룹 ID 는 양수여야 합니다.")
     private Long groupId;
 
-    public NotificationOpenRequest(String trigger, String type, Long groupId) {
+    @Pattern(regexp = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+            message = "푸시 ID 형식이 올바르지 않습니다.")
+    private String pushId;
+
+    public NotificationOpenRequest(String trigger, String type, Long groupId, String pushId) {
         this.trigger = trigger;
         this.type = type;
         this.groupId = groupId;
+        this.pushId = pushId;
     }
 }

@@ -1193,6 +1193,9 @@ FCM 규격상 `data` 의 키와 값은 모두 문자열입니다.
 
 | `interactionType`
 | 상호작용 종류(`KNOCK`, `ORDER`, `DELICIOUS`, `APPLAUSE`). `GROUP_INTERACTION` 알림에만 들어갑니다
+
+| `pushId`
+| 발송마다 새로 만드는 ID(UUID). 모든 푸시에 들어갑니다 (<<_푸시_알림_data,푸시 알림 data>> 참고)
 |===
 
 |===
@@ -1331,12 +1334,49 @@ include::{snippets}/group-invite-share/response-fields.adoc[]
 
 == 알림(Notification)
 
+=== 푸시 알림 data
+
+모든 푸시의 FCM `data` 에는 알림 종류 `type` 과 발송 ID `pushId` 가 들어갑니다. 키와 값은 모두 문자열입니다.
+
+* `pushId` 는 발송마다 새로 만드는 UUID 입니다. 한 사용자의 기기가 여러 대면 같은 값을 받습니다.
+* 알림을 열면 `type`, `pushId` 를 <<_알림_오픈_기록,알림 오픈 기록>> API 로 보내 주세요. 서버의 발송 기록과 연결해 알림별 오픈율을 봅니다.
+* 그룹 푸시의 `type` 과 나머지 키는 <<_그룹_푸시_알림,그룹 푸시 알림>> 을 참고하세요. 그 밖의 푸시는 아래와 같습니다.
+
+|===
+| `type` | 보내는 때 | 받는 사람 | 추가 키
+
+| `TODO_ALARM`
+| 투두에 설정한 알람 시각
+| 알람을 설정한 사용자
+| `todoId`: 알람을 설정한 투두 ID
+
+| `TODO_DEADLINE`
+| 매일 22:00 (Asia/Seoul)
+| 오늘 완료하지 않은 투두가 있는 사용자
+| 없음
+
+| `TODO_BURNT`
+| 매일 00:05 (Asia/Seoul)
+| 어제 완료하지 않은 투두가 있는 사용자
+| 없음
+
+| `TODO_ENCOURAGE`
+| 매일 09:00 (Asia/Seoul)
+| 오늘 투두가 없는 사용자
+| 없음
+
+| `ADMIN_BROADCAST`
+| 운영자가 전체 공지를 보낼 때
+| 푸시 알림을 허용한 모든 기기
+| 없음. `pushId` 는 한 번 발송에 하나라 모든 기기가 같은 값을 받습니다
+|===
+
 === 알림 오픈 기록
 `POST /api/notifications/opens`
 
 사용자가 푸시 알림을 눌러 앱을 열었다는 것을 서버에 기록합니다. 로그인한 상태에서만 보내면 됩니다.
 
-* 푸시 `data` 의 `type`, `groupId` 를 그대로 담아 보냅니다. 값이 없는 알림이면 해당 필드를 빼고 보냅니다.
+* 푸시 `data` 의 `type`, `groupId`, `pushId` 를 그대로 담아 보냅니다. 값이 없는 알림이면 해당 필드를 빼고 보냅니다.
 * `type` 은 정해진 목록으로 검사하지 않으므로, 알림 종류가 늘어나도 앱이 그대로 보내면 됩니다.
 * 해체된 그룹의 알림도 열 수 있으므로 그룹원인지 확인하지 않습니다.
 * 기록 시각은 서버가 요청을 받은 시각입니다.
@@ -1345,7 +1385,7 @@ include::{snippets}/group-invite-share/response-fields.adoc[]
 |===
 | 상황 | 상태 코드
 
-| `trigger` 가 없거나 허용하지 않는 값, `type` 형식이 맞지 않음, `groupId` 가 양수인 숫자가 아님
+| `trigger` 가 없거나 허용하지 않는 값, `type` 형식이 맞지 않음, `groupId` 가 양수인 숫자가 아님, `pushId` 가 UUID 형식이 아님
 | 400
 |===
 
