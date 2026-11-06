@@ -13,7 +13,8 @@ services:
       - ./prometheus:/etc/prometheus:ro
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      # 로그인이 없으니 서버 안에서만 연다. Grafana 는 compose 네트워크(http://prometheus:9090)로 붙는다
+      - "127.0.0.1:9090:9090"
     restart: always
 
   grafana:

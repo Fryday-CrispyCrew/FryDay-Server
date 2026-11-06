@@ -54,7 +54,14 @@ docker compose up -d
 ```
 
 ### 확인
-- `http://<서버>:9090/targets` 에서 `fryday-prod`, `fryday-dev`, `node-exporter-prod` 가 모두 UP 인지 본다.
+- `fryday-prod`, `fryday-dev`, `node-exporter-prod` 가 모두 UP 인지 본다.
+  Prometheus 는 서버 안에서만 열리므로 서버에서 확인하거나 SSH 터널로 연다.
+  ```bash
+  # 서버에서
+  curl -s localhost:9090/api/v1/targets | grep -o '"health":"[a-z]*"'
+  # 또는 내 PC 에서 터널을 열고 브라우저로 http://localhost:9090/targets
+  ssh -L 9090:localhost:9090 ubuntu@<서버>
+  ```
 - Grafana 의 Fryday 폴더에 `Fryday Golden Signals` 대시보드가 있는지 본다.
   - 지연 시간 히스토그램, Tomcat, DB 트랜잭션, 비즈니스 에러 패널은 앱이 새 버전으로 배포된 뒤부터 값이 나온다.
 - Grafana > Alerting > Contact points > `fryday-discord` > Test 로 Discord 에 알림이 오는지 본다.
