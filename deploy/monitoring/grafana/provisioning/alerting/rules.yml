@@ -1,0 +1,399 @@
+# 운영 환경 알림. 임계치는 시작값이라 운영하면서 조정한다
+# 알림 정책 트리를 건드리지 않도록 규칙마다 Discord 연락처를 직접 지정한다
+apiVersion: 1
+groups:
+- orgId: 1
+  name: fryday-prod
+  folder: Fryday
+  interval: 1m
+  rules:
+  - uid: fryday-target-down
+    title: 앱 지표 수집 끊김
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: min(up{job="fryday-prod"})
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+    noDataState: Alerting
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: 앱 지표 수집 끊김
+      description: Prometheus 가 운영 앱 지표를 2분 넘게 긁지 못했다. 앱이 죽었거나 네트워크 문제일 수 있다
+      value: '{{ with $values.A }}{{ if eq .Value 0.0 }}수집 실패{{ else }}정상{{ end }}{{ else }}지표 없음{{ end }}'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '11'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-cpu
+    title: 앱 CPU 80% 초과
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: max(process_cpu_usage{application="fryday-prod"})
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.8
+    noDataState: OK
+    execErrState: Error
+    for: 5m
+    annotations:
+      summary: 앱 CPU 80% 초과
+      description: 앱 프로세스 CPU 사용률이 5분 넘게 80% 를 넘었다
+      value: '{{ humanizePercentage $values.A.Value }}'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '16'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-heap
+    title: Heap 85% 초과
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: sum(jvm_memory_used_bytes{application="fryday-prod", area="heap"}) / sum(jvm_memory_max_bytes{application="fryday-prod", area="heap"} > 0)
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.85
+    noDataState: OK
+    execErrState: Error
+    for: 10m
+    annotations:
+      summary: Heap 85% 초과
+      description: Heap 사용률이 10분 넘게 85% 를 넘었다. GC 로 내려오지 않으면 메모리 누수를 의심한다
+      value: '{{ humanizePercentage $values.A.Value }}'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '17'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-hikari-pending
+    title: DB 커넥션 대기 발생
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: max(hikaricp_connections_pending{application="fryday-prod"})
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: DB 커넥션 대기 발생
+      description: DB 커넥션을 기다리는 요청이 2분 넘게 있다. 커넥션 풀이 모자라거나 느린 쿼리가 커넥션을 오래 잡고 있다
+      value: '{{ humanize $values.A.Value }}건 대기'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '20'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-tomcat-threads
+    title: Tomcat 스레드 80% 초과
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: sum(tomcat_threads_busy_threads{application="fryday-prod"}) / sum(tomcat_threads_config_max_threads{application="fryday-prod"})
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.8
+    noDataState: OK
+    execErrState: Error
+    for: 5m
+    annotations:
+      summary: Tomcat 스레드 80% 초과
+      description: 요청 처리 스레드가 5분 넘게 80% 이상 사용 중이다
+      value: '{{ humanizePercentage $values.A.Value }}'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '19'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-event-log-queue
+    title: 이벤트 로그 대기열 80% 초과
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: max(executor_queued_tasks{application="fryday-prod", name="eventLogExecutor"})
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 800
+    noDataState: OK
+    execErrState: Error
+    for: 1m
+    annotations:
+      summary: 이벤트 로그 대기열 80% 초과
+      description: 이벤트 로그 저장 대기열(1000건)이 80% 를 넘었다. 가득 차면 이벤트를 버린다
+      value: '{{ humanize $values.A.Value }}건 대기 (최대 1000)'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '23'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-event-log-rejected
+    title: 이벤트 로그 넘침
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: sum(increase(event_log_rejected_total{application="fryday-prod"}[5m]))
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: OK
+    execErrState: Error
+    for: 0s
+    annotations:
+      summary: 이벤트 로그 넘침
+      description: 이벤트 로그 저장 대기열이 가득 차 이벤트를 버렸다. 독려, 마감 알림 발송 직후라면 PUSH_SENT 기록이 빠졌을 수 있다
+      value: 최근 5분 {{ humanize $values.A.Value }}건 버림
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '23'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-p99
+    title: p99 응답 시간 1초 초과
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{application="fryday-prod", uri!~"/actuator.*", uri!="/api/groups/{groupId}/events"}[5m])))
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 1
+    noDataState: OK
+    execErrState: Error
+    for: 10m
+    annotations:
+      summary: p99 응답 시간 1초 초과
+      description: SSE 와 /actuator 를 뺀 API 의 p99 응답 시간이 10분 넘게 1초를 넘었다
+      value: '{{ printf "%.2f" $values.A.Value }}초'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '29'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-5xx
+    title: 5xx 비율 1% 초과
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: (sum(rate(http_server_requests_seconds_count{application="fryday-prod", uri!~"/actuator.*", uri!="/api/groups/{groupId}/events", status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{application="fryday-prod", uri!~"/actuator.*", uri!="/api/groups/{groupId}/events"}[5m]))) and on() (sum(increase(http_server_requests_seconds_count{application="fryday-prod", uri!~"/actuator.*", uri!="/api/groups/{groupId}/events"}[5m])) >= 50)
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.01
+    noDataState: OK
+    execErrState: Error
+    for: 5m
+    annotations:
+      summary: 5xx 비율 1% 초과
+      description: 5분 동안 요청이 50건 이상일 때 5xx 비율이 1% 를 넘었다
+      value: '{{ humanizePercentage $values.A.Value }}'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '32'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord
+  - uid: fryday-disk
+    title: 운영 서버 디스크 85% 초과
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: fryday-prometheus
+      model:
+        refId: A
+        expr: max(1 - node_filesystem_avail_bytes{job="node-exporter-prod", mountpoint="/"} / node_filesystem_size_bytes{job="node-exporter-prod", mountpoint="/"})
+        instant: true
+        range: false
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.85
+    noDataState: OK
+    execErrState: Error
+    for: 10m
+    annotations:
+      summary: 운영 서버 디스크 85% 초과
+      description: 운영 서버 루트 디스크 사용률이 85% 를 넘었다. 로그와 도커 이미지를 정리한다
+      value: '{{ humanizePercentage $values.A.Value }}'
+      __dashboardUid__: fryday-golden-signals
+      __panelId__: '25'
+    labels:
+      service: fryday
+      env: prod
+    notification_settings:
+      receiver: fryday-discord

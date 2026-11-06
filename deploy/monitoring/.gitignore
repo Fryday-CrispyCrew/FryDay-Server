@@ -1,0 +1,5 @@
+# 서버에만 두는 파일
+.env
+prometheus/targets/
+loki-config.yaml
+grafana-data/

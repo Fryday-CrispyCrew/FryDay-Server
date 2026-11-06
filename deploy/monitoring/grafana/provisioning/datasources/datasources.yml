@@ -1,0 +1,12 @@
+apiVersion: 1
+
+# 기존에 손으로 만든 데이터 소스는 건드리지 않도록 이름과 uid 를 따로 둔다.
+# 대시보드와 알림 규칙은 이 uid 를 쓴다
+datasources:
+  - name: fryday-prometheus
+    uid: fryday-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    jsonData:
+      timeInterval: 15s
