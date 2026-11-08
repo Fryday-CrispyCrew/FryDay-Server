@@ -39,9 +39,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -111,13 +113,46 @@ class GroupUserEventIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("가입하면 가입 이벤트를 발행한다")
+    @DisplayName("가입하면 로그인 방식과 재가입이 아님을 담은 가입 이벤트를 발행한다")
     void createUserPublishesSignedUp() {
         // when
         User user = userWriteService.createUser(new SocialUserInfo(AuthProvider.KAKAO, "new-user", "new@test.com"));
 
         // then
-        assertThat(eventsOf(EventType.USER_SIGNED_UP)).extracting(UserEvent::userId).containsExactly(user.getId());
+        assertThat(eventsOf(EventType.USER_SIGNED_UP)).extracting(UserEvent::userId, UserEvent::properties)
+                .containsExactly(tuple(user.getId(), Map.of("provider", "KAKAO", "reregistered", false)));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("탈퇴 7일 뒤 재가입하면 이전 계정 ID 를 담은 가입 이벤트를 발행한다")
+    void reregisterPublishesSignedUpWithPreviousUserId() {
+        // given
+        User withdrawn = User.createNewUser(AuthProvider.NAVER, "returning", "returning@test.com");
+        withdrawn.withdraw();
+        ReflectionTestUtils.setField(withdrawn, "withdrawnAt", LocalDateTime.now().minusDays(8));
+        Long previousUserId = userJpaRepository.saveAndFlush(withdrawn).getId();
+
+        // when
+        User user = userWriteService.handleWithdrawnUserReregister(withdrawn,
+                new SocialUserInfo(AuthProvider.NAVER, "returning", "returning@test.com"));
+
+        // then
+        assertThat(eventsOf(EventType.USER_SIGNED_UP)).extracting(UserEvent::userId, UserEvent::properties)
+                .containsExactly(tuple(user.getId(),
+                        Map.of("provider", "NAVER", "reregistered", true, "previousUserId", previousUserId)));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("온보딩을 처음 완료할 때만 온보딩 완료 이벤트를 발행한다")
+    void completeOnboardingPublishesOnlyOnFirstCompletion() {
+        // when
+        userWriteService.completeOnboarding(userJpaRepository.findById(memberId).orElseThrow());
+        userWriteService.completeOnboarding(userJpaRepository.findById(memberId).orElseThrow());
+
+        // then
+        assertThat(eventsOf(EventType.ONBOARDING_COMPLETED)).extracting(UserEvent::userId).containsExactly(memberId);
     }
 
     @Test

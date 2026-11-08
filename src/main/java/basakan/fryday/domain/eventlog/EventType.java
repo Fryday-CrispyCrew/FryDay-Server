@@ -2,6 +2,8 @@ package basakan.fryday.domain.eventlog;
 
 public enum EventType {
     USER_SIGNED_UP,
+    // 약관, 닉네임, 온보딩 화면까지 마친 시점. 처음 완료할 때 한 번만 남긴다
+    ONBOARDING_COMPLETED,
     USER_WITHDREW,
 
     // 유저가 직접 만든 투두만. 반복 회차가 자동으로 만들어지는 것은 세지 않는다
