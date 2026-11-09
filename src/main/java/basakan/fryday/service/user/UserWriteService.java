@@ -4,7 +4,7 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.common.exception.auth.UserReregisterNotAllowedException;
 import basakan.fryday.domain.user.Agreement;
-import basakan.fryday.domain.user.AuthProvider;
+import basakan.fryday.domain.user.SocialAccountKey;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.DailyResultRepository;
@@ -24,7 +24,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -120,30 +119,16 @@ public class UserWriteService {
     }
 
     public User createUser(SocialUserInfo socialUserInfo) {
-        return createUser(socialUserInfo, null);
-    }
-
-    private User createUser(SocialUserInfo socialUserInfo, Long previousUserId) {
         User newUser = User.createNewUser(
                 socialUserInfo.provider(),
                 socialUserInfo.providerUserId(),
                 socialUserInfo.email()
         );
         User savedUser = userJpaRepository.save(newUser);
-        eventPublisher.publishEvent(UserEvent.of(savedUser.getId(), EventType.USER_SIGNED_UP, null,
-                signUpProperties(socialUserInfo.provider(), previousUserId)));
+        eventPublisher.publishEvent(UserEvent.of(savedUser.getId(), EventType.USER_SIGNED_UP, null, Map.of(
+                "provider", socialUserInfo.provider().name(),
+                "accountKey", SocialAccountKey.of(socialUserInfo.provider(), socialUserInfo.providerUserId()))));
         return savedUser;
-    }
-
-    // 재가입은 새 계정 ID 로 만들어지므로, 누적 가입자에서 중복을 거를 수 있게 이전 계정 ID 를 남긴다
-    private Map<String, Object> signUpProperties(AuthProvider provider, Long previousUserId) {
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("provider", provider.name());
-        properties.put("reregistered", previousUserId != null);
-        if (previousUserId != null) {
-            properties.put("previousUserId", previousUserId);
-        }
-        return properties;
     }
 
     public void updateEmailIfAbsent(User user, String email) {
@@ -160,10 +145,9 @@ public class UserWriteService {
         }
 
         // 7일이 지났으므로 기존 계정 삭제 후 신규 생성
-        Long previousUserId = withdrawnUser.getId();
         userJpaRepository.delete(withdrawnUser);
         userJpaRepository.flush(); // 즉시 삭제 반영
 
-        return createUser(socialUserInfo, previousUserId);
+        return createUser(socialUserInfo);
     }
 }
