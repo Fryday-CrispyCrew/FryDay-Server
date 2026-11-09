@@ -13,6 +13,7 @@ import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
 import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.user.AuthProvider;
+import basakan.fryday.domain.user.SocialAccountKey;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.auth.UserJpaRepository;
@@ -39,11 +40,9 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -113,34 +112,16 @@ class GroupUserEventIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("가입하면 로그인 방식과 재가입이 아님을 담은 가입 이벤트를 발행한다")
+    @DisplayName("가입하면 로그인 방식과 소셜 계정 키를 담은 가입 이벤트를 발행한다")
     void createUserPublishesSignedUp() {
         // when
         User user = userWriteService.createUser(new SocialUserInfo(AuthProvider.KAKAO, "new-user", "new@test.com"));
 
         // then
         assertThat(eventsOf(EventType.USER_SIGNED_UP)).extracting(UserEvent::userId, UserEvent::properties)
-                .containsExactly(tuple(user.getId(), Map.of("provider", "KAKAO", "reregistered", false)));
-    }
-
-    @Test
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    @DisplayName("탈퇴 7일 뒤 재가입하면 이전 계정 ID 를 담은 가입 이벤트를 발행한다")
-    void reregisterPublishesSignedUpWithPreviousUserId() {
-        // given
-        User withdrawn = User.createNewUser(AuthProvider.NAVER, "returning", "returning@test.com");
-        withdrawn.withdraw();
-        ReflectionTestUtils.setField(withdrawn, "withdrawnAt", LocalDateTime.now().minusDays(8));
-        Long previousUserId = userJpaRepository.saveAndFlush(withdrawn).getId();
-
-        // when
-        User user = userWriteService.handleWithdrawnUserReregister(withdrawn,
-                new SocialUserInfo(AuthProvider.NAVER, "returning", "returning@test.com"));
-
-        // then
-        assertThat(eventsOf(EventType.USER_SIGNED_UP)).extracting(UserEvent::userId, UserEvent::properties)
-                .containsExactly(tuple(user.getId(),
-                        Map.of("provider", "NAVER", "reregistered", true, "previousUserId", previousUserId)));
+                .containsExactly(tuple(user.getId(), Map.of(
+                        "provider", "KAKAO",
+                        "accountKey", SocialAccountKey.of(AuthProvider.KAKAO, "new-user"))));
     }
 
     @Test

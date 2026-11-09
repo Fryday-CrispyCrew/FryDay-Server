@@ -8,6 +8,7 @@ import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
+import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
 import basakan.fryday.service.admin.AdminMetricsService;
@@ -118,6 +119,58 @@ class AdminMetricsControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.weeks[].activeUsers").description("그 주에 하루라도 앱을 사용한 유저 수 (WAU)"),
                                 fieldWithPath("data.weeks[].completedUsers").description("그 주 날짜의 투두를 하나라도 완료한 유저 수"),
                                 fieldWithPath("data.weeks[].signUps").description("그 주에 가입한 유저 수")
+                        ))
+                ));
+    }
+
+    @Test
+    @DisplayName("요약 지표 API - 성공")
+    void getSummary() throws Exception {
+        // given
+        LocalDate date = LocalDate.of(2026, 11, 30);
+        given(adminMetricsService.getSummary(date, true)).willReturn(MetricsSummaryResponse.builder()
+                .date(date)
+                .cumulativeSignUps(320)
+                .cumulativeOnboarded(290)
+                .dau(9)
+                .dauAvg7(8.4)
+                .mau(75)
+                .dauMauRate(12.0)
+                .weeklyCompletedUsers(21)
+                .activityTrackedSince(LocalDate.of(2026, 10, 17))
+                .build());
+
+        // when & then
+        mockMvc.perform(get("/api/admin/metrics/summary")
+                        .header("Authorization", "Bearer {adminAccessToken}")
+                        .param("date", "2026-11-30")
+                        .param("excludeInternal", "true"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.date").value("2026-11-30"))
+                .andExpect(jsonPath("$.data.dauAvg7").value(8.4))
+                .andDo(document("admin-metrics-summary",
+                        requestHeaders(
+                                headerWithName("Authorization").description("어드민 로그인으로 받은 토큰 (Bearer)")
+                        ),
+                        queryParameters(
+                                parameterWithName("date").description("기준일 (yyyy-MM-dd)"),
+                                parameterWithName("excludeInternal").description("팀 계정 제외 여부 (기본값 true)").optional()
+                        ),
+                        responseFields(envelope(
+                                fieldWithPath("data.date").description("기준일"),
+                                fieldWithPath("data.cumulativeSignUps")
+                                        .description("기준일까지 가입한 사람 수. 탈퇴 후 지워진 계정 포함, 같은 소셜 계정의 재가입은 한 사람으로 셈"),
+                                fieldWithPath("data.cumulativeOnboarded")
+                                        .description("기준일까지 온보딩을 마친 사람 수. 완료 이벤트가 생기기 전 완료한 계정은 가입 시각 기준"),
+                                fieldWithPath("data.dau").description("기준일에 앱을 사용한 유저 수"),
+                                fieldWithPath("data.dauAvg7").description("기준일 포함 최근 7일 DAU 평균 (소수 첫째 자리)"),
+                                fieldWithPath("data.mau").description("기준일 포함 최근 30일 동안 하루라도 앱을 사용한 유저 수"),
+                                fieldWithPath("data.dauMauRate").description("DAU ÷ MAU × 100 (소수 첫째 자리). MAU 가 0 이면 0"),
+                                fieldWithPath("data.weeklyCompletedUsers").description("기준일 포함 최근 7일 동안 투두를 완료한 유저 수"),
+                                fieldWithPath("data.activityTrackedSince")
+                                        .description("활동 기록이 처음 쌓인 날짜. 이 날부터 30일이 지나기 전 MAU 는 30일을 다 채우지 못한 값")
+                                        .optional()
                         ))
                 ));
     }

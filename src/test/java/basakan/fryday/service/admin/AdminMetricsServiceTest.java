@@ -4,9 +4,11 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
+import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
 import basakan.fryday.repository.admin.AdminMetricsRepository;
+import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,7 +18,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,6 +125,74 @@ class AdminMetricsServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
         verify(adminMetricsRepository, never()).findActiveUsers(from, from.plusDays(366));
+    }
+
+    @Test
+    @DisplayName("요약: DAU, 7일 평균 DAU, 최근 30일 MAU, 최근 7일 완료 유저를 팀 계정을 빼고 센다")
+    void summary() {
+        // given
+        LocalDate date = LocalDate.of(2026, 10, 31);
+        given(adminMetricsRepository.findInternalUserIds()).willReturn(Set.of(TEAM_USER));
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(1L, "a", LocalDateTime.of(2026, 10, 2, 9, 0), true),
+                new Account(2L, "b", LocalDateTime.of(2026, 10, 3, 9, 0), false),
+                new Account(TEAM_USER, "team", LocalDateTime.of(2026, 10, 2, 9, 0), true)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
+        given(adminMetricsRepository.findActiveUsers(LocalDate.of(2026, 10, 2), date)).willReturn(List.of(
+                row(2026, 10, 2, 3L),                          // 30일 범위 시작, MAU 만
+                row(2026, 10, 25, 1L),                         // 7일 범위 시작
+                row(2026, 10, 31, 1L), row(2026, 10, 31, 2L),
+                row(2026, 10, 31, TEAM_USER)));
+        given(adminMetricsRepository.findTodoCompletedUsers(LocalDate.of(2026, 10, 25), date))
+                .willReturn(Set.of(1L, TEAM_USER));
+        given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.of(LocalDate.of(2026, 10, 17)));
+
+        // when
+        MetricsSummaryResponse response = adminMetricsService.getSummary(date, true);
+
+        // then
+        assertThat(response)
+                .extracting(MetricsSummaryResponse::getDate,
+                        MetricsSummaryResponse::getCumulativeSignUps, MetricsSummaryResponse::getCumulativeOnboarded,
+                        MetricsSummaryResponse::getDau, MetricsSummaryResponse::getDauAvg7,
+                        MetricsSummaryResponse::getMau, MetricsSummaryResponse::getDauMauRate,
+                        MetricsSummaryResponse::getWeeklyCompletedUsers, MetricsSummaryResponse::getActivityTrackedSince)
+                .containsExactly(date, 2, 1, 2, 0.4, 3, 66.7, 1, LocalDate.of(2026, 10, 17));
+    }
+
+    @Test
+    @DisplayName("요약: 활동 기록이 없으면 비율과 평균은 0 이고 수집 시작일은 비어 있다")
+    void summaryWithoutActivity() {
+        // given
+        LocalDate date = LocalDate.of(2026, 10, 31);
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of());
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
+        given(adminMetricsRepository.findActiveUsers(LocalDate.of(2026, 10, 2), date)).willReturn(List.of());
+        given(adminMetricsRepository.findTodoCompletedUsers(LocalDate.of(2026, 10, 25), date)).willReturn(Set.of());
+        given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.empty());
+
+        // when
+        MetricsSummaryResponse response = adminMetricsService.getSummary(date, false);
+
+        // then
+        assertThat(response)
+                .extracting(MetricsSummaryResponse::getDauAvg7, MetricsSummaryResponse::getMau,
+                        MetricsSummaryResponse::getDauMauRate, MetricsSummaryResponse::getActivityTrackedSince)
+                .containsExactly(0.0, 0, 0.0, null);
+        verify(adminMetricsRepository, never()).findInternalUserIds();
+    }
+
+    @Test
+    @DisplayName("요약: 기준일이 오늘(KST)보다 뒤면 조회하지 않고 예외")
+    void summaryRejectsFutureDate() {
+        // given
+        LocalDate tomorrow = LocalDate.now(ZoneId.of("Asia/Seoul")).plusDays(1);
+
+        // when & then
+        assertThatThrownBy(() -> adminMetricsService.getSummary(tomorrow, true))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
+        verify(adminMetricsRepository, never()).findAccounts();
     }
 
     private UserDate row(int year, int month, int day, Long userId) {
