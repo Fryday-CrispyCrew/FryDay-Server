@@ -5,6 +5,7 @@ import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
 import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,11 +19,15 @@ import java.util.Set;
  */
 final class CumulativeSignUpCounter {
 
-    private CumulativeSignUpCounter() {
+    private final Collection<LocalDateTime> signedUpAt;
+    private final Collection<LocalDateTime> onboardedAt;
+
+    private CumulativeSignUpCounter(Collection<LocalDateTime> signedUpAt, Collection<LocalDateTime> onboardedAt) {
+        this.signedUpAt = signedUpAt;
+        this.onboardedAt = onboardedAt;
     }
 
-    static Counts count(List<Account> accounts, List<SignUpEvent> events, LocalDateTime endExclusive,
-                        Set<Long> excluded) {
+    static CumulativeSignUpCounter of(List<Account> accounts, List<SignUpEvent> events, Set<Long> excluded) {
         Map<Long, String> people = new HashMap<>();
         for (Account account : accounts) {
             people.put(account.userId(), account.accountKey());
@@ -54,16 +59,22 @@ final class CumulativeSignUpCounter {
         }
 
         // 팀원이 재가입해 새 계정 ID 가 팀 계정 목록에 없어도 같은 사람이면 뺀다
-        Set<String> excludedPeople = new HashSet<>();
         for (Long userId : excluded) {
-            excludedPeople.add(personOf(people, userId));
+            String person = personOf(people, userId);
+            signedUpAt.remove(person);
+            onboardedAt.remove(person);
         }
+        // 가입 기록 없이 온보딩 이벤트만 남은 사람은 셀 수 없다
+        onboardedAt.keySet().retainAll(signedUpAt.keySet());
+        return new CumulativeSignUpCounter(signedUpAt.values(), onboardedAt.values());
+    }
 
-        Set<String> signedUp = before(signedUpAt, endExclusive);
-        signedUp.removeAll(excludedPeople);
-        Set<String> onboarded = before(onboardedAt, endExclusive);
-        onboarded.retainAll(signedUp);
-        return new Counts(signedUp.size(), onboarded.size());
+    Counts countBefore(LocalDateTime endExclusive) {
+        return new Counts(countBefore(signedUpAt, endExclusive), countBefore(onboardedAt, endExclusive));
+    }
+
+    private static int countBefore(Collection<LocalDateTime> times, LocalDateTime endExclusive) {
+        return (int) times.stream().filter(time -> time.isBefore(endExclusive)).count();
     }
 
     // 키가 없는 계정은 이미 지워져 소셜 계정을 알 수 없으므로 계정 하나를 한 사람으로 본다
@@ -71,20 +82,14 @@ final class CumulativeSignUpCounter {
         return people.getOrDefault(userId, "user:" + userId);
     }
 
-    private static Set<String> before(Map<String, LocalDateTime> times, LocalDateTime endExclusive) {
-        Set<String> result = new HashSet<>();
-        times.forEach((person, time) -> {
-            if (time.isBefore(endExclusive)) {
-                result.add(person);
-            }
-        });
-        return result;
-    }
-
     private static LocalDateTime earlier(LocalDateTime a, LocalDateTime b) {
         return a.isBefore(b) ? a : b;
     }
 
     record Counts(int signedUp, int onboarded) {
+
+        Counts minus(Counts other) {
+            return new Counts(signedUp - other.signedUp, onboarded - other.onboarded);
+        }
     }
 }

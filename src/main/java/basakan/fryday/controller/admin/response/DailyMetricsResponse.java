@@ -1,5 +1,6 @@
 package basakan.fryday.controller.admin.response;
 
+import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
@@ -15,18 +16,16 @@ public class DailyMetricsResponse {
     }
 
     @Getter
+    @Builder
     public static class DailyMetric {
 
         private final LocalDate date;
         private final int activeUsers;
+        private final double dauAvg7;
+        private final int mau;
         private final int completedUsers;
         private final int signUps;
-
-        public DailyMetric(LocalDate date, int activeUsers, int completedUsers, int signUps) {
-            this.date = date;
-            this.activeUsers = activeUsers;
-            this.completedUsers = completedUsers;
-            this.signUps = signUps;
-        }
+        private final int cumulativeSignUps;
+        private final int cumulativeOnboarded;
     }
 }
