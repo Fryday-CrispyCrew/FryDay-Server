@@ -108,7 +108,7 @@ class CumulativeSignUpCounterTest {
     }
 
     private Counts count(List<Account> accounts, List<SignUpEvent> events, Set<Long> excluded) {
-        return CumulativeSignUpCounter.count(accounts, events, END, excluded);
+        return CumulativeSignUpCounter.of(accounts, events, excluded).countBefore(END);
     }
 
     private Account account(Long userId, String accountKey, LocalDateTime createdAt, boolean onboardingCompleted) {

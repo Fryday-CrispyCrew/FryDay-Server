@@ -62,8 +62,8 @@ class AdminMetricsControllerTest extends RestDocsSupport {
         LocalDate from = LocalDate.of(2026, 10, 20);
         LocalDate to = LocalDate.of(2026, 10, 21);
         given(adminMetricsService.getDailyMetrics(from, to, true)).willReturn(new DailyMetricsResponse(List.of(
-                new DailyMetric(from, 12, 8, 1),
-                new DailyMetric(to, 10, 7, 0))));
+                dailyMetric(from, 12, 8, 1, 241),
+                dailyMetric(to, 10, 7, 0, 241))));
 
         // when & then
         mockMvc.perform(get("/api/admin/metrics/daily")
@@ -82,9 +82,13 @@ class AdminMetricsControllerTest extends RestDocsSupport {
                         queryParameters(periodParameters()),
                         responseFields(envelope(
                                 fieldWithPath("data.days[].date").description("날짜"),
-                                fieldWithPath("data.days[].activeUsers").description("그날 앱을 사용한 유저 수"),
-                                fieldWithPath("data.days[].completedUsers").description("그 날짜의 투두를 하나라도 완료한 유저 수"),
-                                fieldWithPath("data.days[].signUps").description("그날 가입한 유저 수")
+                                fieldWithPath("data.days[].activeUsers").description("그날 앱을 사용한 유저 수 (DAU)"),
+                                fieldWithPath("data.days[].dauAvg7").description("그날 포함 최근 7일 DAU 평균 (소수 첫째 자리)"),
+                                fieldWithPath("data.days[].mau").description("그날 포함 최근 30일 동안 하루라도 앱을 사용한 유저 수"),
+                                fieldWithPath("data.days[].completedUsers").description("그날 투두를 하나라도 완료한 유저 수 (완료한 시각 기준)"),
+                                fieldWithPath("data.days[].signUps").description("그날 처음 가입한 사람 수 (같은 소셜 계정의 재가입 제외)"),
+                                fieldWithPath("data.days[].cumulativeSignUps").description("그날까지 가입한 사람 수"),
+                                fieldWithPath("data.days[].cumulativeOnboarded").description("그날까지 온보딩을 마친 사람 수")
                         ))
                 ));
     }
@@ -117,8 +121,8 @@ class AdminMetricsControllerTest extends RestDocsSupport {
                                 fieldWithPath("data.weeks[].weekStart").description("주 시작일 (월요일)"),
                                 fieldWithPath("data.weeks[].weekEnd").description("주 종료일 (일요일)"),
                                 fieldWithPath("data.weeks[].activeUsers").description("그 주에 하루라도 앱을 사용한 유저 수 (WAU)"),
-                                fieldWithPath("data.weeks[].completedUsers").description("그 주 날짜의 투두를 하나라도 완료한 유저 수"),
-                                fieldWithPath("data.weeks[].signUps").description("그 주에 가입한 유저 수")
+                                fieldWithPath("data.weeks[].completedUsers").description("그 주에 투두를 하나라도 완료한 유저 수 (완료한 시각 기준)"),
+                                fieldWithPath("data.weeks[].signUps").description("그 주에 처음 가입한 사람 수 (같은 소셜 계정의 재가입 제외)")
                         ))
                 ));
     }
@@ -190,6 +194,20 @@ class AdminMetricsControllerTest extends RestDocsSupport {
                         .param("to", "2026-10-20"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(ErrorCode.ADMIN_METRICS_INVALID_PERIOD.getMessage()));
+    }
+
+    private DailyMetric dailyMetric(LocalDate date, int activeUsers, int completedUsers, int signUps,
+                                    int cumulativeSignUps) {
+        return DailyMetric.builder()
+                .date(date)
+                .activeUsers(activeUsers)
+                .dauAvg7(11.3)
+                .mau(52)
+                .completedUsers(completedUsers)
+                .signUps(signUps)
+                .cumulativeSignUps(cumulativeSignUps)
+                .cumulativeOnboarded(230)
+                .build();
     }
 
     private ParameterDescriptor[] periodParameters() {

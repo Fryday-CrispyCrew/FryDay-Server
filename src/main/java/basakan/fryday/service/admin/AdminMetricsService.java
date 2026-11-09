@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -41,11 +42,28 @@ public class AdminMetricsService {
 
     public DailyMetricsResponse getDailyMetrics(LocalDate from, LocalDate to, boolean excludeInternal) {
         validatePeriod(from, to);
-        Metrics metrics = load(from, to, excludeInternal, UnaryOperator.identity());
+        Set<Long> excluded = excludedUsers(excludeInternal);
+        // 기간 첫날의 MAU 를 세려면 그 전 29일 활동도 필요하다
+        ActiveUsers active = activeUsers(from.minusDays(MAU_DAYS - 1), to, excluded);
+        Map<LocalDate, Set<Long>> completed = group(
+                adminMetricsRepository.findCompletedUsers(from, to), UnaryOperator.identity(), excluded);
+        CumulativeSignUpCounter signUps = signUpCounter(excluded);
 
         List<DailyMetric> days = from.datesUntil(to.plusDays(1))
-                .map(date -> new DailyMetric(date,
-                        metrics.activeUsers(date), metrics.completedUsers(date), metrics.signUps(date)))
+                .map(date -> {
+                    Counts upToDate = signUps.countBefore(date.plusDays(1).atStartOfDay());
+                    Counts newOnDate = upToDate.minus(signUps.countBefore(date.atStartOfDay()));
+                    return DailyMetric.builder()
+                            .date(date)
+                            .activeUsers(active.dau(date))
+                            .dauAvg7(active.dauAvg7(date))
+                            .mau(active.mau(date))
+                            .completedUsers(sizeOf(completed, date))
+                            .signUps(newOnDate.signedUp())
+                            .cumulativeSignUps(upToDate.signedUp())
+                            .cumulativeOnboarded(upToDate.onboarded())
+                            .build();
+                })
                 .toList();
         return new DailyMetricsResponse(days);
     }
@@ -55,12 +73,21 @@ public class AdminMetricsService {
         validatePeriod(from, to);
         LocalDate firstWeekStart = weekStart(from);
         LocalDate lastWeekEnd = to.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
-        Metrics metrics = load(firstWeekStart, lastWeekEnd, excludeInternal, AdminMetricsService::weekStart);
+        Set<Long> excluded = excludedUsers(excludeInternal);
+        Map<LocalDate, Set<Long>> active = group(
+                adminMetricsRepository.findActiveUsers(firstWeekStart, lastWeekEnd),
+                AdminMetricsService::weekStart, excluded);
+        Map<LocalDate, Set<Long>> completed = group(
+                adminMetricsRepository.findCompletedUsers(firstWeekStart, lastWeekEnd),
+                AdminMetricsService::weekStart, excluded);
+        CumulativeSignUpCounter signUps = signUpCounter(excluded);
 
         List<WeeklyMetric> weeks = Stream.iterate(firstWeekStart, start -> start.isBefore(lastWeekEnd),
                         start -> start.plusWeeks(1))
                 .map(start -> new WeeklyMetric(start, start.plusDays(6),
-                        metrics.activeUsers(start), metrics.completedUsers(start), metrics.signUps(start)))
+                        sizeOf(active, start), sizeOf(completed, start),
+                        signUps.countBefore(start.plusWeeks(1).atStartOfDay())
+                                .minus(signUps.countBefore(start.atStartOfDay())).signedUp()))
                 .toList();
         return new WeeklyMetricsResponse(weeks);
     }
@@ -69,38 +96,29 @@ public class AdminMetricsService {
         if (date.isAfter(LocalDate.now(KOREA_ZONE))) {
             throw new BusinessException(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
         }
-        Set<Long> excluded = excludeInternal ? adminMetricsRepository.findInternalUserIds() : Set.of();
-        Counts signUps = CumulativeSignUpCounter.count(adminMetricsRepository.findAccounts(),
-                adminMetricsRepository.findSignUpEvents(), date.plusDays(1).atStartOfDay(), excluded);
+        Set<Long> excluded = excludedUsers(excludeInternal);
+        Counts signUps = signUpCounter(excluded).countBefore(date.plusDays(1).atStartOfDay());
+        ActiveUsers active = activeUsers(date.minusDays(MAU_DAYS - 1), date, excluded);
+        int dau = active.dau(date);
+        int mau = active.mau(date);
 
-        Map<LocalDate, Set<Long>> active = group(
-                adminMetricsRepository.findActiveUsers(date.minusDays(MAU_DAYS - 1), date),
-                UnaryOperator.identity(), excluded);
-        int dau = active.getOrDefault(date, Set.of()).size();
-        double dauAvg7 = date.minusDays(DAU_AVERAGE_DAYS - 1).datesUntil(date.plusDays(1))
-                .mapToInt(day -> active.getOrDefault(day, Set.of()).size())
-                .average().orElse(0);
-        int mau = (int) active.values().stream().flatMap(Set::stream).distinct().count();
-
-        Set<Long> weeklyCompleted = new HashSet<>(
-                adminMetricsRepository.findTodoCompletedUsers(date.minusDays(DAU_AVERAGE_DAYS - 1), date));
-        weeklyCompleted.removeAll(excluded);
+        Set<Long> weeklyCompleted = adminMetricsRepository
+                .findCompletedUsers(date.minusDays(DAU_AVERAGE_DAYS - 1), date).stream()
+                .map(UserDate::userId)
+                .filter(userId -> !excluded.contains(userId))
+                .collect(Collectors.toSet());
 
         return MetricsSummaryResponse.builder()
                 .date(date)
                 .cumulativeSignUps(signUps.signedUp())
                 .cumulativeOnboarded(signUps.onboarded())
                 .dau(dau)
-                .dauAvg7(roundOneDecimal(dauAvg7))
+                .dauAvg7(active.dauAvg7(date))
                 .mau(mau)
                 .dauMauRate(mau == 0 ? 0 : roundOneDecimal(dau * 100.0 / mau))
                 .weeklyCompletedUsers(weeklyCompleted.size())
                 .activityTrackedSince(adminMetricsRepository.findActivityTrackedSince().orElse(null))
                 .build();
-    }
-
-    private static double roundOneDecimal(double value) {
-        return Math.round(value * 10) / 10.0;
     }
 
     private void validatePeriod(LocalDate from, LocalDate to) {
@@ -109,17 +127,22 @@ public class AdminMetricsService {
         }
     }
 
-    private Metrics load(LocalDate from, LocalDate to, boolean excludeInternal, UnaryOperator<LocalDate> bucket) {
-        Set<Long> excluded = excludeInternal ? adminMetricsRepository.findInternalUserIds() : Set.of();
-        return new Metrics(
-                group(adminMetricsRepository.findActiveUsers(from, to), bucket, excluded),
-                group(adminMetricsRepository.findCompletedUsers(from, to), bucket, excluded),
-                group(adminMetricsRepository.findSignUps(from, to), bucket, excluded)
-        );
+    private Set<Long> excludedUsers(boolean excludeInternal) {
+        return excludeInternal ? adminMetricsRepository.findInternalUserIds() : Set.of();
+    }
+
+    private ActiveUsers activeUsers(LocalDate from, LocalDate to, Set<Long> excluded) {
+        return new ActiveUsers(group(adminMetricsRepository.findActiveUsers(from, to), UnaryOperator.identity(), excluded));
+    }
+
+    private CumulativeSignUpCounter signUpCounter(Set<Long> excluded) {
+        return CumulativeSignUpCounter.of(
+                adminMetricsRepository.findAccounts(), adminMetricsRepository.findSignUpEvents(), excluded);
     }
 
     // 같은 구간에 여러 번 나온 유저는 한 명으로 센다
-    private Map<LocalDate, Set<Long>> group(List<UserDate> rows, UnaryOperator<LocalDate> bucket, Set<Long> excluded) {
+    private static Map<LocalDate, Set<Long>> group(List<UserDate> rows, UnaryOperator<LocalDate> bucket,
+                                                   Set<Long> excluded) {
         Map<LocalDate, Set<Long>> grouped = new HashMap<>();
         for (UserDate row : rows) {
             if (!excluded.contains(row.userId())) {
@@ -129,24 +152,35 @@ public class AdminMetricsService {
         return grouped;
     }
 
+    private static int sizeOf(Map<LocalDate, Set<Long>> grouped, LocalDate key) {
+        return grouped.getOrDefault(key, Set.of()).size();
+    }
+
     private static LocalDate weekStart(LocalDate date) {
         return date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     }
 
-    private record Metrics(Map<LocalDate, Set<Long>> active,
-                           Map<LocalDate, Set<Long>> completed,
-                           Map<LocalDate, Set<Long>> signUps) {
+    private static double roundOneDecimal(double value) {
+        return Math.round(value * 10) / 10.0;
+    }
 
-        int activeUsers(LocalDate key) {
-            return active.getOrDefault(key, Set.of()).size();
+    private record ActiveUsers(Map<LocalDate, Set<Long>> byDate) {
+
+        int dau(LocalDate date) {
+            return sizeOf(byDate, date);
         }
 
-        int completedUsers(LocalDate key) {
-            return completed.getOrDefault(key, Set.of()).size();
+        double dauAvg7(LocalDate date) {
+            return roundOneDecimal(date.minusDays(DAU_AVERAGE_DAYS - 1).datesUntil(date.plusDays(1))
+                    .mapToInt(this::dau)
+                    .average().orElse(0));
         }
 
-        int signUps(LocalDate key) {
-            return signUps.getOrDefault(key, Set.of()).size();
+        int mau(LocalDate date) {
+            Set<Long> users = new HashSet<>();
+            date.minusDays(MAU_DAYS - 1).datesUntil(date.plusDays(1))
+                    .forEach(day -> users.addAll(byDate.getOrDefault(day, Set.of())));
+            return users.size();
         }
     }
 }

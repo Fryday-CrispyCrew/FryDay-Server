@@ -39,42 +39,18 @@ public class AdminMetricsRepository {
                 """, period(from, to), USER_DATE_MAPPER);
     }
 
-    // 그 날짜에 잡힌 투두를 하나라도 완료 상태로 둔 유저
+    // 투두를 완료한 시각의 날짜로 센다. 완료 후 취소했어도 완료한 경험은 있으므로 센다
     public List<UserDate> findCompletedUsers(LocalDate from, LocalDate to) {
-        return jdbcTemplate.query("""
-                SELECT DISTINCT t.date, c.user_id
-                FROM todo t
-                JOIN category c ON c.id = t.category_id
-                WHERE t.status = 'COMPLETED'
-                  AND t.deleted_at IS NULL
-                  AND t.date BETWEEN :from AND :to
-                """, period(from, to), USER_DATE_MAPPER);
-    }
-
-    // created_at 은 KST 로 저장된다 (컨테이너 TZ Asia/Seoul)
-    public List<UserDate> findSignUps(LocalDate from, LocalDate to) {
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("fromStart", from.atStartOfDay())
-                .addValue("toEndExclusive", to.plusDays(1).atStartOfDay());
-        return jdbcTemplate.query("""
-                SELECT CAST(created_at AS DATE), id
-                FROM users
-                WHERE created_at >= :fromStart AND created_at < :toEndExclusive
-                """, params, USER_DATE_MAPPER);
-    }
-
-    // 완료 후 취소했어도 완료한 경험은 있으므로 센다
-    public Set<Long> findTodoCompletedUsers(LocalDate from, LocalDate to) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("type", EventType.TODO_COMPLETED.name())
                 .addValue("fromStart", from.atStartOfDay())
                 .addValue("toEndExclusive", to.plusDays(1).atStartOfDay());
-        return new HashSet<>(jdbcTemplate.queryForList("""
-                SELECT DISTINCT user_id
+        return jdbcTemplate.query("""
+                SELECT DISTINCT CAST(occurred_at AS DATE), user_id
                 FROM event_log
                 WHERE event_type = :type
                   AND occurred_at >= :fromStart AND occurred_at < :toEndExclusive
-                """, params, Long.class));
+                """, params, USER_DATE_MAPPER);
     }
 
     // 지금 남아 있는 계정만 나온다. 탈퇴 후 지워진 계정은 가입 이벤트로 보완한다

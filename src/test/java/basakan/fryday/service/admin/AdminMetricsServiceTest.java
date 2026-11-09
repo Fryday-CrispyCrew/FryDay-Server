@@ -44,29 +44,36 @@ class AdminMetricsServiceTest {
     private AdminMetricsService adminMetricsService;
 
     @Test
-    @DisplayName("일별: 기록이 없는 날도 0 으로 채우고, 팀 계정은 뺀다")
-    void dailyFillsEmptyDaysAndExcludesInternal() {
+    @DisplayName("일별: 기록이 없는 날도 0 으로 채우고, 7일 평균 DAU, 최근 30일 MAU, 누적 가입자를 팀 계정을 빼고 센다")
+    void dailyMetricsExcludeInternal() {
         // given
         LocalDate from = LocalDate.of(2026, 10, 20);
         LocalDate to = LocalDate.of(2026, 10, 22);
         given(adminMetricsRepository.findInternalUserIds()).willReturn(Set.of(TEAM_USER));
-        given(adminMetricsRepository.findActiveUsers(from, to)).willReturn(List.of(
+        given(adminMetricsRepository.findActiveUsers(LocalDate.of(2026, 9, 21), to)).willReturn(List.of(
+                row(2026, 9, 21, 5L), // 10/20 의 30일 범위 첫날
                 row(2026, 10, 20, 1L), row(2026, 10, 20, 2L), row(2026, 10, 20, TEAM_USER),
                 row(2026, 10, 22, 1L)));
-        given(adminMetricsRepository.findCompletedUsers(from, to)).willReturn(List.of(row(2026, 10, 20, 1L)));
-        given(adminMetricsRepository.findSignUps(from, to)).willReturn(List.of(row(2026, 10, 22, 3L)));
+        given(adminMetricsRepository.findCompletedUsers(from, to)).willReturn(List.of(
+                row(2026, 10, 20, 1L), row(2026, 10, 20, TEAM_USER)));
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(1L, "a", LocalDateTime.of(2026, 10, 1, 9, 0), true),
+                new Account(3L, "c", LocalDateTime.of(2026, 10, 22, 10, 0), false),
+                new Account(TEAM_USER, "team", LocalDateTime.of(2026, 10, 21, 9, 0), true)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
 
         // when
         DailyMetricsResponse response = adminMetricsService.getDailyMetrics(from, to, true);
 
         // then
         assertThat(response.getDays())
-                .extracting(DailyMetric::getDate, DailyMetric::getActiveUsers,
-                        DailyMetric::getCompletedUsers, DailyMetric::getSignUps)
+                .extracting(DailyMetric::getDate, DailyMetric::getActiveUsers, DailyMetric::getDauAvg7,
+                        DailyMetric::getMau, DailyMetric::getCompletedUsers, DailyMetric::getSignUps,
+                        DailyMetric::getCumulativeSignUps, DailyMetric::getCumulativeOnboarded)
                 .containsExactly(
-                        tuple(LocalDate.of(2026, 10, 20), 2, 1, 0),
-                        tuple(LocalDate.of(2026, 10, 21), 0, 0, 0),
-                        tuple(LocalDate.of(2026, 10, 22), 1, 0, 1));
+                        tuple(LocalDate.of(2026, 10, 20), 2, 0.3, 3, 1, 0, 1, 1),
+                        tuple(LocalDate.of(2026, 10, 21), 0, 0.3, 2, 0, 0, 1, 1),
+                        tuple(LocalDate.of(2026, 10, 22), 1, 0.4, 2, 0, 1, 2, 1));
     }
 
     @Test
@@ -74,10 +81,11 @@ class AdminMetricsServiceTest {
     void dailyIncludesInternal() {
         // given
         LocalDate day = LocalDate.of(2026, 10, 20);
-        given(adminMetricsRepository.findActiveUsers(day, day)).willReturn(List.of(
+        given(adminMetricsRepository.findActiveUsers(day.minusDays(29), day)).willReturn(List.of(
                 row(2026, 10, 20, 1L), row(2026, 10, 20, TEAM_USER)));
         given(adminMetricsRepository.findCompletedUsers(day, day)).willReturn(List.of());
-        given(adminMetricsRepository.findSignUps(day, day)).willReturn(List.of());
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of());
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
 
         // when
         DailyMetricsResponse response = adminMetricsService.getDailyMetrics(day, day, false);
@@ -97,8 +105,12 @@ class AdminMetricsServiceTest {
         given(adminMetricsRepository.findActiveUsers(weekStart, weekEnd)).willReturn(List.of(
                 row(2026, 10, 19, 1L), row(2026, 10, 25, 1L), // 같은 주 월, 일
                 row(2026, 10, 26, 1L), row(2026, 10, 26, 2L))); // 다음 주 월
-        given(adminMetricsRepository.findCompletedUsers(weekStart, weekEnd)).willReturn(List.of(row(2026, 10, 25, 1L)));
-        given(adminMetricsRepository.findSignUps(weekStart, weekEnd)).willReturn(List.of());
+        given(adminMetricsRepository.findCompletedUsers(weekStart, weekEnd)).willReturn(List.of(
+                row(2026, 10, 19, 1L), row(2026, 10, 25, 1L)));
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(1L, "a", LocalDateTime.of(2026, 10, 25, 23, 59), false),
+                new Account(2L, "b", LocalDateTime.of(2026, 10, 26, 0, 0), false)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
 
         // when
         WeeklyMetricsResponse response = adminMetricsService.getWeeklyMetrics(
@@ -107,10 +119,10 @@ class AdminMetricsServiceTest {
         // then
         assertThat(response.getWeeks())
                 .extracting(WeeklyMetric::getWeekStart, WeeklyMetric::getWeekEnd,
-                        WeeklyMetric::getActiveUsers, WeeklyMetric::getCompletedUsers)
+                        WeeklyMetric::getActiveUsers, WeeklyMetric::getCompletedUsers, WeeklyMetric::getSignUps)
                 .containsExactly(
-                        tuple(LocalDate.of(2026, 10, 19), LocalDate.of(2026, 10, 25), 1, 1),
-                        tuple(LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 1), 2, 0));
+                        tuple(LocalDate.of(2026, 10, 19), LocalDate.of(2026, 10, 25), 1, 1, 1),
+                        tuple(LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 1), 2, 0, 1));
     }
 
     @Test
@@ -143,8 +155,8 @@ class AdminMetricsServiceTest {
                 row(2026, 10, 25, 1L),                         // 7일 범위 시작
                 row(2026, 10, 31, 1L), row(2026, 10, 31, 2L),
                 row(2026, 10, 31, TEAM_USER)));
-        given(adminMetricsRepository.findTodoCompletedUsers(LocalDate.of(2026, 10, 25), date))
-                .willReturn(Set.of(1L, TEAM_USER));
+        given(adminMetricsRepository.findCompletedUsers(LocalDate.of(2026, 10, 25), date)).willReturn(List.of(
+                row(2026, 10, 26, 1L), row(2026, 10, 30, 1L), row(2026, 10, 30, TEAM_USER)));
         given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.of(LocalDate.of(2026, 10, 17)));
 
         // when
@@ -168,7 +180,7 @@ class AdminMetricsServiceTest {
         given(adminMetricsRepository.findAccounts()).willReturn(List.of());
         given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
         given(adminMetricsRepository.findActiveUsers(LocalDate.of(2026, 10, 2), date)).willReturn(List.of());
-        given(adminMetricsRepository.findTodoCompletedUsers(LocalDate.of(2026, 10, 25), date)).willReturn(Set.of());
+        given(adminMetricsRepository.findCompletedUsers(LocalDate.of(2026, 10, 25), date)).willReturn(List.of());
         given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.empty());
 
         // when
