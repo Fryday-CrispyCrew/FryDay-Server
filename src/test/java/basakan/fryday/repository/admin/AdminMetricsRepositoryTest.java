@@ -2,9 +2,14 @@ package basakan.fryday.repository.admin;
 
 import basakan.fryday.domain.category.Category;
 import basakan.fryday.domain.category.CategoryColor;
+import basakan.fryday.domain.eventlog.EventLog;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.domain.user.AuthProvider;
+import basakan.fryday.domain.user.SocialAccountKey;
 import basakan.fryday.domain.user.User;
+import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
+import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
 import basakan.fryday.repository.auth.UserDailyActivityRepository;
 import jakarta.persistence.EntityManager;
@@ -20,6 +25,7 @@ import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -97,6 +103,66 @@ class AdminMetricsRepositoryTest {
     }
 
     @Test
+    @DisplayName("투두 완료 유저는 기간 안에 완료 이벤트가 있는 유저를 한 번씩 가져온다")
+    void todoCompletedUsers() {
+        // given
+        event(1L, EventType.TODO_COMPLETED, null, DAY.atStartOfDay());
+        event(1L, EventType.TODO_COMPLETED, null, DAY.plusDays(1).atTime(23, 59, 59));
+        event(2L, EventType.TODO_UNCOMPLETED, null, DAY.atTime(12, 0));
+        event(3L, EventType.TODO_COMPLETED, null, DAY.minusDays(1).atTime(23, 59, 59));
+        event(4L, EventType.TODO_COMPLETED, null, DAY.plusDays(2).atStartOfDay());
+        entityManager.flush();
+
+        // when & then
+        assertThat(adminMetricsRepository.findTodoCompletedUsers(DAY, DAY.plusDays(1))).containsExactly(1L);
+    }
+
+    @Test
+    @DisplayName("계정은 소셜 계정 키, 가입 시각, 온보딩 완료 여부를 가져온다")
+    void accounts() {
+        // given
+        Long onboarded = user("onboarded", DAY.atStartOfDay());
+        Long pending = user("pending", DAY.atTime(9, 0));
+        jdbcTemplate.update("UPDATE users SET onboarding_status = 'COMPLETED' WHERE id = ?", onboarded);
+
+        // when & then
+        assertThat(adminMetricsRepository.findAccounts()).containsExactlyInAnyOrder(
+                new Account(onboarded, SocialAccountKey.of(AuthProvider.KAKAO, "onboarded"), DAY.atStartOfDay(), true),
+                new Account(pending, SocialAccountKey.of(AuthProvider.KAKAO, "pending"), DAY.atTime(9, 0), false));
+    }
+
+    @Test
+    @DisplayName("가입과 온보딩 완료 이벤트만 가져오고, 소셜 계정 키가 있으면 읽는다")
+    void signUpEvents() {
+        // given
+        event(1L, EventType.USER_SIGNED_UP, null, DAY.atStartOfDay());
+        event(2L, EventType.USER_SIGNED_UP, Map.of("provider", "KAKAO", "accountKey", "key-2"), DAY.atTime(1, 0));
+        event(2L, EventType.ONBOARDING_COMPLETED, null, DAY.atTime(3, 0));
+        event(2L, EventType.TODO_COMPLETED, null, DAY.atTime(4, 0));
+        entityManager.flush();
+        entityManager.clear();
+
+        // when & then
+        assertThat(adminMetricsRepository.findSignUpEvents()).containsExactlyInAnyOrder(
+                new SignUpEvent(1L, EventType.USER_SIGNED_UP, DAY.atStartOfDay(), null),
+                new SignUpEvent(2L, EventType.USER_SIGNED_UP, DAY.atTime(1, 0), "key-2"),
+                new SignUpEvent(2L, EventType.ONBOARDING_COMPLETED, DAY.atTime(3, 0), null));
+    }
+
+    @Test
+    @DisplayName("활동 기록 수집 시작일은 가장 이른 활동 날짜이고, 기록이 없으면 비어 있다")
+    void activityTrackedSince() {
+        assertThat(adminMetricsRepository.findActivityTrackedSince()).isEmpty();
+
+        // given
+        userDailyActivityRepository.insertIgnore(1L, DAY, LocalDateTime.now());
+        userDailyActivityRepository.insertIgnore(2L, DAY.minusDays(3), LocalDateTime.now());
+
+        // when & then
+        assertThat(adminMetricsRepository.findActivityTrackedSince()).contains(DAY.minusDays(3));
+    }
+
+    @Test
     @DisplayName("팀 계정 user_id 를 모두 가져온다")
     void internalUserIds() {
         // given
@@ -130,5 +196,14 @@ class AdminMetricsRepositoryTest {
         entityManager.flush();
         jdbcTemplate.update("UPDATE users SET created_at = ? WHERE id = ?", createdAt, user.getId());
         return user.getId();
+    }
+
+    private void event(Long userId, EventType type, Map<String, Object> properties, LocalDateTime occurredAt) {
+        entityManager.persist(EventLog.builder()
+                .userId(userId)
+                .eventType(type)
+                .properties(properties)
+                .occurredAt(occurredAt)
+                .build());
     }
 }

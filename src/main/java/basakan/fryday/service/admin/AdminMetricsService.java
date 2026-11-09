@@ -4,16 +4,19 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
+import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
 import basakan.fryday.repository.admin.AdminMetricsRepository;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
+import basakan.fryday.service.admin.CumulativeSignUpCounter.Counts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
@@ -30,6 +33,9 @@ import java.util.stream.Stream;
 public class AdminMetricsService {
 
     private static final long MAX_PERIOD_DAYS = 366;
+    private static final int MAU_DAYS = 30;
+    private static final int DAU_AVERAGE_DAYS = 7;
+    private static final ZoneId KOREA_ZONE = ZoneId.of("Asia/Seoul");
 
     private final AdminMetricsRepository adminMetricsRepository;
 
@@ -57,6 +63,44 @@ public class AdminMetricsService {
                         metrics.activeUsers(start), metrics.completedUsers(start), metrics.signUps(start)))
                 .toList();
         return new WeeklyMetricsResponse(weeks);
+    }
+
+    public MetricsSummaryResponse getSummary(LocalDate date, boolean excludeInternal) {
+        if (date.isAfter(LocalDate.now(KOREA_ZONE))) {
+            throw new BusinessException(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
+        }
+        Set<Long> excluded = excludeInternal ? adminMetricsRepository.findInternalUserIds() : Set.of();
+        Counts signUps = CumulativeSignUpCounter.count(adminMetricsRepository.findAccounts(),
+                adminMetricsRepository.findSignUpEvents(), date.plusDays(1).atStartOfDay(), excluded);
+
+        Map<LocalDate, Set<Long>> active = group(
+                adminMetricsRepository.findActiveUsers(date.minusDays(MAU_DAYS - 1), date),
+                UnaryOperator.identity(), excluded);
+        int dau = active.getOrDefault(date, Set.of()).size();
+        double dauAvg7 = date.minusDays(DAU_AVERAGE_DAYS - 1).datesUntil(date.plusDays(1))
+                .mapToInt(day -> active.getOrDefault(day, Set.of()).size())
+                .average().orElse(0);
+        int mau = (int) active.values().stream().flatMap(Set::stream).distinct().count();
+
+        Set<Long> weeklyCompleted = new HashSet<>(
+                adminMetricsRepository.findTodoCompletedUsers(date.minusDays(DAU_AVERAGE_DAYS - 1), date));
+        weeklyCompleted.removeAll(excluded);
+
+        return MetricsSummaryResponse.builder()
+                .date(date)
+                .cumulativeSignUps(signUps.signedUp())
+                .cumulativeOnboarded(signUps.onboarded())
+                .dau(dau)
+                .dauAvg7(roundOneDecimal(dauAvg7))
+                .mau(mau)
+                .dauMauRate(mau == 0 ? 0 : roundOneDecimal(dau * 100.0 / mau))
+                .weeklyCompletedUsers(weeklyCompleted.size())
+                .activityTrackedSince(adminMetricsRepository.findActivityTrackedSince().orElse(null))
+                .build();
+    }
+
+    private static double roundOneDecimal(double value) {
+        return Math.round(value * 10) / 10.0;
     }
 
     private void validatePeriod(LocalDate from, LocalDate to) {

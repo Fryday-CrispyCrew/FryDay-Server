@@ -2,6 +2,7 @@ package basakan.fryday.controller.admin;
 
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
+import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.service.admin.AdminMetricsService;
 import lombok.RequiredArgsConstructor;
@@ -35,5 +36,13 @@ public class AdminMetricsController {
             @RequestParam(defaultValue = "true") boolean excludeInternal
     ) {
         return ApiResponse.success(adminMetricsService.getWeeklyMetrics(from, to, excludeInternal));
+    }
+
+    @GetMapping("/summary")
+    public ApiResponse<MetricsSummaryResponse> getSummary(
+            @RequestParam LocalDate date,
+            @RequestParam(defaultValue = "true") boolean excludeInternal
+    ) {
+        return ApiResponse.success(adminMetricsService.getSummary(date, excludeInternal));
     }
 }
