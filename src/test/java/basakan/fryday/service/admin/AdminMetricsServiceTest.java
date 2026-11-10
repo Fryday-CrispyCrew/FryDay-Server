@@ -2,6 +2,7 @@ package basakan.fryday.service.admin;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
@@ -15,6 +16,7 @@ import basakan.fryday.repository.admin.AdminMetricsRepository;
 import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
 import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
+import basakan.fryday.repository.admin.AdminMetricsRepository.UserTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -262,6 +264,41 @@ class AdminMetricsServiceTest {
         assertThat(response.getCohorts().get(0).getRetention())
                 .extracting(RetentionDay::getDay, RetentionDay::getEligible, RetentionDay::getReturned)
                 .containsExactly(tuple(1, 0, 0), tuple(7, 1, 1), tuple(30, 1, 0));
+    }
+
+    @Test
+    @DisplayName("활성화: 가입 완료 후 24시간 안의 투두 생성을 사람 단위로 보고, 팀 계정은 코호트와 사용자 수에서 뺀다")
+    void activationByPerson() {
+        // given
+        given(adminMetricsRepository.findInternalUserIds()).willReturn(Set.of(TEAM_USER));
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(2L, "a", LocalDateTime.of(2026, 9, 1, 11, 0), false), // 1 의 재가입 계정
+                new Account(3L, "c", LocalDateTime.of(2026, 9, 1, 9, 0), true),
+                new Account(TEAM_USER, "team", LocalDateTime.of(2026, 9, 1, 9, 0), true)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of(
+                new SignUpEvent(1L, EventType.USER_SIGNED_UP, LocalDateTime.of(2026, 8, 31, 23, 0), "a"),
+                new SignUpEvent(1L, EventType.ONBOARDING_COMPLETED, LocalDateTime.of(2026, 9, 1, 0, 10), null)));
+        given(adminMetricsRepository.findTodoCreatedTimes(any(), any())).willReturn(List.of(
+                new UserTime(2L, LocalDateTime.of(2026, 9, 1, 12, 0)), // 1 이 재가입 계정으로 만든 투두
+                new UserTime(3L, LocalDateTime.of(2026, 9, 2, 10, 0)), // 24시간이 지난 뒤
+                new UserTime(TEAM_USER, LocalDateTime.of(2026, 9, 1, 10, 0))));
+        given(adminMetricsRepository.findTodoCreatedUsers(any(), any())).willReturn(List.of(
+                row(2026, 9, 1, 2L), row(2026, 9, 2, 3L), row(2026, 9, 3, 3L), row(2026, 9, 1, TEAM_USER)));
+        given(adminMetricsRepository.findCompletedUsers(any(), any())).willReturn(List.of(
+                row(2026, 9, 1, 3L), row(2026, 9, 1, TEAM_USER)));
+        given(adminMetricsRepository.findTodoCreatedTrackedSince()).willReturn(Optional.of(LocalDateTime.of(2026, 8, 1, 0, 0)));
+
+        // when
+        ActivationResponse response = adminMetricsService.getActivation(
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 1), CohortUnit.DAY, true);
+
+        // then
+        assertThat(response.getTodoCreatedUsers()).isEqualTo(2);
+        assertThat(response.getTodoCompletedUsers()).isEqualTo(1);
+        assertThat(response.getCohorts())
+                .extracting(ActivationResponse.Cohort::getSize, ActivationResponse.Cohort::getEligible,
+                        ActivationResponse.Cohort::getActivated, ActivationResponse.Cohort::getRate)
+                .containsExactly(tuple(2, 2, 1, 50.0));
     }
 
     private UserDate row(int year, int month, int day, Long userId) {

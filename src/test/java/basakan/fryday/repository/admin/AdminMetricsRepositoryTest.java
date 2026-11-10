@@ -8,6 +8,7 @@ import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
 import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
+import basakan.fryday.repository.admin.AdminMetricsRepository.UserTime;
 import basakan.fryday.repository.auth.UserDailyActivityRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -81,6 +82,37 @@ class AdminMetricsRepositoryTest {
         // when & then
         assertThat(adminMetricsRepository.findCompletedUsers(DAY, DAY.plusDays(1)))
                 .containsExactlyInAnyOrder(new UserDate(DAY, 1L), new UserDate(DAY.plusDays(1), 1L));
+    }
+
+    @Test
+    @DisplayName("투두 생성은 기간 안의 사용자를 날짜별 한 행으로, 생성 시각은 모두 가져온다")
+    void todoCreated() {
+        // given
+        event(1L, EventType.TODO_CREATED, null, DAY.atTime(9, 0));
+        event(1L, EventType.TODO_CREATED, null, DAY.atTime(18, 0));
+        event(2L, EventType.TODO_COMPLETED, null, DAY.atTime(12, 0));
+        event(3L, EventType.TODO_CREATED, null, DAY.plusDays(1).atStartOfDay());
+        entityManager.flush();
+
+        // when & then
+        assertThat(adminMetricsRepository.findTodoCreatedUsers(DAY, DAY))
+                .containsExactly(new UserDate(DAY, 1L));
+        assertThat(adminMetricsRepository.findTodoCreatedTimes(DAY.atTime(10, 0), DAY.plusDays(1).atStartOfDay()))
+                .containsExactly(new UserTime(1L, DAY.atTime(18, 0)));
+    }
+
+    @Test
+    @DisplayName("투두 생성 기록 시작 시각은 가장 이른 투두 생성 이벤트 시각이고, 기록이 없으면 비어 있다")
+    void todoCreatedTrackedSince() {
+        assertThat(adminMetricsRepository.findTodoCreatedTrackedSince()).isEmpty();
+
+        // given
+        event(1L, EventType.TODO_CREATED, null, DAY.atTime(15, 0));
+        event(2L, EventType.USER_SIGNED_UP, null, DAY.atTime(14, 30));
+        entityManager.flush();
+
+        // when & then
+        assertThat(adminMetricsRepository.findTodoCreatedTrackedSince()).contains(DAY.atTime(15, 0));
     }
 
     @Test

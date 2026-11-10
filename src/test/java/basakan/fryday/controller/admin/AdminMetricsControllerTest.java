@@ -6,6 +6,7 @@ import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
+import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
@@ -236,6 +237,56 @@ class AdminMetricsControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("활성화 지표 API - 성공")
+    void getActivation() throws Exception {
+        // given
+        LocalDate from = LocalDate.of(2026, 11, 2);
+        LocalDate to = LocalDate.of(2026, 11, 15);
+        given(adminMetricsService.getActivation(from, to, CohortUnit.WEEK, true)).willReturn(ActivationResponse.builder()
+                .todoCreatedUsers(40)
+                .todoCompletedUsers(31)
+                .cohorts(List.of(
+                        activationCohort(from, 25, 25, 15, 60.0),
+                        activationCohort(from.plusWeeks(1), 18, 0, 0, null)))
+                .build());
+
+        // when & then
+        mockMvc.perform(get("/api/admin/metrics/activation")
+                        .header("Authorization", "Bearer {adminAccessToken}")
+                        .param("from", "2026-11-02")
+                        .param("to", "2026-11-15")
+                        .param("cohort", "WEEK")
+                        .param("excludeInternal", "true"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.todoCreatedUsers").value(40))
+                .andExpect(jsonPath("$.data.cohorts[0].activated").value(15))
+                .andDo(document("admin-metrics-activation",
+                        requestHeaders(
+                                headerWithName("Authorization").description("어드민 로그인으로 받은 토큰 (Bearer)")
+                        ),
+                        queryParameters(
+                                parameterWithName("from").description("시작일 (yyyy-MM-dd)"),
+                                parameterWithName("to").description("종료일 (yyyy-MM-dd). 시작일부터 최대 366일"),
+                                parameterWithName("cohort").description("코호트 단위 DAY, WEEK(월요일 시작), MONTH (기본값 WEEK)").optional(),
+                                parameterWithName("excludeInternal").description("팀 계정 제외 여부 (기본값 true)").optional()
+                        ),
+                        responseFields(envelope(
+                                fieldWithPath("data.todoCreatedUsers").description("시작일부터 종료일까지 투두를 직접 만든 사용자 수"),
+                                fieldWithPath("data.todoCompletedUsers").description("시작일부터 종료일까지 투두를 완료한 사용자 수"),
+                                fieldWithPath("data.cohorts[].cohortStart").description("코호트 시작일. 시작일이 속한 코호트부터"),
+                                fieldWithPath("data.cohorts[].cohortEnd").description("코호트 종료일. 종료일이 속한 코호트까지"),
+                                fieldWithPath("data.cohorts[].size").description("이 기간에 가입을 완료(온보딩 완료)한 사람 수"),
+                                fieldWithPath("data.cohorts[].eligible")
+                                        .description("측정 대상 수. 가입 완료 후 24시간이 지났고 그 24시간이 이벤트 기록 기간 안인 사람"),
+                                fieldWithPath("data.cohorts[].activated").description("측정 대상 중 가입 완료 후 24시간 안에 투두를 만든 사람 수"),
+                                fieldWithPath("data.cohorts[].rate")
+                                        .description("activated ÷ eligible × 100 (소수 첫째 자리). 측정 대상이 없으면 null").optional()
+                        ))
+                ));
+    }
+
+    @Test
     @DisplayName("지표 API - 기간이 올바르지 않으면 400")
     void invalidPeriod() throws Exception {
         // given
@@ -263,6 +314,18 @@ class AdminMetricsControllerTest extends RestDocsSupport {
                 .signUps(signUps)
                 .cumulativeSignUps(cumulativeSignUps)
                 .cumulativeOnboarded(230)
+                .build();
+    }
+
+    private ActivationResponse.Cohort activationCohort(LocalDate start, int size, int eligible, int activated,
+                                                       Double rate) {
+        return ActivationResponse.Cohort.builder()
+                .cohortStart(start)
+                .cohortEnd(start.plusDays(6))
+                .size(size)
+                .eligible(eligible)
+                .activated(activated)
+                .rate(rate)
                 .build();
     }
 
