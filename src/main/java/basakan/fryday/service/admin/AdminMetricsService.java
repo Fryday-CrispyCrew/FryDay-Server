@@ -2,6 +2,7 @@ package basakan.fryday.service.admin;
 
 import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
+import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
@@ -10,6 +11,7 @@ import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
 import basakan.fryday.repository.admin.AdminMetricsRepository;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
+import basakan.fryday.repository.admin.AdminMetricsRepository.UserTime;
 import basakan.fryday.service.admin.SignUpHistory.Counts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
@@ -26,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
@@ -103,11 +105,8 @@ public class AdminMetricsService {
         int dau = active.dau(date);
         int mau = active.mau(date);
 
-        Set<Long> weeklyCompleted = adminMetricsRepository
-                .findCompletedUsers(date.minusDays(DAU_AVERAGE_DAYS - 1), date).stream()
-                .map(UserDate::userId)
-                .filter(userId -> !excluded.contains(userId))
-                .collect(Collectors.toSet());
+        int weeklyCompleted = countUsers(
+                adminMetricsRepository.findCompletedUsers(date.minusDays(DAU_AVERAGE_DAYS - 1), date), excluded);
 
         return MetricsSummaryResponse.builder()
                 .date(date)
@@ -117,7 +116,7 @@ public class AdminMetricsService {
                 .dauAvg7(active.dauAvg7(date))
                 .mau(mau)
                 .dauMauRate(mau == 0 ? 0 : roundOneDecimal(dau * 100.0 / mau))
-                .weeklyCompletedUsers(weeklyCompleted.size())
+                .weeklyCompletedUsers(weeklyCompleted)
                 .activityTrackedSince(adminMetricsRepository.findActivityTrackedSince().orElse(null))
                 .build();
     }
@@ -129,12 +128,8 @@ public class AdminMetricsService {
         LocalDate cohortFrom = unit.start(from);
         LocalDate cohortTo = unit.end(unit.start(to));
         Map<String, LocalDate> day0ByPerson = new HashMap<>();
-        history.onboardedAt().forEach((person, onboardedAt) -> {
-            LocalDate day0 = onboardedAt.toLocalDate();
-            if (!day0.isBefore(cohortFrom) && !day0.isAfter(cohortTo)) {
-                day0ByPerson.put(person, day0);
-            }
-        });
+        onboardedWithin(history, cohortFrom, cohortTo)
+                .forEach((person, onboardedAt) -> day0ByPerson.put(person, onboardedAt.toLocalDate()));
 
         LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
         LocalDate activityFrom = cohortFrom.plusDays(1);
@@ -155,6 +150,53 @@ public class AdminMetricsService {
                 .orElse(null);
         return new RetentionResponse(CohortRetention.calculate(day0ByPerson, activeDates, unit, from, to,
                 measurableFrom, yesterday));
+    }
+
+    // 코호트는 from 과 to 가 속한 단위 전체, 투두 생성 사용자 수는 from 부터 to 까지 센다
+    public ActivationResponse getActivation(LocalDate from, LocalDate to, CohortUnit unit, boolean excludeInternal) {
+        validatePeriod(from, to);
+        Set<Long> excluded = excludedUsers(excludeInternal);
+        SignUpHistory history = signUpHistory(excluded);
+        LocalDate cohortFrom = unit.start(from);
+        LocalDate cohortTo = unit.end(unit.start(to));
+        Map<String, LocalDateTime> onboardedAtByPerson = onboardedWithin(history, cohortFrom, cohortTo);
+
+        Map<String, LocalDateTime> firstTodoAt = new HashMap<>();
+        List<UserTime> created = adminMetricsRepository.findTodoCreatedTimes(
+                cohortFrom.atStartOfDay(), cohortTo.plusDays(1).atStartOfDay().plus(ActivationRate.WINDOW));
+        for (UserTime row : created) {
+            String person = history.personOf(row.userId());
+            if (onboardedAtByPerson.containsKey(person)) {
+                firstTodoAt.merge(person, row.occurredAt(), (a, b) -> a.isBefore(b) ? a : b);
+            }
+        }
+
+        return ActivationResponse.builder()
+                .todoCreatedUsers(countUsers(adminMetricsRepository.findTodoCreatedUsers(from, to), excluded))
+                .todoCompletedUsers(countUsers(adminMetricsRepository.findCompletedUsers(from, to), excluded))
+                .cohorts(ActivationRate.calculate(onboardedAtByPerson, firstTodoAt, unit, from, to,
+                        adminMetricsRepository.findTodoCreatedTrackedSince().orElse(null),
+                        LocalDateTime.now(KOREA_ZONE)))
+                .build();
+    }
+
+    private static Map<String, LocalDateTime> onboardedWithin(SignUpHistory history, LocalDate from, LocalDate to) {
+        Map<String, LocalDateTime> within = new HashMap<>();
+        history.onboardedAt().forEach((person, onboardedAt) -> {
+            LocalDate date = onboardedAt.toLocalDate();
+            if (!date.isBefore(from) && !date.isAfter(to)) {
+                within.put(person, onboardedAt);
+            }
+        });
+        return within;
+    }
+
+    private static int countUsers(List<UserDate> rows, Set<Long> excluded) {
+        return (int) rows.stream()
+                .map(UserDate::userId)
+                .filter(userId -> !excluded.contains(userId))
+                .distinct()
+                .count();
     }
 
     private static LocalDate min(LocalDate a, LocalDate b) {

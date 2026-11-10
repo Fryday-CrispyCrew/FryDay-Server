@@ -41,16 +41,24 @@ public class AdminMetricsRepository {
 
     // 투두를 완료한 시각의 날짜로 센다. 완료 후 취소했어도 완료한 경험은 있으므로 센다
     public List<UserDate> findCompletedUsers(LocalDate from, LocalDate to) {
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("type", EventType.TODO_COMPLETED.name())
-                .addValue("fromStart", from.atStartOfDay())
-                .addValue("toEndExclusive", to.plusDays(1).atStartOfDay());
+        return findEventUsers(EventType.TODO_COMPLETED, from, to);
+    }
+
+    public List<UserDate> findTodoCreatedUsers(LocalDate from, LocalDate to) {
+        return findEventUsers(EventType.TODO_CREATED, from, to);
+    }
+
+    public List<UserTime> findTodoCreatedTimes(LocalDateTime fromInclusive, LocalDateTime toExclusive) {
         return jdbcTemplate.query("""
-                SELECT DISTINCT CAST(occurred_at AS DATE), user_id
+                SELECT user_id, occurred_at
                 FROM event_log
                 WHERE event_type = :type
-                  AND occurred_at >= :fromStart AND occurred_at < :toEndExclusive
-                """, params, USER_DATE_MAPPER);
+                  AND occurred_at >= :from AND occurred_at < :to
+                """, new MapSqlParameterSource()
+                .addValue("type", EventType.TODO_CREATED.name())
+                .addValue("from", fromInclusive)
+                .addValue("to", toExclusive), (rs, rowNum) ->
+                new UserTime(rs.getLong(1), rs.getObject(2, LocalDateTime.class)));
     }
 
     // 지금 남아 있는 계정만 나온다. 탈퇴 후 지워진 계정은 가입 이벤트로 보완한다
@@ -82,9 +90,28 @@ public class AdminMetricsRepository {
                 "SELECT MIN(activity_date) FROM user_daily_activity", new MapSqlParameterSource(), LocalDate.class));
     }
 
+    public Optional<LocalDateTime> findTodoCreatedTrackedSince() {
+        return Optional.ofNullable(jdbcTemplate.queryForObject(
+                "SELECT MIN(occurred_at) FROM event_log WHERE event_type = :type",
+                new MapSqlParameterSource("type", EventType.TODO_CREATED.name()), LocalDateTime.class));
+    }
+
     public Set<Long> findInternalUserIds() {
         return new HashSet<>(jdbcTemplate.queryForList(
                 "SELECT user_id FROM internal_account", new MapSqlParameterSource(), Long.class));
+    }
+
+    private List<UserDate> findEventUsers(EventType type, LocalDate from, LocalDate to) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("type", type.name())
+                .addValue("fromStart", from.atStartOfDay())
+                .addValue("toEndExclusive", to.plusDays(1).atStartOfDay());
+        return jdbcTemplate.query("""
+                SELECT DISTINCT CAST(occurred_at AS DATE), user_id
+                FROM event_log
+                WHERE event_type = :type
+                  AND occurred_at >= :fromStart AND occurred_at < :toEndExclusive
+                """, params, USER_DATE_MAPPER);
     }
 
     private MapSqlParameterSource period(LocalDate from, LocalDate to) {
@@ -94,6 +121,9 @@ public class AdminMetricsRepository {
     }
 
     public record UserDate(LocalDate date, Long userId) {
+    }
+
+    public record UserTime(Long userId, LocalDateTime occurredAt) {
     }
 
     public record Account(Long userId, String accountKey, LocalDateTime createdAt, boolean onboardingCompleted) {

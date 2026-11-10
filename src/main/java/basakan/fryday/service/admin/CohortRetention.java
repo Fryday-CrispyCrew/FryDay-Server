@@ -5,7 +5,6 @@ import basakan.fryday.controller.admin.response.RetentionResponse.RetentionDay;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,30 +28,15 @@ final class CohortRetention {
     static List<Cohort> calculate(Map<String, LocalDate> day0ByPerson, Map<String, Set<LocalDate>> activeDates,
                                   CohortUnit unit, LocalDate from, LocalDate to,
                                   LocalDate measurableFrom, LocalDate measurableTo) {
-        LocalDate firstStart = unit.start(from);
-        LocalDate lastStart = unit.start(to);
-
-        Map<LocalDate, List<String>> members = new HashMap<>();
-        day0ByPerson.forEach((person, day0) -> {
-            LocalDate start = unit.start(day0);
-            if (!start.isBefore(firstStart) && !start.isAfter(lastStart)) {
-                members.computeIfAbsent(start, key -> new ArrayList<>()).add(person);
-            }
-        });
-
         List<Cohort> cohorts = new ArrayList<>();
-        for (LocalDate start = firstStart; !start.isAfter(lastStart); start = unit.next(start)) {
-            List<String> people = members.getOrDefault(start, List.of());
-            List<RetentionDay> retention = DAYS.stream()
-                    .map(day -> retentionDay(day, people, day0ByPerson, activeDates, measurableFrom, measurableTo))
-                    .toList();
-            cohorts.add(Cohort.builder()
-                    .cohortStart(start)
-                    .cohortEnd(unit.end(start))
-                    .size(people.size())
-                    .retention(retention)
-                    .build());
-        }
+        unit.members(day0ByPerson, from, to).forEach((start, people) -> cohorts.add(Cohort.builder()
+                .cohortStart(start)
+                .cohortEnd(unit.end(start))
+                .size(people.size())
+                .retention(DAYS.stream()
+                        .map(day -> retentionDay(day, people, day0ByPerson, activeDates, measurableFrom, measurableTo))
+                        .toList())
+                .build()));
         return cohorts;
     }
 
