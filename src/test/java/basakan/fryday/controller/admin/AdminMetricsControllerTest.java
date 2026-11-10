@@ -9,9 +9,13 @@ import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
+import basakan.fryday.controller.admin.response.RetentionResponse;
+import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
+import basakan.fryday.controller.admin.response.RetentionResponse.RetentionDay;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
 import basakan.fryday.service.admin.AdminMetricsService;
+import basakan.fryday.service.admin.CohortUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -180,6 +184,58 @@ class AdminMetricsControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("코호트 리텐션 API - 성공")
+    void getRetention() throws Exception {
+        // given
+        LocalDate from = LocalDate.of(2026, 12, 1);
+        LocalDate to = LocalDate.of(2026, 12, 31);
+        given(adminMetricsService.getRetention(from, to, CohortUnit.MONTH, true)).willReturn(new RetentionResponse(List.of(
+                Cohort.builder()
+                        .cohortStart(from)
+                        .cohortEnd(to)
+                        .size(120)
+                        .retention(List.of(
+                                retentionDay(1, 120, 42, 35.0),
+                                retentionDay(7, 120, 19, 15.8),
+                                retentionDay(30, 35, 3, 8.6)))
+                        .build())));
+
+        // when & then
+        mockMvc.perform(get("/api/admin/metrics/retention")
+                        .header("Authorization", "Bearer {adminAccessToken}")
+                        .param("from", "2026-12-01")
+                        .param("to", "2026-12-31")
+                        .param("cohort", "MONTH")
+                        .param("excludeInternal", "true"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cohorts[0].size").value(120))
+                .andExpect(jsonPath("$.data.cohorts[0].retention[1].day").value(7))
+                .andDo(document("admin-metrics-retention",
+                        requestHeaders(
+                                headerWithName("Authorization").description("어드민 로그인으로 받은 토큰 (Bearer)")
+                        ),
+                        queryParameters(
+                                parameterWithName("from").description("시작일 (yyyy-MM-dd). 이 날이 속한 코호트부터"),
+                                parameterWithName("to").description("종료일 (yyyy-MM-dd). 이 날이 속한 코호트까지, 시작일부터 최대 366일"),
+                                parameterWithName("cohort").description("코호트 단위 DAY, WEEK(월요일 시작), MONTH (기본값 WEEK)").optional(),
+                                parameterWithName("excludeInternal").description("팀 계정 제외 여부 (기본값 true)").optional()
+                        ),
+                        responseFields(envelope(
+                                fieldWithPath("data.cohorts[].cohortStart").description("코호트 시작일"),
+                                fieldWithPath("data.cohorts[].cohortEnd").description("코호트 종료일"),
+                                fieldWithPath("data.cohorts[].size").description("이 기간에 가입을 완료(온보딩 완료)한 사람 수"),
+                                fieldWithPath("data.cohorts[].retention[].day").description("가입 완료일로부터 며칠째인지 (1, 7, 30)"),
+                                fieldWithPath("data.cohorts[].retention[].eligible")
+                                        .description("측정 대상 수. 그날이 어제 이전이고 활동 기록이 있는 기간인 사람"),
+                                fieldWithPath("data.cohorts[].retention[].returned").description("측정 대상 중 정확히 그날 앱을 사용한 사람 수"),
+                                fieldWithPath("data.cohorts[].retention[].rate")
+                                        .description("returned ÷ eligible × 100 (소수 첫째 자리). 측정 대상이 없으면 null").optional()
+                        ))
+                ));
+    }
+
+    @Test
     @DisplayName("지표 API - 기간이 올바르지 않으면 400")
     void invalidPeriod() throws Exception {
         // given
@@ -208,6 +264,10 @@ class AdminMetricsControllerTest extends RestDocsSupport {
                 .cumulativeSignUps(cumulativeSignUps)
                 .cumulativeOnboarded(230)
                 .build();
+    }
+
+    private RetentionDay retentionDay(int day, int eligible, int returned, Double rate) {
+        return RetentionDay.builder().day(day).eligible(eligible).returned(returned).rate(rate).build();
     }
 
     private ParameterDescriptor[] periodParameters() {

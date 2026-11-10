@@ -3,8 +3,10 @@ package basakan.fryday.controller.admin;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
+import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.service.admin.AdminMetricsService;
+import basakan.fryday.service.admin.CohortUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,5 +46,15 @@ public class AdminMetricsController {
             @RequestParam(defaultValue = "true") boolean excludeInternal
     ) {
         return ApiResponse.success(adminMetricsService.getSummary(date, excludeInternal));
+    }
+
+    @GetMapping("/retention")
+    public ApiResponse<RetentionResponse> getRetention(
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to,
+            @RequestParam(defaultValue = "WEEK") CohortUnit cohort,
+            @RequestParam(defaultValue = "true") boolean excludeInternal
+    ) {
+        return ApiResponse.success(adminMetricsService.getRetention(from, to, cohort, excludeInternal));
     }
 }
