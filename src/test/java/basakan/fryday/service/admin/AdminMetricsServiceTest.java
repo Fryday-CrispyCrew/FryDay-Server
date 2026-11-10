@@ -5,10 +5,15 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
+import basakan.fryday.controller.admin.response.RetentionResponse;
+import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
+import basakan.fryday.controller.admin.response.RetentionResponse.RetentionDay;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
+import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.repository.admin.AdminMetricsRepository;
 import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
+import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +32,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -205,6 +211,57 @@ class AdminMetricsServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
         verify(adminMetricsRepository, never()).findAccounts();
+    }
+
+    @Test
+    @DisplayName("리텐션: 온보딩 완료일을 Day 0 으로, 재가입한 계정의 활동도 같은 사람의 활동으로 보고 팀 계정은 뺀다")
+    void retentionByPerson() {
+        // given
+        given(adminMetricsRepository.findInternalUserIds()).willReturn(Set.of(TEAM_USER));
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(2L, "a", LocalDateTime.of(2026, 9, 5, 9, 0), false), // 1 의 재가입 계정
+                new Account(3L, "c", LocalDateTime.of(2026, 9, 1, 9, 0), true),
+                new Account(TEAM_USER, "team", LocalDateTime.of(2026, 9, 1, 9, 0), true)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of(
+                new SignUpEvent(1L, EventType.USER_SIGNED_UP, LocalDateTime.of(2026, 8, 31, 23, 0), "a"),
+                new SignUpEvent(1L, EventType.ONBOARDING_COMPLETED, LocalDateTime.of(2026, 9, 1, 0, 10), null)));
+        given(adminMetricsRepository.findActiveUsers(any(), any())).willReturn(List.of(
+                row(2026, 9, 2, 3L),
+                row(2026, 9, 8, 2L), // 1 의 D7 을 재가입 계정으로 방문
+                row(2026, 9, 2, TEAM_USER)));
+        given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.of(LocalDate.of(2026, 8, 1)));
+
+        // when
+        RetentionResponse response = adminMetricsService.getRetention(
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 1), CohortUnit.DAY, true);
+
+        // then
+        assertThat(response.getCohorts()).singleElement().extracting(Cohort::getSize).isEqualTo(2);
+        assertThat(response.getCohorts().get(0).getRetention())
+                .extracting(RetentionDay::getDay, RetentionDay::getEligible, RetentionDay::getReturned)
+                .containsExactly(tuple(1, 2, 1), tuple(7, 2, 1), tuple(30, 2, 0));
+    }
+
+    @Test
+    @DisplayName("리텐션: 활동 기록 첫날은 하루가 다 기록되지 않아 측정 대상에서 뺀다")
+    void retentionSkipsFirstTrackedDay() {
+        // given
+        given(adminMetricsRepository.findInternalUserIds()).willReturn(Set.of());
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(1L, "a", LocalDateTime.of(2026, 9, 1, 9, 0), true)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
+        given(adminMetricsRepository.findActiveUsers(any(), any())).willReturn(List.of(
+                row(2026, 9, 8, 1L)));
+        given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.of(LocalDate.of(2026, 9, 2)));
+
+        // when
+        RetentionResponse response = adminMetricsService.getRetention(
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 1), CohortUnit.DAY, true);
+
+        // then
+        assertThat(response.getCohorts().get(0).getRetention())
+                .extracting(RetentionDay::getDay, RetentionDay::getEligible, RetentionDay::getReturned)
+                .containsExactly(tuple(1, 0, 0), tuple(7, 1, 1), tuple(30, 1, 0));
     }
 
     private UserDate row(int year, int month, int day, Long userId) {

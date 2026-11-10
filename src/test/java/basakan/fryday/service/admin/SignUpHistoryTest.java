@@ -3,7 +3,7 @@ package basakan.fryday.service.admin;
 import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
 import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
-import basakan.fryday.service.admin.CumulativeSignUpCounter.Counts;
+import basakan.fryday.service.admin.SignUpHistory.Counts;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -14,8 +14,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DisplayName("누적 가입자 계산")
-class CumulativeSignUpCounterTest {
+@DisplayName("가입 이력")
+class SignUpHistoryTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 11, 10);
     private static final LocalDateTime END = DAY.plusDays(1).atStartOfDay();
@@ -108,7 +108,7 @@ class CumulativeSignUpCounterTest {
     }
 
     private Counts count(List<Account> accounts, List<SignUpEvent> events, Set<Long> excluded) {
-        return CumulativeSignUpCounter.of(accounts, events, excluded).countBefore(END);
+        return SignUpHistory.of(accounts, events, excluded).countBefore(END);
     }
 
     private Account account(Long userId, String accountKey, LocalDateTime createdAt, boolean onboardingCompleted) {

@@ -5,11 +5,12 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
+import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
 import basakan.fryday.repository.admin.AdminMetricsRepository;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
-import basakan.fryday.service.admin.CumulativeSignUpCounter.Counts;
+import basakan.fryday.service.admin.SignUpHistory.Counts;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +48,7 @@ public class AdminMetricsService {
         ActiveUsers active = activeUsers(from.minusDays(MAU_DAYS - 1), to, excluded);
         Map<LocalDate, Set<Long>> completed = group(
                 adminMetricsRepository.findCompletedUsers(from, to), UnaryOperator.identity(), excluded);
-        CumulativeSignUpCounter signUps = signUpCounter(excluded);
+        SignUpHistory signUps = signUpHistory(excluded);
 
         List<DailyMetric> days = from.datesUntil(to.plusDays(1))
                 .map(date -> {
@@ -80,7 +81,7 @@ public class AdminMetricsService {
         Map<LocalDate, Set<Long>> completed = group(
                 adminMetricsRepository.findCompletedUsers(firstWeekStart, lastWeekEnd),
                 AdminMetricsService::weekStart, excluded);
-        CumulativeSignUpCounter signUps = signUpCounter(excluded);
+        SignUpHistory signUps = signUpHistory(excluded);
 
         List<WeeklyMetric> weeks = Stream.iterate(firstWeekStart, start -> start.isBefore(lastWeekEnd),
                         start -> start.plusWeeks(1))
@@ -97,7 +98,7 @@ public class AdminMetricsService {
             throw new BusinessException(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
         }
         Set<Long> excluded = excludedUsers(excludeInternal);
-        Counts signUps = signUpCounter(excluded).countBefore(date.plusDays(1).atStartOfDay());
+        Counts signUps = signUpHistory(excluded).countBefore(date.plusDays(1).atStartOfDay());
         ActiveUsers active = activeUsers(date.minusDays(MAU_DAYS - 1), date, excluded);
         int dau = active.dau(date);
         int mau = active.mau(date);
@@ -121,6 +122,45 @@ public class AdminMetricsService {
                 .build();
     }
 
+    // from 과 to 가 속한 코호트 전체를 센다
+    public RetentionResponse getRetention(LocalDate from, LocalDate to, CohortUnit unit, boolean excludeInternal) {
+        validatePeriod(from, to);
+        SignUpHistory history = signUpHistory(excludedUsers(excludeInternal));
+        LocalDate cohortFrom = unit.start(from);
+        LocalDate cohortTo = unit.end(unit.start(to));
+        Map<String, LocalDate> day0ByPerson = new HashMap<>();
+        history.onboardedAt().forEach((person, onboardedAt) -> {
+            LocalDate day0 = onboardedAt.toLocalDate();
+            if (!day0.isBefore(cohortFrom) && !day0.isAfter(cohortTo)) {
+                day0ByPerson.put(person, day0);
+            }
+        });
+
+        LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
+        LocalDate activityFrom = cohortFrom.plusDays(1);
+        LocalDate activityTo = min(cohortTo.plusDays(CohortRetention.LONGEST_DAY), yesterday);
+        Map<String, Set<LocalDate>> activeDates = new HashMap<>();
+        if (!activityFrom.isAfter(activityTo)) {
+            for (UserDate row : adminMetricsRepository.findActiveUsers(activityFrom, activityTo)) {
+                String person = history.personOf(row.userId());
+                if (day0ByPerson.containsKey(person)) {
+                    activeDates.computeIfAbsent(person, key -> new HashSet<>()).add(row.date());
+                }
+            }
+        }
+
+        // 기록 첫날은 배포 시점 이후 활동만 남아 있어서 측정에서 뺀다
+        LocalDate measurableFrom = adminMetricsRepository.findActivityTrackedSince()
+                .map(trackedSince -> trackedSince.plusDays(1))
+                .orElse(null);
+        return new RetentionResponse(CohortRetention.calculate(day0ByPerson, activeDates, unit, from, to,
+                measurableFrom, yesterday));
+    }
+
+    private static LocalDate min(LocalDate a, LocalDate b) {
+        return a.isBefore(b) ? a : b;
+    }
+
     private void validatePeriod(LocalDate from, LocalDate to) {
         if (from.isAfter(to) || ChronoUnit.DAYS.between(from, to) + 1 > MAX_PERIOD_DAYS) {
             throw new BusinessException(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
@@ -135,8 +175,8 @@ public class AdminMetricsService {
         return new ActiveUsers(group(adminMetricsRepository.findActiveUsers(from, to), UnaryOperator.identity(), excluded));
     }
 
-    private CumulativeSignUpCounter signUpCounter(Set<Long> excluded) {
-        return CumulativeSignUpCounter.of(
+    private SignUpHistory signUpHistory(Set<Long> excluded) {
+        return SignUpHistory.of(
                 adminMetricsRepository.findAccounts(), adminMetricsRepository.findSignUpEvents(), excluded);
     }
 
