@@ -1,6 +1,7 @@
 package basakan.fryday.service.admin;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.common.service.push.PushType;
 import basakan.fryday.domain.user.UserDevice;
 import basakan.fryday.repository.auth.UserDeviceRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -25,6 +28,10 @@ public class AdminPushService {
 
     @Transactional(readOnly = true)
     public int broadcastPush(String title, String body) {
+        // 거의 쓰지 않는 기능이라 유저 단위 발송 기록 없이, 발송 한 번에 pushId 하나만 붙인다
+        Map<String, String> data = Map.of(
+                PushService.TYPE_KEY, PushType.ADMIN_BROADCAST.name(),
+                PushService.PUSH_ID_KEY, UUID.randomUUID().toString());
         Set<String> sentTokens = new HashSet<>();
         int successCount = 0;
 
@@ -38,7 +45,7 @@ public class AdminPushService {
                     continue;
                 }
                 try {
-                    pushService.sendToToken(token, title, body);
+                    pushService.sendToToken(token, title, body, data);
                     successCount++;
                 } catch (Exception e) {
                     log.warn("전체 푸시 발송 실패: error={}", e.getMessage());

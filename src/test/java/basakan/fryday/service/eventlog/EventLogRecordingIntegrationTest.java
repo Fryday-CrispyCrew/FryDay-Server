@@ -4,6 +4,7 @@ import basakan.fryday.common.config.AsyncConfig;
 import basakan.fryday.domain.eventlog.EventLog;
 import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.repository.eventlog.EventLogRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
                         + "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
         }
 )
-@Import({AsyncConfig.class, EventLogListener.class})
+@Import({AsyncConfig.class, SimpleMeterRegistry.class, EventLogListener.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @DisplayName("이벤트 로그 기록")
 class EventLogRecordingIntegrationTest {
@@ -81,6 +82,20 @@ class EventLogRecordingIntegrationTest {
 
         // then
         assertThat(waitForLogs(1)).extracting(EventLog::getEventType).containsExactly(EventType.USER_WITHDREW);
+    }
+
+    @Test
+    @DisplayName("트랜잭션 밖에서 발행한 이벤트도 저장된다")
+    void recordsWithoutTransaction() throws InterruptedException {
+        // when
+        eventPublisher.publishEvent(UserEvent.of(1L, EventType.NOTIFICATION_OPENED, null, Map.of("trigger", "cold_start")));
+
+        // then
+        List<EventLog> logs = waitForLogs(1);
+        assertThat(logs).hasSize(1);
+        assertThat(logs.get(0).getEventType()).isEqualTo(EventType.NOTIFICATION_OPENED);
+        assertThat(logs.get(0).getTargetId()).isNull();
+        assertThat(logs.get(0).getProperties()).isEqualTo(Map.of("trigger", "cold_start"));
     }
 
     private List<EventLog> waitForLogs(int expected) throws InterruptedException {

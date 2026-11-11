@@ -5,9 +5,12 @@ import basakan.fryday.common.response.ApiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.transaction.CannotCreateTransactionException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,6 +42,16 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(503);
         assertThat(response.getBody().getErrorCode()).isEqualTo("SERVICE_UNAVAILABLE");
+    }
+
+    @Test
+    @DisplayName("없는 정적 리소스를 요청하면 500 이 아니라 404 로 응답한다")
+    void handleNoResourceFoundException() {
+        ResponseEntity<ApiResponse<Void>> response = handler.handleNoResourceFoundException(
+                new NoResourceFoundException(HttpMethod.GET, "docs/none.html"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody().getMessage()).contains("GET /docs/none.html");
     }
 
     @Test

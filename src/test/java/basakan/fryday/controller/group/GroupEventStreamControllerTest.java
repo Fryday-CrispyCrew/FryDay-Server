@@ -22,7 +22,13 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import basakan.fryday.repository.group.FryGroupRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
+import org.springframework.mock.web.MockAsyncContext;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -45,7 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = SecurityConfig.class)
         }
 )
-@Import(GroupSseService.class)
+@Import({GroupSseService.class, SimpleMeterRegistry.class})
 @DisplayName("그룹 이벤트 스트림 API")
 class GroupEventStreamControllerTest extends RestDocsSupport {
 
@@ -53,6 +59,7 @@ class GroupEventStreamControllerTest extends RestDocsSupport {
     private static final Long USER_ID = 1L;
 
     @Autowired private GroupSseService groupSseService;
+    @Autowired private MeterRegistry meterRegistry;
     @MockitoBean private FryGroupRepository fryGroupRepository;
     @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
     @MockitoBean private JwtTokenProvider jwtTokenProvider;
@@ -127,5 +134,59 @@ class GroupEventStreamControllerTest extends RestDocsSupport {
                         .accept(MediaType.TEXT_EVENT_STREAM))
                 .andDo(print())
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("지표 - 연결이 끊긴 사유별로 한 번씩만 집계된다")
+    void disconnectMetrics() throws Exception {
+        // given
+        given(fryGroupRepository.findByIdAndMemberUserId(GROUP_ID, USER_ID))
+                .willReturn(Optional.of(mock(FryGroup.class)));
+        double completion = disconnects("completion");
+        double timeout = disconnects("timeout");
+        double error = disconnects("error");
+        double connections = connections();
+
+        MockAsyncContext completed = openConnection();
+        MockAsyncContext timedOut = openConnection();
+        MockAsyncContext failed = openConnection();
+        assertThat(connections()).isEqualTo(connections + 3);
+
+        // when - 서블릿 컨테이너처럼 timeout·error 뒤에도 complete를 알린다
+        for (AsyncListener listener : timedOut.getListeners()) {
+            listener.onTimeout(new AsyncEvent(timedOut));
+        }
+        for (AsyncListener listener : failed.getListeners()) {
+            listener.onError(new AsyncEvent(failed, new IOException("broken pipe")));
+        }
+        for (MockAsyncContext context : new MockAsyncContext[]{completed, timedOut, failed}) {
+            for (AsyncListener listener : context.getListeners()) {
+                listener.onComplete(new AsyncEvent(context));
+            }
+        }
+
+        // then
+        assertThat(connections()).isEqualTo(connections);
+        assertThat(disconnects("completion")).isEqualTo(completion + 1);
+        assertThat(disconnects("timeout")).isEqualTo(timeout + 1);
+        assertThat(disconnects("error")).isEqualTo(error + 1);
+    }
+
+
+    private MockAsyncContext openConnection() throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/groups/{groupId}/events", GROUP_ID)
+                        .accept(MediaType.TEXT_EVENT_STREAM))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+        return (MockAsyncContext) result.getRequest().getAsyncContext();
+    }
+
+
+    private double connections() {
+        return meterRegistry.get("group.sse.connections").gauge().value();
+    }
+
+    private double disconnects(String reason) {
+        return meterRegistry.get("group.sse.disconnects").tag("reason", reason).counter().count();
     }
 }

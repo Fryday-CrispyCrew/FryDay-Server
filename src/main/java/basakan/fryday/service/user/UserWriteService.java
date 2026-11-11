@@ -4,6 +4,7 @@ import basakan.fryday.common.ErrorCode;
 import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.common.exception.auth.UserReregisterNotAllowedException;
 import basakan.fryday.domain.user.Agreement;
+import basakan.fryday.domain.user.SocialAccountKey;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.CategoryRepository;
 import basakan.fryday.repository.DailyResultRepository;
@@ -22,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -53,8 +56,12 @@ public class UserWriteService {
     }
 
     public void completeOnboarding(User user) {
+        boolean firstCompletion = !user.getOnboardingStatus().isCompleted();
         user.completeOnboardingStep();
         userJpaRepository.save(user);
+        if (firstCompletion) {
+            eventPublisher.publishEvent(UserEvent.of(user.getId(), EventType.ONBOARDING_COMPLETED));
+        }
     }
 
     public void setNickname(User user, String nickname) {
@@ -118,7 +125,9 @@ public class UserWriteService {
                 socialUserInfo.email()
         );
         User savedUser = userJpaRepository.save(newUser);
-        eventPublisher.publishEvent(UserEvent.of(savedUser.getId(), EventType.USER_SIGNED_UP));
+        eventPublisher.publishEvent(UserEvent.of(savedUser.getId(), EventType.USER_SIGNED_UP, null, Map.of(
+                "provider", socialUserInfo.provider().name(),
+                "accountKey", SocialAccountKey.of(socialUserInfo.provider(), socialUserInfo.providerUserId()))));
         return savedUser;
     }
 

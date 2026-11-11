@@ -25,17 +25,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String DOCS_PATH_PREFIX = "/docs";
+    private static final String ADMIN_PATH_PREFIX = "/api/admin";
 
     private final JwtTokenProvider jwtTokenProvider;
 
     /**
      * /docs/** 요청은 Basic Auth 전용 SecurityFilterChain 으로 보호한다.
      * JWT 토큰이 같이 들어와도 docs 인증 흐름에 영향을 주지 않도록 이 필터 자체를 건너뛴다.
+     * /api/admin/** 요청도 어드민 전용 체인이 따로 인증하므로 건너뛴다.
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals(DOCS_PATH_PREFIX) || path.startsWith(DOCS_PATH_PREFIX + "/");
+        return matches(path, DOCS_PATH_PREFIX) || matches(path, ADMIN_PATH_PREFIX);
+    }
+
+    private boolean matches(String path, String prefix) {
+        return path.equals(prefix) || path.startsWith(prefix + "/");
     }
 
     @Override

@@ -19,6 +19,7 @@ import basakan.fryday.repository.group.GroupPushHistoryRepository;
 import basakan.fryday.repository.todo.TodoRepository;
 import basakan.fryday.service.todo.RecurrenceOccurrenceMaterializeService;
 import basakan.fryday.service.todo.TodoService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,7 +66,7 @@ import static org.mockito.Mockito.verify;
                         + "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
         }
 )
-@Import({JpaConfig.class, AsyncConfig.class, GroupService.class, GroupCreator.class, InviteCodeGenerator.class,
+@Import({JpaConfig.class, AsyncConfig.class, SimpleMeterRegistry.class, GroupService.class, GroupCreator.class, InviteCodeGenerator.class,
         GroupNotificationListener.class, GroupPushSender.class, GroupProgressNotifier.class,
         GroupPushHistoryRecorder.class, TodoService.class})
 @DisplayName("그룹 알림 발송 배선")

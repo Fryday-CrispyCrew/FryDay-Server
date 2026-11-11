@@ -26,6 +26,20 @@ spring:
         size: 5
       thread-name-prefix: fryday-scheduler-
 
+server:
+  tomcat:
+    # Tomcat 스레드와 연결 수 지표(tomcat_threads_*, tomcat_connections_*)를 내보내려면 켜야 한다
+    mbeanregistry:
+      enabled: true
+
+management:
+  metrics:
+    distribution:
+      # p95, p99 를 Prometheus 에서 계산할 수 있도록 응답 시간 히스토그램 버킷을 내보낸다.
+      # percentiles-histogram 은 버킷이 50개 가까이라 시계열이 많아져, 경계를 직접 정한다
+      slo:
+        http.server.requests: 10ms,25ms,50ms,100ms,200ms,300ms,500ms,750ms,1s,2s,5s,10s
+
 jwt:
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:1296000000}
@@ -47,3 +61,6 @@ docs:
 
 admin:
   api-key: ${ADMIN_API_KEY:#{null}}
+  jwt:
+    secret-key: ${ADMIN_JWT_SECRET_KEY}
+    access-token-expiration: ${ADMIN_JWT_ACCESS_TOKEN_EXPIRATION:43200000}

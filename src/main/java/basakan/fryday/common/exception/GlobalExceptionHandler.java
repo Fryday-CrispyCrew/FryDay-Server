@@ -7,6 +7,8 @@ import basakan.fryday.common.exception.auth.UserBlockedException;
 import basakan.fryday.common.exception.auth.UserWithdrawnException;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.common.response.FieldErrorResponse;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Metrics;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.CannotCreateTransactionException;
@@ -31,6 +34,19 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final String ERROR_METRIC = "api.errors";
+    private static final String BUSINESS = "business";
+    private static final String VALIDATION = "validation";
+
+    // 컨트롤러 슬라이스 테스트에는 MeterRegistry 빈이 없어서, Spring Boot 가 연결해 주는 전역 레지스트리에 남긴다.
+    // 처음 셀 때 만들면 increase() 에서 첫 증가분이 빠지므로 미리 등록해 0부터 노출한다
+    static {
+        for (ErrorCode errorCode : ErrorCode.values()) {
+            errorCounter(BUSINESS, errorCode);
+        }
+        errorCounter(VALIDATION, ErrorCode.INVALID_INPUT_VALUE);
+    }
 
     // 1. Auth 예외 처리 - InvalidProviderTokenException
     @ExceptionHandler(InvalidProviderTokenException.class)
@@ -73,6 +89,7 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         log.warn("BusinessException: {}", e.getMessage());
         ErrorCode errorCode = e.getErrorCode();
+        errorCounter(BUSINESS, errorCode).increment();
 
         // 커스텀 메시지가 있으면 사용, 없으면 ErrorCode의 기본 메시지 사용
         String message = e.getMessage() != null && !e.getMessage().equals(errorCode.getMessage())
@@ -89,6 +106,7 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.warn("Validation Failed: {}", e.getMessage());
         ErrorCode errorCode = ErrorCode.INVALID_INPUT_VALUE;
+        errorCounter(VALIDATION, errorCode).increment();
 
         List<FieldErrorResponse> fieldErrors = e.getBindingResult()
                 .getFieldErrors()
@@ -112,6 +130,21 @@ public class GlobalExceptionHandler {
 
         String message = String.format("요청한 경로를 찾을 수 없습니다. (경로: %s %s)", 
                 e.getHttpMethod(), e.getRequestURL());
+
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.fail(message));
+    }
+
+    // 7-1. 없는 정적 리소스 (404 Not Found)
+    // 매핑되지 않은 경로는 정적 리소스 처리로 넘어가 이 예외가 난다. 따로 잡지 않으면 맨 아래 처리로 빠져 500 이 된다
+    @ExceptionHandler(NoResourceFoundException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("No Resource Found: {} /{}", e.getHttpMethod(), e.getResourcePath());
+        ErrorCode errorCode = ErrorCode.NOT_FOUND;
+
+        String message = String.format("요청한 경로를 찾을 수 없습니다. (경로: %s /%s)",
+                e.getHttpMethod(), e.getResourcePath());
 
         return ResponseEntity
                 .status(errorCode.getStatus())
@@ -278,5 +311,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(errorCode.getStatus())
                 .body(ApiResponse.fail(errorCode.getMessage()));
+    }
+
+    private static Counter errorCounter(String type, ErrorCode errorCode) {
+        return Metrics.counter(ERROR_METRIC,
+                "type", type,
+                "code", errorCode.name(),
+                "status", String.valueOf(errorCode.getStatus().value()));
     }
 }

@@ -1,6 +1,7 @@
 package basakan.fryday.scheduler;
 
 import basakan.fryday.common.service.push.PushService;
+import basakan.fryday.common.service.push.PushType;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.auth.UserJpaRepository;
 import basakan.fryday.repository.todo.TodoRepository;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -72,7 +74,8 @@ public class EncourageAlarmScheduler {
         for (User user : targetUsers) {
             try {
                 String message = pickRandomMessage();
-                pushService.sendToUser(user, "튀김기에 새로운 튀김을 넣어주세요!", message);
+                pushService.sendToUser(user, "튀김기에 새로운 튀김을 넣어주세요!", message,
+                        Map.of(PushService.TYPE_KEY, PushType.TODO_ENCOURAGE.name()));
                 notificationCount++;
                 log.info("Encourage alarm sent: userId={}", user.getId());
             } catch (Exception e) {

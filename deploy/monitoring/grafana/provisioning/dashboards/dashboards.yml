@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: fryday
+    folder: Fryday
+    type: file
+    # UI 에서 고쳐도 파일로 되돌아가니, 바꿀 때는 JSON 을 내보내 레포에 반영한다
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/dashboards

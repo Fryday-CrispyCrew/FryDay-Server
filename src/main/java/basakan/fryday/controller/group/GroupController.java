@@ -7,6 +7,7 @@ import basakan.fryday.controller.group.request.GroupJoinRequest;
 import basakan.fryday.controller.group.request.GroupNameUpdateRequest;
 import basakan.fryday.controller.group.request.GroupNotificationSettingRequest;
 import basakan.fryday.controller.group.request.GroupPublicCategoryUpdateRequest;
+import basakan.fryday.controller.group.request.InviteShareRequest;
 import basakan.fryday.controller.group.response.GroupCreateResponse;
 import basakan.fryday.controller.group.response.GroupDetailResponse;
 import basakan.fryday.controller.group.response.GroupInvitePreviewResponse;
@@ -117,6 +118,14 @@ public class GroupController {
                                       @AuthenticationPrincipal Long userId) {
         groupInteractionService.interact(groupId, targetUserId, request, userId);
         return ApiResponse.success(null, "상호작용을 보냈습니다.");
+    }
+
+    @PostMapping("/{groupId}/invite-shares")
+    public ApiResponse<Void> recordInviteShare(@PathVariable Long groupId,
+                                               @Valid @RequestBody InviteShareRequest request,
+                                               @AuthenticationPrincipal Long userId) {
+        groupService.recordInviteShare(groupId, userId, request);
+        return ApiResponse.success(null, "초대 공유가 기록되었습니다.");
     }
 
     @GetMapping("/{groupId}/members/{targetUserId}/todos")

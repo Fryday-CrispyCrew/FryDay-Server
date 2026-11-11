@@ -1,7 +1,6 @@
 package basakan.fryday.controller.admin;
 
 import basakan.fryday.RestDocsSupport;
-import basakan.fryday.common.config.AdminWebConfig;
 import basakan.fryday.common.config.SecurityConfig;
 import basakan.fryday.common.security.JwtAuthenticationFilter;
 import basakan.fryday.common.security.JwtTokenProvider;
@@ -31,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         controllers = AdminPushController.class,
         excludeFilters = {
                 @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                        classes = {SecurityConfig.class, AdminWebConfig.class})
+                        classes = SecurityConfig.class)
         }
 )
 class AdminPushControllerTest extends RestDocsSupport {
@@ -54,7 +53,7 @@ class AdminPushControllerTest extends RestDocsSupport {
 
         // when & then
         mockMvc.perform(post("/api/admin/push")
-                        .header("X-Admin-Key", "test-admin-key")
+                        .header("Authorization", "Bearer {adminAccessToken}")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
@@ -63,7 +62,7 @@ class AdminPushControllerTest extends RestDocsSupport {
                 .andExpect(jsonPath("$.data.sentCount").value(15))
                 .andDo(document("admin-broadcast-push",
                         requestHeaders(
-                                headerWithName("X-Admin-Key").description("Admin 인증 키")
+                                headerWithName("Authorization").description("어드민 로그인으로 받은 토큰 (Bearer). 스크립트에서는 대신 X-Admin-Key 헤더를 쓸 수 있다")
                         ),
                         requestFields(
                                 fieldWithPath("title").description("알림 제목 (최대 50자)"),
@@ -86,7 +85,7 @@ class AdminPushControllerTest extends RestDocsSupport {
 
         // when & then
         mockMvc.perform(post("/api/admin/push")
-                        .header("X-Admin-Key", "test-admin-key")
+                        .header("Authorization", "Bearer {adminAccessToken}")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
