@@ -9,6 +9,7 @@ import basakan.fryday.common.security.JwtTokenProvider;
 import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
+import basakan.fryday.controller.admin.response.ExistingRetentionResponse;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
@@ -231,6 +232,52 @@ class AdminMetricsControllerTest extends RestDocsSupport {
                                         .description("측정 대상 수. 그날이 어제 이전이고 활동 기록이 있는 기간인 사람"),
                                 fieldWithPath("data.cohorts[].retention[].returned").description("측정 대상 중 정확히 그날 앱을 사용한 사람 수"),
                                 fieldWithPath("data.cohorts[].retention[].rate")
+                                        .description("returned ÷ eligible × 100 (소수 첫째 자리). 측정 대상이 없으면 null").optional()
+                        ))
+                ));
+    }
+
+    @Test
+    @DisplayName("기존 사용자 리텐션 API - 성공")
+    void getExistingRetention() throws Exception {
+        // given
+        given(adminMetricsService.getExistingRetention(true)).willReturn(ExistingRetentionResponse.builder()
+                .day0(LocalDate.of(2026, 11, 11))
+                .activeFrom(LocalDate.of(2026, 11, 5))
+                .activeTo(LocalDate.of(2026, 11, 11))
+                .size(7)
+                .retention(List.of(
+                        retentionDay(1, 7, 3, 42.9),
+                        retentionDay(7, 0, 0, null),
+                        retentionDay(30, 0, 0, null)))
+                .build());
+
+        // when & then
+        mockMvc.perform(get("/api/admin/metrics/retention/existing")
+                        .header("Authorization", "Bearer {adminAccessToken}")
+                        .param("excludeInternal", "true"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.day0").value("2026-11-11"))
+                .andExpect(jsonPath("$.data.size").value(7))
+                .andExpect(jsonPath("$.data.retention[0].rate").value(42.9))
+                .andDo(document("admin-metrics-retention-existing",
+                        requestHeaders(
+                                headerWithName("Authorization").description("어드민 로그인으로 받은 토큰 (Bearer)")
+                        ),
+                        queryParameters(
+                                parameterWithName("excludeInternal").description("팀 계정 제외 여부 (기본값 true)").optional()
+                        ),
+                        responseFields(envelope(
+                                fieldWithPath("data.day0").description("기존 사용자 전원의 Day 0 (2026-11-11 고정)"),
+                                fieldWithPath("data.activeFrom").description("활동 확인 기간 시작일"),
+                                fieldWithPath("data.activeTo").description("활동 확인 기간 종료일. 이 기간에 하루라도 앱을 쓴 사람이 기존 사용자"),
+                                fieldWithPath("data.size").description("Day 0 전에 가입을 완료했고 활동 확인 기간에 앱을 쓴 사람 수"),
+                                fieldWithPath("data.retention[].day").description("Day 0 으로부터 며칠째인지 (1, 7, 30)"),
+                                fieldWithPath("data.retention[].eligible")
+                                        .description("측정 대상 수. 그날이 어제 이전이고 활동 기록이 있는 기간이면 size, 아니면 0"),
+                                fieldWithPath("data.retention[].returned").description("측정 대상 중 정확히 그날 앱을 사용한 사람 수"),
+                                fieldWithPath("data.retention[].rate")
                                         .description("returned ÷ eligible × 100 (소수 첫째 자리). 측정 대상이 없으면 null").optional()
                         ))
                 ));
