@@ -5,8 +5,10 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
+import basakan.fryday.controller.admin.response.ExistingRetentionResponse;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse;
+import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetric;
 import basakan.fryday.repository.admin.AdminMetricsRepository;
@@ -132,24 +134,57 @@ public class AdminMetricsService {
                 .forEach((person, onboardedAt) -> day0ByPerson.put(person, onboardedAt.toLocalDate()));
 
         LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
-        LocalDate activityFrom = cohortFrom.plusDays(1);
-        LocalDate activityTo = min(cohortTo.plusDays(CohortRetention.LONGEST_DAY), yesterday);
+        Map<String, Set<LocalDate>> activeDates = activeDatesOf(history, day0ByPerson.keySet(),
+                cohortFrom.plusDays(1), min(cohortTo.plusDays(CohortRetention.LONGEST_DAY), yesterday));
+        return new RetentionResponse(CohortRetention.calculate(day0ByPerson, activeDates, unit, from, to,
+                retentionMeasurableFrom(), yesterday));
+    }
+
+    // 기준일과 활동 확인 기간은 고정이다
+    public ExistingRetentionResponse getExistingRetention(boolean excludeInternal) {
+        SignUpHistory history = signUpHistory(excludedUsers(excludeInternal));
+        Map<String, LocalDate> onboardedOnByPerson = new HashMap<>();
+        history.onboardedAt().forEach((person, onboardedAt) -> {
+            if (onboardedAt.toLocalDate().isBefore(ExistingUserRetention.DAY0)) {
+                onboardedOnByPerson.put(person, onboardedAt.toLocalDate());
+            }
+        });
+
+        LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
+        Map<String, Set<LocalDate>> activeDates = activeDatesOf(history, onboardedOnByPerson.keySet(),
+                ExistingUserRetention.ACTIVE_FROM,
+                min(ExistingUserRetention.DAY0.plusDays(CohortRetention.LONGEST_DAY), yesterday));
+        Cohort cohort = ExistingUserRetention.calculate(onboardedOnByPerson, activeDates,
+                retentionMeasurableFrom(), yesterday);
+        return ExistingRetentionResponse.builder()
+                .day0(ExistingUserRetention.DAY0)
+                .activeFrom(ExistingUserRetention.ACTIVE_FROM)
+                .activeTo(ExistingUserRetention.DAY0)
+                .size(cohort.getSize())
+                .retention(cohort.getRetention())
+                .build();
+    }
+
+    private Map<String, Set<LocalDate>> activeDatesOf(SignUpHistory history, Set<String> people,
+                                                      LocalDate from, LocalDate to) {
         Map<String, Set<LocalDate>> activeDates = new HashMap<>();
-        if (!activityFrom.isAfter(activityTo)) {
-            for (UserDate row : adminMetricsRepository.findActiveUsers(activityFrom, activityTo)) {
-                String person = history.personOf(row.userId());
-                if (day0ByPerson.containsKey(person)) {
-                    activeDates.computeIfAbsent(person, key -> new HashSet<>()).add(row.date());
-                }
+        if (from.isAfter(to)) {
+            return activeDates;
+        }
+        for (UserDate row : adminMetricsRepository.findActiveUsers(from, to)) {
+            String person = history.personOf(row.userId());
+            if (people.contains(person)) {
+                activeDates.computeIfAbsent(person, key -> new HashSet<>()).add(row.date());
             }
         }
+        return activeDates;
+    }
 
-        // 기록 첫날은 배포 시점 이후 활동만 남아 있어서 측정에서 뺀다
-        LocalDate measurableFrom = adminMetricsRepository.findActivityTrackedSince()
+    // 기록 첫날은 배포 시점 이후 활동만 남아 있어서 측정에서 뺀다
+    private LocalDate retentionMeasurableFrom() {
+        return adminMetricsRepository.findActivityTrackedSince()
                 .map(trackedSince -> trackedSince.plusDays(1))
                 .orElse(null);
-        return new RetentionResponse(CohortRetention.calculate(day0ByPerson, activeDates, unit, from, to,
-                measurableFrom, yesterday));
     }
 
     // 코호트는 from 과 to 가 속한 단위 전체, 투두 생성 사용자 수는 from 부터 to 까지 센다

@@ -5,6 +5,7 @@ import basakan.fryday.common.exception.BusinessException;
 import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
+import basakan.fryday.controller.admin.response.ExistingRetentionResponse;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
@@ -299,6 +300,39 @@ class AdminMetricsServiceTest {
                 .extracting(ActivationResponse.Cohort::getSize, ActivationResponse.Cohort::getEligible,
                         ActivationResponse.Cohort::getActivated, ActivationResponse.Cohort::getRate)
                 .containsExactly(tuple(2, 2, 1, 50.0));
+    }
+
+    @Test
+    @DisplayName("기존 사용자 리텐션: 재가입한 사람은 한 명으로 보고, 팀 계정과 확인 기간에 활동하지 않은 사람은 뺀다")
+    void existingRetention() {
+        // given
+        given(adminMetricsRepository.findInternalUserIds()).willReturn(Set.of(TEAM_USER));
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(2L, "a", LocalDateTime.of(2026, 10, 10, 9, 0), false), // 1 의 재가입 계정
+                new Account(3L, "c", LocalDateTime.of(2026, 10, 1, 9, 0), true),
+                new Account(TEAM_USER, "team", LocalDateTime.of(2026, 10, 1, 9, 0), true)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of(
+                new SignUpEvent(1L, EventType.USER_SIGNED_UP, LocalDateTime.of(2026, 10, 1, 9, 0), "a"),
+                new SignUpEvent(1L, EventType.ONBOARDING_COMPLETED, LocalDateTime.of(2026, 10, 1, 9, 5), null)));
+        given(adminMetricsRepository.findActiveUsers(any(), any())).willReturn(List.of(
+                row(2026, 11, 5, 1L),
+                row(2026, 11, 6, 2L),
+                row(2026, 11, 12, 2L), // 재가입 계정으로 D1 방문
+                row(2026, 11, 12, 3L), // 확인 기간에는 활동 없음
+                row(2026, 11, 5, TEAM_USER)));
+        given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.of(LocalDate.of(2026, 10, 17)));
+
+        // when
+        ExistingRetentionResponse response = adminMetricsService.getExistingRetention(true);
+
+        // then
+        assertThat(response.getDay0()).isEqualTo(LocalDate.of(2026, 11, 11));
+        assertThat(response.getActiveFrom()).isEqualTo(LocalDate.of(2026, 11, 5));
+        assertThat(response.getActiveTo()).isEqualTo(LocalDate.of(2026, 11, 11));
+        assertThat(response.getSize()).isEqualTo(1);
+        assertThat(response.getRetention().get(0))
+                .extracting(RetentionDay::getDay, RetentionDay::getEligible, RetentionDay::getReturned)
+                .containsExactly(1, 1, 1);
     }
 
     private UserDate row(int year, int month, int day, Long userId) {

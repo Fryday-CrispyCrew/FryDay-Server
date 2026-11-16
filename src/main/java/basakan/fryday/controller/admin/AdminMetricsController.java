@@ -3,6 +3,7 @@ package basakan.fryday.controller.admin;
 import basakan.fryday.common.response.ApiResponse;
 import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
+import basakan.fryday.controller.admin.response.ExistingRetentionResponse;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.WeeklyMetricsResponse;
@@ -57,6 +58,13 @@ public class AdminMetricsController {
             @RequestParam(defaultValue = "true") boolean excludeInternal
     ) {
         return ApiResponse.success(adminMetricsService.getRetention(from, to, cohort, excludeInternal));
+    }
+
+    @GetMapping("/retention/existing")
+    public ApiResponse<ExistingRetentionResponse> getExistingRetention(
+            @RequestParam(defaultValue = "true") boolean excludeInternal
+    ) {
+        return ApiResponse.success(adminMetricsService.getExistingRetention(excludeInternal));
     }
 
     @GetMapping("/activation")
