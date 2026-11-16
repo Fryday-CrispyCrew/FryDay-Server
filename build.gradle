@@ -18,7 +18,7 @@ repositories {
 	mavenCentral()
 }
 
-// Spring Boot 3.5.7 의 1.21.3 은 Docker Engine 29 에서 연결이 거부된다
+// Spring Boot 3.5.7 의 1.21.3 은 API 1.32 로 접속해서 CI 의 최신 Docker Engine 에서 거부된다
 ext['testcontainers.version'] = '1.21.4'
 
 configurations {
