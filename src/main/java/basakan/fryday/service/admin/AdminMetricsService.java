@@ -6,6 +6,8 @@ import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.ExistingRetentionResponse;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse.Snapshot;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
@@ -25,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -163,6 +166,55 @@ public class AdminMetricsService {
                 .size(cohort.getSize())
                 .retention(cohort.getRetention())
                 .build();
+    }
+
+    // from 과 to 사이의 월요일마다, 그날까지 7일 안에 앱을 쓴 사람을 그날 그룹 소속으로 나눈다
+    public GroupRetentionResponse getGroupRetention(LocalDate from, LocalDate to, boolean excludeInternal) {
+        validatePeriod(from, to);
+        LocalDate yesterday = LocalDate.now(KOREA_ZONE).minusDays(1);
+        LocalDate measurableFrom = retentionMeasurableFrom();
+        List<LocalDate> day0s = groupRetentionDay0s(from, min(to, yesterday), measurableFrom);
+        if (day0s.isEmpty()) {
+            return new GroupRetentionResponse(List.of(), GroupRetention.total(List.of()));
+        }
+
+        LocalDate firstDay0 = day0s.get(0);
+        LocalDate lastDay0 = day0s.get(day0s.size() - 1);
+        SignUpHistory history = signUpHistory(excludedUsers(excludeInternal));
+        Map<String, LocalDate> onboardedOnByPerson = new HashMap<>();
+        history.onboardedAt().forEach((person, onboardedAt) -> {
+            if (onboardedAt.toLocalDate().isBefore(lastDay0)) {
+                onboardedOnByPerson.put(person, onboardedAt.toLocalDate());
+            }
+        });
+        Map<String, Set<LocalDate>> activeDates = activeDatesOf(history, onboardedOnByPerson.keySet(),
+                firstDay0.minusDays(GroupRetention.ACTIVE_WINDOW_DAYS - 1),
+                min(lastDay0.plusDays(CohortRetention.LONGEST_DAY), yesterday));
+        GroupMembership membership = new GroupMembership(
+                adminMetricsRepository.findGroupMembershipEvents(lastDay0.plusDays(1).atStartOfDay()));
+
+        List<Snapshot> snapshots = new ArrayList<>();
+        List<GroupRetention.Split> splits = new ArrayList<>();
+        for (LocalDate day0 : day0s) {
+            Set<String> groupPeople = new HashSet<>();
+            membership.sharedGroupUsersBefore(day0.plusDays(1).atStartOfDay())
+                    .forEach(userId -> groupPeople.add(history.personOf(userId)));
+            GroupRetention.Split split = GroupRetention.calculate(day0, onboardedOnByPerson, activeDates,
+                    groupPeople, measurableFrom, yesterday);
+            snapshots.add(GroupRetention.snapshot(day0, split));
+            splits.add(split);
+        }
+        return new GroupRetentionResponse(snapshots, GroupRetention.total(splits));
+    }
+
+    // 활동 확인 기간이 기록 시작 전에 걸치면 활동일 수가 덜 세어지므로 뺀다
+    private static List<LocalDate> groupRetentionDay0s(LocalDate from, LocalDate to, LocalDate measurableFrom) {
+        if (measurableFrom == null) {
+            return List.of();
+        }
+        LocalDate earliest = measurableFrom.plusDays(GroupRetention.ACTIVE_WINDOW_DAYS - 1);
+        LocalDate first = (from.isBefore(earliest) ? earliest : from).with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+        return Stream.iterate(first, day0 -> !day0.isAfter(to), day0 -> day0.plusWeeks(1)).toList();
     }
 
     private Map<String, Set<LocalDate>> activeDatesOf(SignUpHistory history, Set<String> people,

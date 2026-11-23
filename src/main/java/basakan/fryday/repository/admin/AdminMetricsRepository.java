@@ -28,6 +28,9 @@ public class AdminMetricsRepository {
     private static final RowMapper<UserDate> USER_DATE_MAPPER = (rs, rowNum) ->
             new UserDate(rs.getObject(1, LocalDate.class), rs.getLong(2));
 
+    private static final List<EventType> GROUP_MEMBERSHIP_EVENTS = List.of(EventType.GROUP_CREATED,
+            EventType.GROUP_JOINED, EventType.GROUP_LEFT, EventType.GROUP_DISBANDED, EventType.USER_WITHDREW);
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final EntityManager entityManager;
 
@@ -101,6 +104,23 @@ public class AdminMetricsRepository {
                 "SELECT user_id FROM internal_account", new MapSqlParameterSource(), Long.class));
     }
 
+    // 소속을 재생하는 순서대로 가져온다. 같은 시각이면 먼저 기록된 것이 먼저다
+    public List<GroupEvent> findGroupMembershipEvents(LocalDateTime toExclusive) {
+        return jdbcTemplate.query("""
+                SELECT user_id, event_type, target_id, occurred_at
+                FROM event_log
+                WHERE event_type IN (:types)
+                  AND occurred_at < :to
+                ORDER BY occurred_at, id
+                """, new MapSqlParameterSource()
+                .addValue("types", GROUP_MEMBERSHIP_EVENTS.stream().map(EventType::name).toList())
+                .addValue("to", toExclusive), (rs, rowNum) -> new GroupEvent(
+                rs.getLong(1),
+                EventType.valueOf(rs.getString(2)),
+                rs.getObject(3, Long.class),
+                rs.getObject(4, LocalDateTime.class)));
+    }
+
     private List<UserDate> findEventUsers(EventType type, LocalDate from, LocalDate to) {
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("type", type.name())
@@ -124,6 +144,10 @@ public class AdminMetricsRepository {
     }
 
     public record UserTime(Long userId, LocalDateTime occurredAt) {
+    }
+
+    // 회원 탈퇴는 그룹이 정해지지 않아 groupId 가 null 이다
+    public record GroupEvent(Long userId, EventType type, Long groupId, LocalDateTime occurredAt) {
     }
 
     public record Account(Long userId, String accountKey, LocalDateTime createdAt, boolean onboardingCompleted) {
