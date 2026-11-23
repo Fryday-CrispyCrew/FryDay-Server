@@ -10,6 +10,10 @@ import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.ExistingRetentionResponse;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse.Comparison;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse.Segment;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse.Snapshot;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
@@ -29,6 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.mockito.BDDMockito.given;
@@ -284,6 +289,55 @@ class AdminMetricsControllerTest extends RestDocsSupport {
     }
 
     @Test
+    @DisplayName("그룹 / 비그룹 리텐션 API - 성공")
+    void getGroupRetention() throws Exception {
+        // given
+        LocalDate from = LocalDate.of(2026, 11, 2);
+        LocalDate to = LocalDate.of(2026, 11, 22);
+        given(adminMetricsService.getGroupRetention(from, to, true)).willReturn(new GroupRetentionResponse(
+                List.of(Snapshot.builder()
+                        .day0(LocalDate.of(2026, 11, 9))
+                        .group(segment(7, 4.1, retentionDay(1, 7, 4, 57.1), retentionDay(7, 7, 3, 42.9)))
+                        .nonGroup(segment(43, 2.3, retentionDay(1, 43, 13, 30.2), retentionDay(7, 43, 8, 18.6)))
+                        .build()),
+                Comparison.builder()
+                        .group(segment(7, 4.1, retentionDay(1, 7, 4, 57.1), retentionDay(7, 7, 3, 42.9)))
+                        .nonGroup(segment(43, 2.3, retentionDay(1, 43, 13, 30.2), retentionDay(7, 43, 8, 18.6)))
+                        .build()));
+
+        // when & then
+        mockMvc.perform(get("/api/admin/metrics/retention/group")
+                        .header("Authorization", "Bearer {adminAccessToken}")
+                        .param("from", "2026-11-02")
+                        .param("to", "2026-11-22")
+                        .param("excludeInternal", "true"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.snapshots[0].day0").value("2026-11-09"))
+                .andExpect(jsonPath("$.data.snapshots[0].group.size").value(7))
+                .andExpect(jsonPath("$.data.total.nonGroup.avgActiveDaysBefore").value(2.3))
+                .andDo(document("admin-metrics-retention-group",
+                        requestHeaders(
+                                headerWithName("Authorization").description("어드민 로그인으로 받은 토큰 (Bearer)")
+                        ),
+                        queryParameters(
+                                parameterWithName("from").description("조회 시작일. 이 날부터 to 까지의 월요일이 Day 0"),
+                                parameterWithName("to").description("조회 종료일. 어제보다 뒤인 Day 0 은 빠진다"),
+                                parameterWithName("excludeInternal").description("팀 계정 제외 여부 (기본값 true). 그룹 인원 수에는 팀 계정도 센다").optional()
+                        ),
+                        responseFields(envelope(concat(
+                                List.of(fieldWithPath("data.snapshots[].day0")
+                                        .description("이날까지 7일 안에 앱을 쓴 사람을 이날이 끝날 때의 그룹 소속으로 나눈다. "
+                                                + "활동 기록이 7일 쌓이기 전 월요일은 빠진다")),
+                                segmentFields("data.snapshots[].group", "Day 0 이 끝날 때 2명 이상 그룹에 속한 사람"),
+                                segmentFields("data.snapshots[].nonGroup", "그 외 (혼자인 그룹의 그룹장 포함)"),
+                                segmentFields("data.total.group", "모든 Day 0 의 그룹 사용자 합산. 한 사람이 여러 번 들어갈 수 있다"),
+                                segmentFields("data.total.nonGroup", "모든 Day 0 의 비그룹 사용자 합산")
+                        )))
+                ));
+    }
+
+    @Test
     @DisplayName("활성화 지표 API - 성공")
     void getActivation() throws Exception {
         // given
@@ -378,6 +432,27 @@ class AdminMetricsControllerTest extends RestDocsSupport {
 
     private RetentionDay retentionDay(int day, int eligible, int returned, Double rate) {
         return RetentionDay.builder().day(day).eligible(eligible).returned(returned).rate(rate).build();
+    }
+
+    private Segment segment(int size, Double avgActiveDaysBefore, RetentionDay... retention) {
+        return Segment.builder().size(size).avgActiveDaysBefore(avgActiveDaysBefore).retention(List.of(retention)).build();
+    }
+
+    private List<FieldDescriptor> segmentFields(String path, String who) {
+        return List.of(
+                fieldWithPath(path + ".size").description(who + "의 수"),
+                fieldWithPath(path + ".avgActiveDaysBefore")
+                        .description("Day 0 까지 7일 중 앱을 쓴 날 수의 평균 (소수 첫째 자리). 출발선 비교용. 인원이 없으면 null").optional(),
+                fieldWithPath(path + ".retention[].day").description("Day 0 으로부터 며칠째인지 (1, 7, 30)"),
+                fieldWithPath(path + ".retention[].eligible").description("측정 대상 수. 그날이 어제 이전인 사람"),
+                fieldWithPath(path + ".retention[].returned").description("측정 대상 중 정확히 그날 앱을 사용한 사람 수"),
+                fieldWithPath(path + ".retention[].rate")
+                        .description("returned ÷ eligible × 100 (소수 첫째 자리). 측정 대상이 없으면 null").optional());
+    }
+
+    @SafeVarargs
+    private static FieldDescriptor[] concat(List<FieldDescriptor>... groups) {
+        return Arrays.stream(groups).flatMap(List::stream).toArray(FieldDescriptor[]::new);
     }
 
     private ParameterDescriptor[] periodParameters() {

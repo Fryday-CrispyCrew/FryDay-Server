@@ -55,6 +55,10 @@ final class CohortRetention {
                 returned++;
             }
         }
+        return retentionDay(day, eligible, returned);
+    }
+
+    static RetentionDay retentionDay(int day, int eligible, int returned) {
         return RetentionDay.builder()
                 .day(day)
                 .eligible(eligible)
