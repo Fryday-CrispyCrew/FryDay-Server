@@ -7,6 +7,7 @@ import basakan.fryday.domain.todo.Todo;
 import basakan.fryday.repository.todo.RecurrenceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -77,6 +78,17 @@ public class RecurrenceOccurrenceMaterializeService {
                 return null;
             }
             throw e;
+        } catch (DataIntegrityViolationException e) {
+            // 동시 요청이 같은 회차를 먼저 저장해 유니크 제약에 걸렸다. 이 트랜잭션은 롤백됐으므로 새로 조회한다.
+            return occurrenceWriter.findOccurrence(recurrenceId, date)
+                    .map(existing -> {
+                        log.info("반복 투두 동시 생성 감지, 기존 회차 사용 - recurrenceId: {}, date: {}", recurrenceId, date);
+                        return existing.isDeleted() ? null : existing;
+                    })
+                    .orElseGet(() -> {
+                        log.error("반복 투두 생성 실패 - recurrenceId: {}, date: {}. 스킵하고 계속 진행", recurrenceId, date, e);
+                        return null;
+                    });
         } catch (Exception e) {
             log.error("반복 투두 생성 실패 - recurrenceId: {}, date: {}. 스킵하고 계속 진행", recurrenceId, date, e);
             return null;

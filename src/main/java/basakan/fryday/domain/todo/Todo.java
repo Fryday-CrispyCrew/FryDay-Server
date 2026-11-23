@@ -16,7 +16,7 @@ import java.time.LocalTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "todo", indexes = {
         @Index(name = "idx_todo_category_date", columnList = "category_id, date, deleted_at, display_order"),
-        @Index(name = "idx_todo_recurrence_date", columnList = "recurrence_id, date")
+        @Index(name = "uk_todo_recurrence_date", columnList = "recurrence_id, date", unique = true)
 })
 public class Todo extends BaseEntity {
 

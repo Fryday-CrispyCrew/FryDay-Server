@@ -93,6 +93,12 @@ public class RecurrenceOccurrenceWriter {
         return savedTodo;
     }
 
+    /** 삭제된 회차도 포함해 조회한다. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public Optional<Todo> findOccurrence(Long recurrenceId, LocalDate occurrenceDate) {
+        return todoRepository.findByRecurrenceIdAndDate(recurrenceId, occurrenceDate);
+    }
+
     private void attachAlarm(Long userId, Todo todo, LocalDate occurrenceDate, Recurrence recurrence) {
         LocalDateTime notifyAt = LocalDateTime.of(occurrenceDate, recurrence.getNotificationTime());
 
