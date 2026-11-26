@@ -8,10 +8,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Firebase Cloud Messaging 설정
@@ -38,28 +40,13 @@ public class FcmConfig {
             return;
         }
 
-        try {
-            InputStream serviceAccount;
+        if (!StringUtils.hasText(credentialsJson) && !new ClassPathResource(DEFAULT_CREDENTIALS_PATH).exists()) {
+            throw new IllegalStateException(
+                    "fcm.enabled=true 인데 FCM 인증 정보가 없다. FCM_CREDENTIALS_JSON 을 설정하거나 "
+                            + DEFAULT_CREDENTIALS_PATH + " 를 classpath 에 두어야 한다");
+        }
 
-            // 1. 환경변수로 JSON 내용이 제공된 경우 우선 사용 (운영 환경)
-            if (credentialsJson != null && !credentialsJson.isEmpty()) {
-                log.info("Loading FCM credentials from environment variable");
-                serviceAccount = new ByteArrayInputStream(credentialsJson.getBytes());
-            }
-            // 2. 파일 경로로 로드 (로컬 환경)
-            else {
-                log.info("Loading FCM credentials from file: {}", DEFAULT_CREDENTIALS_PATH);
-                ClassPathResource resource = new ClassPathResource(DEFAULT_CREDENTIALS_PATH);
-
-                if (!resource.exists()) {
-                    log.error("FCM credentials file not found: {}", DEFAULT_CREDENTIALS_PATH);
-                    log.error("Push notifications will not work. Please add {} to src/main/resources/", DEFAULT_CREDENTIALS_PATH);
-                    return;
-                }
-
-                serviceAccount = resource.getInputStream();
-            }
-
+        try (InputStream serviceAccount = openCredentials()) {
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .build();
@@ -70,9 +57,17 @@ public class FcmConfig {
             } else {
                 log.info("Firebase Admin SDK already initialized");
             }
-
-        } catch (IOException e) {
-            log.error("Failed to initialize Firebase Admin SDK", e);
+        } catch (IOException | RuntimeException e) {
+            throw new IllegalStateException("FCM 인증 정보로 Firebase Admin SDK 를 초기화하지 못했다", e);
         }
+    }
+
+    private InputStream openCredentials() throws IOException {
+        if (StringUtils.hasText(credentialsJson)) {
+            log.info("Loading FCM credentials from environment variable");
+            return new ByteArrayInputStream(credentialsJson.getBytes(StandardCharsets.UTF_8));
+        }
+        log.info("Loading FCM credentials from file: {}", DEFAULT_CREDENTIALS_PATH);
+        return new ClassPathResource(DEFAULT_CREDENTIALS_PATH).getInputStream();
     }
 }
