@@ -6,6 +6,7 @@ import basakan.fryday.domain.user.AuthProvider;
 import basakan.fryday.domain.user.SocialAccountKey;
 import basakan.fryday.domain.user.User;
 import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
+import basakan.fryday.repository.admin.AdminMetricsRepository.GroupEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserTime;
@@ -148,6 +149,28 @@ class AdminMetricsRepositoryTest {
     }
 
     @Test
+    @DisplayName("그룹 소속 이벤트만 기준 시각 전까지 발생 순서대로 가져온다")
+    void groupMembershipEvents() {
+        // given
+        groupEvent(2L, EventType.GROUP_JOINED, 10L, DAY.atTime(2, 0));
+        groupEvent(1L, EventType.GROUP_CREATED, 10L, DAY.atTime(1, 0));
+        groupEvent(3L, EventType.GROUP_LEFT, 10L, DAY.atTime(2, 0));
+        groupEvent(1L, EventType.GROUP_DISBANDED, 10L, DAY.atTime(3, 0));
+        groupEvent(4L, EventType.USER_WITHDREW, null, DAY.atTime(4, 0));
+        groupEvent(1L, EventType.GROUP_INTERACTION_SENT, 10L, DAY.atTime(1, 30));
+        groupEvent(5L, EventType.GROUP_JOINED, 20L, DAY.plusDays(1).atStartOfDay());
+        entityManager.flush();
+
+        // when & then
+        assertThat(adminMetricsRepository.findGroupMembershipEvents(DAY.plusDays(1).atStartOfDay())).containsExactly(
+                new GroupEvent(1L, EventType.GROUP_CREATED, 10L, DAY.atTime(1, 0)),
+                new GroupEvent(2L, EventType.GROUP_JOINED, 10L, DAY.atTime(2, 0)),
+                new GroupEvent(3L, EventType.GROUP_LEFT, 10L, DAY.atTime(2, 0)),
+                new GroupEvent(1L, EventType.GROUP_DISBANDED, 10L, DAY.atTime(3, 0)),
+                new GroupEvent(4L, EventType.USER_WITHDREW, null, DAY.atTime(4, 0)));
+    }
+
+    @Test
     @DisplayName("활동 기록 수집 시작일은 가장 이른 활동 날짜이고, 기록이 없으면 비어 있다")
     void activityTrackedSince() {
         assertThat(adminMetricsRepository.findActivityTrackedSince()).isEmpty();
@@ -177,6 +200,15 @@ class AdminMetricsRepositoryTest {
         entityManager.flush();
         jdbcTemplate.update("UPDATE users SET created_at = ? WHERE id = ?", createdAt, user.getId());
         return user.getId();
+    }
+
+    private void groupEvent(Long userId, EventType type, Long groupId, LocalDateTime occurredAt) {
+        entityManager.persist(EventLog.builder()
+                .userId(userId)
+                .eventType(type)
+                .targetId(groupId)
+                .occurredAt(occurredAt)
+                .build());
     }
 
     private void event(Long userId, EventType type, Map<String, Object> properties, LocalDateTime occurredAt) {

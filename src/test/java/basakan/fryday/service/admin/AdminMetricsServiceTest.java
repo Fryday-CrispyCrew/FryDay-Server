@@ -6,6 +6,8 @@ import basakan.fryday.controller.admin.response.ActivationResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse;
 import basakan.fryday.controller.admin.response.DailyMetricsResponse.DailyMetric;
 import basakan.fryday.controller.admin.response.ExistingRetentionResponse;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse;
+import basakan.fryday.controller.admin.response.GroupRetentionResponse.Snapshot;
 import basakan.fryday.controller.admin.response.MetricsSummaryResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse;
 import basakan.fryday.controller.admin.response.RetentionResponse.Cohort;
@@ -15,6 +17,7 @@ import basakan.fryday.controller.admin.response.WeeklyMetricsResponse.WeeklyMetr
 import basakan.fryday.domain.eventlog.EventType;
 import basakan.fryday.repository.admin.AdminMetricsRepository;
 import basakan.fryday.repository.admin.AdminMetricsRepository.Account;
+import basakan.fryday.repository.admin.AdminMetricsRepository.GroupEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.SignUpEvent;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserDate;
 import basakan.fryday.repository.admin.AdminMetricsRepository.UserTime;
@@ -25,9 +28,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -333,6 +338,71 @@ class AdminMetricsServiceTest {
         assertThat(response.getRetention().get(0))
                 .extracting(RetentionDay::getDay, RetentionDay::getEligible, RetentionDay::getReturned)
                 .containsExactly(1, 1, 1);
+    }
+
+    @Test
+    @DisplayName("그룹 리텐션: 활동 기록이 7일 쌓인 뒤의 월요일부터 어제까지를 Day 0 으로 잡고, 팀 계정도 그룹 인원으로는 센다")
+    void groupRetention() {
+        // given
+        LocalDate yesterday = LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1);
+        LocalDate firstDay0 = yesterday.minusWeeks(2).plusDays(1).with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
+        LocalDate secondDay0 = firstDay0.plusWeeks(1);
+        LocalDate trackedSince = firstDay0.minusDays(7);
+        given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.of(trackedSince));
+        given(adminMetricsRepository.findInternalUserIds()).willReturn(Set.of(TEAM_USER));
+        given(adminMetricsRepository.findAccounts()).willReturn(List.of(
+                new Account(1L, "a", trackedSince.atStartOfDay(), true),
+                new Account(2L, "b", trackedSince.atStartOfDay(), true),
+                new Account(TEAM_USER, "team", trackedSince.atStartOfDay(), true)));
+        given(adminMetricsRepository.findSignUpEvents()).willReturn(List.of());
+        given(adminMetricsRepository.findActiveUsers(any(), any())).willReturn(List.of(
+                new UserDate(firstDay0, 1L), new UserDate(firstDay0.plusDays(1), 1L),
+                new UserDate(firstDay0, 2L), new UserDate(secondDay0, 2L),
+                new UserDate(firstDay0, TEAM_USER)));
+        given(adminMetricsRepository.findGroupMembershipEvents(secondDay0.plusDays(1).atStartOfDay())).willReturn(List.of(
+                new GroupEvent(1L, EventType.GROUP_CREATED, 10L, firstDay0.minusDays(1).atTime(9, 0)),
+                new GroupEvent(TEAM_USER, EventType.GROUP_JOINED, 10L, firstDay0.minusDays(1).atTime(10, 0)),
+                new GroupEvent(2L, EventType.GROUP_JOINED, 10L, firstDay0.plusDays(2).atTime(9, 0))));
+
+        // when
+        GroupRetentionResponse response = adminMetricsService.getGroupRetention(
+                trackedSince.minusDays(10), yesterday.plusDays(10), true);
+
+        // then
+        assertThat(response.getSnapshots())
+                .extracting(Snapshot::getDay0, snapshot -> snapshot.getGroup().getSize(),
+                        snapshot -> snapshot.getNonGroup().getSize())
+                .containsExactly(
+                        tuple(firstDay0, 1, 1),
+                        tuple(secondDay0, 2, 0));
+        assertThat(response.getTotal().getGroup().getSize()).isEqualTo(3);
+        assertThat(response.getTotal().getNonGroup().getSize()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("그룹 리텐션: 활동 기록이 7일 쌓이기 전 기간만 요청하면 조회 없이 빈 결과를 준다")
+    void groupRetentionBeforeTracking() {
+        // given
+        LocalDate trackedSince = LocalDate.of(2026, 10, 17);
+        given(adminMetricsRepository.findActivityTrackedSince()).willReturn(Optional.of(trackedSince));
+
+        // when
+        GroupRetentionResponse response = adminMetricsService.getGroupRetention(
+                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 25), true);
+
+        // then
+        assertThat(response.getSnapshots()).isEmpty();
+        assertThat(response.getTotal().getGroup().getSize()).isZero();
+        verify(adminMetricsRepository, never()).findGroupMembershipEvents(any());
+    }
+
+    @Test
+    @DisplayName("그룹 리텐션: 시작일이 종료일보다 늦으면 예외")
+    void groupRetentionInvalidPeriod() {
+        assertThatThrownBy(() -> adminMetricsService.getGroupRetention(
+                LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 10), true))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ADMIN_METRICS_INVALID_PERIOD);
     }
 
     private UserDate row(int year, int month, int day, Long userId) {
